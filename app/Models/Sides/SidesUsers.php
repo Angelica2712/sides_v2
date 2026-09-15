@@ -2,6 +2,7 @@
 
 namespace App\Models\Sides;
 
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -15,7 +16,7 @@ class SidesUsers extends Authenticatable
 
     protected $table = 'sides_users';
     protected $primaryKey = 'id';
-    protected $fillable = ['name', 'email', 'password', 'estado', 'clave', 'activarMonitor', 'activarPicking', 'activarPacking', 'activarUsuario', 'activarConfig', 'eliminarPedido', 'activarResetear', 'activarPedido', 'activarResumen', 'codisb', 'activarInformes', 'activarGuiaCarga', 'activarGuiaDescarga', 'activarLiberarAlcabala'];
+    protected $fillable = ['name', 'email', 'password', 'estado', 'clave', 'activarMonitor', 'activarPicking', 'activarPacking', 'activarUsuario', 'activarConfig', 'eliminarPedido', 'activarResetear', 'activarPedido', 'activarResumen', 'codisb', 'activarInformes', 'activarGuiaCarga', 'activarGuiaDescarga', 'activarLiberarAlcabala', 'esAdmin'];
     protected $hidden = ['password', 'remember_token', 'clave'];
 
     protected function casts(): array
@@ -23,5 +24,11 @@ class SidesUsers extends Authenticatable
         return [
             'password' => 'hashed',
         ];
+    }
+
+    /** Configuración de la sucursal del usuario. */
+    public function cfg(): BelongsTo
+    {
+        return $this->belongsTo(SidesCfg::class, 'codisb', 'codisb');
     }
 }

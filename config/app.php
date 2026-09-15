@@ -65,7 +65,8 @@ return [
     |
     */
 
-    'timezone' => 'UTC',
+    // Igual que seped_v2: las fechas de pedido/pedren se guardan en hora de Venezuela.
+    'timezone' => 'America/Caracas',
 
     /*
     |--------------------------------------------------------------------------
