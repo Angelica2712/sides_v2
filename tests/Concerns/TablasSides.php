@@ -30,6 +30,11 @@ trait TablasSides
             $table->string('codisb', 20)->primary();
             $table->string('nombre', 150)->nullable();
             $table->string('nomcorto', 20)->nullable();
+            $table->string('rif', 20)->nullable();
+            $table->string('direccion', 150)->nullable();
+            $table->string('contacto', 50)->nullable();
+            $table->string('telefono', 50)->nullable();
+            $table->string('localidad', 100)->nullable();
             $table->integer('activarPacking')->default(1);
             $table->integer('activarEtiPacking')->default(0);
             $table->integer('ModoCesta')->default(0);
@@ -51,6 +56,7 @@ trait TablasSides
             $table->integer('activarImpTicket')->default(0);
             $table->integer('activar_etiqueta_packing')->default(0);
             $table->integer('mostrarEntrega')->default(0);
+            $table->integer('activarSincronizacionRutas')->default(0);
         });
 
         Schema::create('sides_users', function (Blueprint $table) {
@@ -102,6 +108,9 @@ trait TablasSides
             $table->string('observacion', 500)->nullable();
             $table->string('codtransp', 100)->nullable();
             $table->string('entrega', 250)->nullable();
+            $table->text('documento')->nullable();
+            $table->dateTime('fecrecibido')->nullable();
+            $table->string('tipedido', 10)->default('NORMAL');
         });
 
         Schema::create('sides_etiqueta_pedido', function (Blueprint $table) {
@@ -248,6 +257,127 @@ trait TablasSides
             $table->integer('tiempo_picking_inac');
             $table->dateTime('fecha_del_picking');
         });
+    }
+
+    /** Rutas de SIDES, `cliente` de SEPED (solo columnas que usa SIDES) y sides_guia. */
+    protected function crearTablasRutas(): void
+    {
+        Schema::create('sides_rutas', function (Blueprint $table) {
+            $table->increments('id');
+            $table->string('nombre', 100);
+            $table->dateTime('fecha')->nullable();
+            $table->string('codisb', 20);
+            $table->unique(['codisb', 'nombre']);
+        });
+
+        Schema::create('sides_rutasren', function (Blueprint $table) {
+            $table->increments('item');
+            $table->integer('id');
+            $table->string('codisb', 20);
+            $table->string('codcli', 100);
+            $table->text('nomcli');
+            $table->string('rif', 100);
+            $table->string('sec', 100)->nullable();
+            $table->string('zona', 100);
+            $table->integer('retiraLocal')->default(0);
+            $table->unique(['codisb', 'codcli']);
+        });
+
+        Schema::create('cliente', function (Blueprint $table) {
+            $table->string('codcli', 20);
+            $table->string('codisb', 20);
+            $table->string('codac3', 20)->default('');
+            $table->string('nombre', 200)->nullable();
+            $table->string('rif', 50)->nullable();
+            $table->text('direccion')->nullable();
+            $table->string('entrega', 250)->nullable();
+            $table->string('ruta', 50)->default('');
+            $table->integer('orden')->default(0);
+            $table->primary(['codac3', 'codcli', 'codisb']);
+        });
+
+        Schema::create('sides_guia', function (Blueprint $table) {
+            $table->increments('id');
+            $table->timestamp('fecha')->nullable();
+            $table->string('chofer', 255)->default('');
+            $table->string('estado', 30)->nullable();
+            $table->string('nomchofer', 255)->default('');
+            $table->string('codisb', 20);
+            $table->string('ruta', 100);
+            $table->string('chofer_aux_id', 20)->nullable();
+            $table->string('chof_aux_nom', 255)->nullable();
+            $table->dateTime('fecha_salida')->nullable();
+            $table->string('unidad', 100)->nullable();
+            $table->string('ordenarPor', 100)->default('clientes');
+            $table->string('latitud', 100)->nullable();
+            $table->string('longitud', 100)->nullable();
+        });
+    }
+
+    /** Renglones de guía y tablas de SEPED que leen las guías (choferes, users, fact, cxc, reclamo, recren). */
+    protected function crearTablasGuias(): void
+    {
+        Schema::create('sides_guia_ren', function (Blueprint $table) {
+            $table->integer('id');
+            $table->string('codcli', 100);
+            $table->string('nomcli', 100);
+            $table->integer('orden');
+            $table->boolean('terminado')->default(0);
+            $table->boolean('cargado')->default(0);
+        });
+
+        Schema::create('choferes', function (Blueprint $table) {
+            $table->string('chof_co', 20);
+            $table->string('chof_nom', 100)->nullable();
+            $table->string('chof_ced', 20)->nullable();
+            $table->string('chof_tipo', 1)->default('C');
+            $table->string('codisb', 20);
+        });
+
+        Schema::create('users', function (Blueprint $table) {
+            $table->increments('id');
+            $table->string('email');
+            $table->string('codcli', 20)->nullable();
+        });
+
+        Schema::create('fact', function (Blueprint $table) {
+            $table->string('factnum', 20);
+            $table->string('codisb', 20);
+            $table->string('codcli', 20);
+            $table->string('descrip', 100);
+            $table->string('nroctrol', 20)->default('');
+        });
+
+        Schema::create('cxc', function (Blueprint $table) {
+            $table->string('id', 20);
+            $table->string('codisb', 20);
+            $table->string('codcli', 20);
+        });
+
+        Schema::create('reclamo', function (Blueprint $table) {
+            $table->increments('id');
+            $table->string('codisb', 20)->nullable();
+            $table->string('codcli', 20);
+            $table->string('factnum', 20);
+        });
+
+        Schema::create('recren', function (Blueprint $table) {
+            $table->integer('id');
+            $table->increments('item');
+            $table->string('motivo', 50);
+        });
+    }
+
+    /** Cliente en `cliente` de SEPED. */
+    protected function crearCliente(string $codcli, string $nombre, string $ruta = '', array $atributos = []): void
+    {
+        DB::table('cliente')->insert(array_merge([
+            'codcli' => $codcli,
+            'codisb' => '505094939',
+            'nombre' => $nombre,
+            'rif' => "J-{$codcli}",
+            'ruta' => $ruta,
+        ], $atributos));
     }
 
     /** Renglón en `pedren` de SEPED. */

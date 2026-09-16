@@ -98,8 +98,8 @@ class EtiquetasService
     {
         $actuales = SidesEtiquetaPedido::query()->where('numepedi', (string) $pedido->id)->lockForUpdate()->get();
 
-        // Ya entregado: se puede reimprimir, pero el control de entrega queda como está.
-        if ($actuales->contains('estado', 'ENTREGADO')) {
+        // Ya cargado en el camión o entregado: se puede reimprimir, pero los bultos quedan como están.
+        if ($actuales->contains(fn (SidesEtiquetaPedido $etiqueta) => in_array($etiqueta->estado, ['CARGADO', 'ENTREGADO'], true))) {
             return;
         }
 
@@ -115,7 +115,6 @@ class EtiquetasService
             'ruta' => (string) $pedido->ruta,
             'estado' => $enGuia ? 'EN GUIA' : 'NUEVO',
             'guia' => $enGuia?->guia,
-            'feccargado' => $enGuia?->feccargado,
         ], range(1, $bultos)));
     }
 

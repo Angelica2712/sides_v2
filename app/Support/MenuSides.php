@@ -32,6 +32,7 @@ class MenuSides
         'informes' => ['Informes', 'informes', 'invoice', 'Informes de picking y packing.'],
         'configuracion' => ['Configuración', 'configuracion', 'settings', 'Parámetros de la sucursal.'],
         'guias' => ['Guías', 'guias', 'clipboard', 'Guías de despacho y choferes.'],
+        'despacho' => ['Carga y descarga', 'despacho', 'package', 'Carga de bultos al camión y entrega a los clientes.'],
         'rutas' => ['Rutas', 'rutas', 'truck', 'Rutas y clientes por ruta.'],
         'admin' => ['Administración', 'admin', 'shield', 'Droguerías y módulos que usa cada una.'],
     ];
@@ -39,9 +40,13 @@ class MenuSides
     /** Módulos que el administrador activa por droguería. Una droguería nueva los tiene apagados. */
     public const OPCIONALES = ['batch', 'etiquetas', 'guias', 'rutas'];
 
+    /** Módulos que dependen de un opcional con otra clave. */
+    private const DEPENDE_DE = ['despacho' => 'guias'];
+
     public static function puede(SidesUsers $usuario, ?SidesCfg $cfg, string $clave): bool
     {
-        if (in_array($clave, self::OPCIONALES, true) && ! $cfg?->tieneModulo($clave)) {
+        $opcional = self::DEPENDE_DE[$clave] ?? $clave;
+        if (in_array($opcional, self::OPCIONALES, true) && ! $cfg?->tieneModulo($opcional)) {
             return false;
         }
 
@@ -58,7 +63,10 @@ class MenuSides
             'pedidos' => (bool) $usuario->activarPedido,
             'filtromonitor', 'configuracion', 'guias', 'rutas' => (bool) $usuario->activarConfig,
             'resumen' => (bool) $usuario->activarResumen,
-            'usuarios', 'informes' => (bool) $usuario->activarUsuario,
+            'usuarios' => (bool) $usuario->activarUsuario,
+            // Permiso propio de dromarko; droactiva y mastranto usaban activarUsuario.
+            'informes' => (bool) $usuario->activarInformes,
+            'despacho' => $usuario->activarGuiaCarga || $usuario->activarGuiaDescarga,
             'admin' => (bool) $usuario->esAdmin,
             default => false,
         };

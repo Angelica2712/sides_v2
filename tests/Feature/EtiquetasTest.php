@@ -114,6 +114,12 @@ class EtiquetasTest extends TestCase
 
         $this->post('/etiquetas/600/generar', ['bultos' => 5])->assertRedirect();
         $this->assertSame([['600-01', 'ENTREGADO', 8], ['600-02', 'ENTREGADO', 8]], $this->etiquetasDe(600));
+
+        // Ya en el camión: se reimprime sin duplicar ni cambiar los bultos.
+        $this->pedidoEmpacado(700, [], ['recipiente' => 'C9']);
+        SidesEtiquetaPedido::query()->insert($fila + ['numepedi' => '700', 'etiqueta' => '700-01', 'estado' => 'CARGADO', 'guia' => 9, 'feccargado' => '2026-09-15 09:00:00']);
+        $this->post('/etiquetas/700/generar', ['bultos' => 3])->assertRedirect();
+        $this->assertSame([['700-01', 'CARGADO', 9]], $this->etiquetasDe(700));
     }
 
     public function test_no_imprime_pedidos_sin_packing_terminado_ni_bultos_invalidos(): void

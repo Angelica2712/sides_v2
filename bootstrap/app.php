@@ -14,6 +14,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'permiso' => \App\Http\Middleware\EnsureSidesPermiso::class,
         ]);
+        $middleware->web(append: [
+            \App\Http\Middleware\CerrarSesionInactivo::class,
+        ]);
         $middleware->redirectUsersTo('/home');
     })
     ->withExceptions(function (Exceptions $exceptions): void {

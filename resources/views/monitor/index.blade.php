@@ -137,7 +137,7 @@
         @else
             {{-- Vista tablero --}}
             {{-- Columnas con ancho mínimo: llenan pantallas grandes y se desplazan de lado en las angostas. --}}
-            <div x-show="vista === 'tablero'" class="grid auto-cols-[minmax(19rem,1fr)] grid-flow-col items-start gap-4 overflow-x-auto pb-2">
+            <div x-show="vista === 'tablero'" class="relative grid auto-cols-[minmax(19rem,1fr)] grid-flow-col items-start gap-4 overflow-x-auto pb-2">
                 @foreach ($columnas as $estado => $lista)
                     @php
                         $meta = $columnasMeta[$estado];
