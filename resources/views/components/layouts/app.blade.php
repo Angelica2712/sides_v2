@@ -16,6 +16,7 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
+        <link rel="icon" type="image/png" href="{{ asset('img/favicon-sides.png') }}">
 
         <title>{{ $titulo ? $titulo.' · ' : '' }}SIDES {{ $nombreCorto }}</title>
 
@@ -39,10 +40,11 @@
 
                 <div class="shrink-0 min-h-20 px-3 py-3 flex flex-col items-center justify-center bg-primary border-b border-primary-dark text-white">
                     <a href="{{ route('home') }}" class="flex flex-col items-center text-center group">
-                        <span :class="sidebarCollapsed ? 'size-11 text-lg' : 'size-14 text-2xl'"
-                              class="flex items-center justify-center rounded-xl bg-white font-extrabold text-primary shadow-md transition-all duration-300 group-hover:scale-105">
-                            {{ strtoupper(mb_substr($nombreCorto, 0, 1)) }}
-                        </span>
+                        {{-- El PNG tiene fondo blanco opaco, pero la marca es un círculo: rounded-full
+                             recorta las esquinas y queda como si fuera transparente sobre el azul. --}}
+                        <img src="{{ asset('img/logo-sides.png') }}" alt="SIDES"
+                             :class="sidebarCollapsed ? 'size-11' : 'size-14'"
+                             class="rounded-full shadow-md transition-all duration-300 group-hover:scale-105">
                         <span x-show="!sidebarCollapsed" class="mt-1.5 max-w-[210px] truncate text-sm font-bold leading-tight">{{ $nombreCorto }}</span>
                         <span x-show="!sidebarCollapsed" class="text-xs font-semibold tracking-widest uppercase text-white/75">SIDES V2</span>
                     </a>
@@ -124,6 +126,8 @@
 
                     {{ $slot }}
                 </main>
+
+                <x-creditos class="border-t border-slate-200 px-4 py-3" />
             </div>
         </div>
     </body>

@@ -4,6 +4,7 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
+        <link rel="icon" type="image/png" href="{{ asset('img/favicon-sides.png') }}">
 
         <title>Iniciar sesión · SIDES</title>
 
@@ -16,7 +17,7 @@
         <main class="min-h-screen grid lg:grid-cols-2">
             <section class="hidden lg:flex flex-col justify-between bg-primary text-white p-12">
                 <div class="flex items-center gap-3">
-                    <span class="flex items-center justify-center size-12 rounded-xl bg-white text-primary text-xl font-extrabold shadow-md">S</span>
+                    <img src="{{ asset('img/logo-sides.png') }}" alt="SIDES" class="size-14 rounded-full shadow-md">
                     <span class="text-sm font-semibold tracking-widest uppercase text-white/80">SIDES V2</span>
                 </div>
 
@@ -30,10 +31,10 @@
                 <p class="text-sm font-semibold text-white/75">{{ $cfg?->nombre ?? 'Sistema de despacho' }}</p>
             </section>
 
-            <section class="flex items-center justify-center p-6 sm:p-10">
+            <section class="relative flex items-center justify-center p-6 pb-14 sm:p-10 sm:pb-14">
                 <div class="w-full max-w-sm">
                     <div class="lg:hidden mb-8 flex items-center gap-3">
-                        <span class="flex items-center justify-center size-11 rounded-xl bg-primary text-white text-lg font-extrabold shadow-md">S</span>
+                        <img src="{{ asset('img/logo-sides.png') }}" alt="SIDES" class="size-11 rounded-full shadow-md">
                         <span class="text-sm font-semibold tracking-widest uppercase text-slate-500">SIDES V2</span>
                     </div>
 
@@ -78,6 +79,8 @@
                         </button>
                     </form>
                 </div>
+
+                <x-creditos class="absolute inset-x-0 bottom-4 px-6" />
             </section>
         </main>
     </body>
