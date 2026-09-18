@@ -30,7 +30,11 @@ Route::middleware('auth')->group(function () {
 
     Route::get('home', HomeController::class)->name('home');
 
-    Route::get('monitor', MonitorController::class)->name('monitor.index')->middleware('permiso:monitor');
+    Route::middleware('permiso:monitor')->group(function () {
+        Route::get('monitor', MonitorController::class)->name('monitor.index');
+        // Fragmento que pide el monitor por AJAX cuando llega un aviso por el WebSocket.
+        Route::get('monitor/contenido', [MonitorController::class, 'contenido'])->name('monitor.contenido');
+    });
 
     Route::prefix('picking')->name('picking.')->middleware('permiso:picking')
         ->controller(PickingController::class)->whereNumber('pedido')

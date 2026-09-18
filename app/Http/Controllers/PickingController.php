@@ -10,6 +10,7 @@ use App\Services\Picking\PickingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use App\Support\MenuSides;
+use App\Support\Monitor\NotificarMonitor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
@@ -72,6 +73,8 @@ class PickingController extends Controller
         } catch (PickingException $e) {
             return redirect()->route('picking.index')->with('error', $e->getMessage());
         }
+
+        NotificarMonitor::cambio($request->user()->codisb, 'picking.tomar', $pedido);
 
         return redirect()->route('picking.show', $pedido)->with('mensaje', "Tomaste el pedido #{$pedido}.");
     }
@@ -163,6 +166,8 @@ class PickingController extends Controller
             return back()->with('error', $e->getMessage());
         }
 
+        NotificarMonitor::cambio($request->user()->codisb, 'picking.terminar', $pedido);
+
         $mensaje = match ($resultado) {
             'PACKING' => "Pedido #{$pedido} enviado a packing.",
             'PEND-FACTURA' => "Pedido #{$pedido} enviado a facturar.",
@@ -179,6 +184,8 @@ class PickingController extends Controller
         } catch (PickingException $e) {
             return back()->with('error', $e->getMessage());
         }
+
+        NotificarMonitor::cambio($request->user()->codisb, 'picking.liberar', $pedido);
 
         return redirect()->route('picking.index')->with('mensaje', "Liberaste el pedido #{$pedido}. Otro operario puede tomarlo.");
     }

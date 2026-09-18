@@ -18,12 +18,32 @@ use Illuminate\View\View;
  * - "Alcabala" cuenta en vivo los pedidos POR-APROBAR de SEPED (legacy: contador
  *   cfg.pedidoxAprobar, que actualizaba un cron).
  * - "Facturados hoy" usa fecfacturado (legacy: fecprocesado, que es la fecha de aprobación).
+ * - No se refresca por tiempo (el legacy y la primera versión de v2 recargaban la página cada
+ *   60 segundos): el navegador escucha el canal sides-monitor.{codisb} y pide `contenido`
+ *   apenas algo cambia. Ver App\Events\MonitorActualizado.
  */
 class MonitorController extends Controller
 {
     public const ESTADOS = ['RECIBIDO', 'PICKING', 'PACKING'];
 
+    /** Pantalla completa del monitor. */
     public function __invoke(Request $request): View
+    {
+        return view('monitor.index', $this->datos($request));
+    }
+
+    /**
+     * Solo la parte que cambia (indicadores, tablero, tabla). La pide resources/js/monitor.js
+     * cuando llega un aviso por el WebSocket, y reemplaza ese bloque sin recargar la página,
+     * así no se pierden la vista elegida, el desplazamiento ni la pantalla completa.
+     */
+    public function contenido(Request $request): View
+    {
+        return view('monitor.contenido', $this->datos($request));
+    }
+
+    /** @return array<string, mixed> */
+    private function datos(Request $request): array
     {
         $usuario = $request->user();
         $codisb = $usuario->codisb;
@@ -62,15 +82,16 @@ class MonitorController extends Controller
         $cfg = $usuario->cfg;
         $filas = $pedidos->getCollection();
 
-        return view('monitor.index', [
+        return [
             'cfg' => $cfg,
+            'codisb' => $codisb,
             'pedidos' => $pedidos,
             // Vista tablero: una columna por estado, conservando el orden por fecha de envío.
             'columnas' => collect(self::ESTADOS)
                 ->reject(fn (string $estado) => $estado === 'PACKING' && ! ($cfg?->activarPacking ?? true))
                 ->mapWithKeys(fn (string $estado) => [$estado => $filas->where('estado', $estado)->values()])
                 ->all(),
-            'tiempos' => $pedidos->getCollection()
+            'tiempos' => $filas
                 ->mapWithKeys(fn (Pedido $pedido) => [$pedido->id => TiemposPedido::calcular($pedido, $ahora)])
                 ->all(),
             'indicadores' => [
@@ -81,6 +102,6 @@ class MonitorController extends Controller
                 ['etiqueta' => 'Facturados hoy', 'valor' => $facturadosHoy, 'icono' => 'invoice'],
             ],
             'actualizado' => $ahora,
-        ]);
+        ];
     }
 }

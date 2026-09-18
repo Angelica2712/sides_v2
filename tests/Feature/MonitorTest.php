@@ -2,7 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Events\MonitorActualizado;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Event;
 use Tests\Concerns\TablasSides;
 use Tests\TestCase;
 
@@ -122,6 +124,110 @@ class MonitorTest extends TestCase
         $this->actingAs($this->operador())->get('/monitor')
             ->assertOk()
             ->assertSee('No hay pedidos en proceso');
+    }
+
+    public function test_no_se_refresca_por_tiempo_sino_por_el_canal_de_la_sucursal(): void
+    {
+        $this->crearCfg();
+
+        $respuesta = $this->actingAs($this->operador())->get('/monitor')->assertOk();
+
+        // Escucha su canal en vez de recargarse sola.
+        $respuesta->assertSee('sides-monitor.505094939')
+            ->assertSee('monitorEnVivo')
+            ->assertSee('En vivo');
+
+        // Nada del refresco por tiempo que esto reemplaza.
+        $respuesta->assertDontSee('location.reload')
+            ->assertDontSee('setInterval')
+            ->assertDontSee('Pausar');
+    }
+
+    public function test_contenido_devuelve_solo_el_fragmento_del_monitor(): void
+    {
+        $this->crearCfg();
+        $this->crearPedido(['id' => 91001, 'estado' => 'RECIBIDO', 'nomcli' => 'CLIENTE RECIBIDO']);
+
+        $respuesta = $this->actingAs($this->operador())->get('/monitor/contenido')->assertOk();
+
+        // Trae los pedidos...
+        $respuesta->assertSee('CLIENTE RECIBIDO')
+            ->assertSee('#91001');
+
+        // ...pero no la página entera: ni layout, ni barra de herramientas.
+        $respuesta->assertDontSee('<body', false)
+            ->assertDontSee('Pantalla completa')
+            ->assertDontSee('Pedidos en proceso');
+    }
+
+    public function test_contenido_pide_el_mismo_permiso_que_el_monitor(): void
+    {
+        $this->crearCfg();
+
+        $this->actingAs($this->operador(['activarPicking' => 1]))->get('/monitor/contenido')->assertForbidden();
+    }
+
+    public function test_avisa_al_monitor_de_la_sucursal_cuando_un_operario_toma_un_pedido(): void
+    {
+        $this->crearCfg();
+        $this->crearPedido(['id' => 91002, 'estado' => 'RECIBIDO']);
+        $this->crearRenglon(91002, 1);
+
+        Event::fake([MonitorActualizado::class]);
+
+        $this->actingAs($this->operador(['activarPicking' => 1]))->post('/picking/91002/tomar', ['recipiente' => 'CESTA 5']);
+
+        Event::assertDispatched(
+            MonitorActualizado::class,
+            fn (MonitorActualizado $evento) => $evento->codisb === '505094939'
+                && $evento->motivo === 'picking.tomar'
+                && (int) $evento->pedidoId === 91002
+                && $evento->broadcastOn()[0]->name === 'private-sides-monitor.505094939'
+                && $evento->broadcastAs() === 'actualizado'
+        );
+    }
+
+    public function test_no_avisa_si_la_accion_falla(): void
+    {
+        $this->crearCfg();
+        $this->crearPedido(['id' => 91003, 'estado' => 'PACKING']);
+
+        Event::fake([MonitorActualizado::class]);
+
+        $this->actingAs($this->operador(['activarPicking' => 1]))->post('/picking/91003/tomar', ['recipiente' => 'CESTA 5']);
+
+        Event::assertNotDispatched(MonitorActualizado::class);
+    }
+
+    public function test_al_canal_de_una_sucursal_solo_entra_quien_ve_su_monitor(): void
+    {
+        $this->crearCfg();
+        $this->crearCfg(['codisb' => '999999999', 'nombre' => 'OTRA DROGUERIA']);
+
+        // El broadcaster "null" que usan las pruebas autoriza cualquier canal sin consultar
+        // routes/channels.php, así que acá se levanta el de verdad. Broadcast::channel registra
+        // en el driver activo al momento de llamarlo, por eso el archivo se vuelve a cargar
+        // después de cambiar la configuración.
+        config(['broadcasting.default' => 'reverb']);
+        config(['broadcasting.connections.reverb' => [
+            'driver' => 'reverb',
+            'key' => 'clave-de-prueba',
+            'secret' => 'secreto-de-prueba',
+            'app_id' => '1',
+            'options' => ['host' => 'localhost', 'port' => 8080, 'scheme' => 'http', 'useTLS' => false],
+        ]]);
+        require base_path('routes/channels.php');
+
+        $autorizar = fn ($usuario, string $canal) => $this->actingAs($usuario)
+            ->post('/broadcasting/auth', ['channel_name' => $canal, 'socket_id' => '1234.5678']);
+
+        $autorizar($this->operador(), 'private-sides-monitor.505094939')->assertOk();
+
+        $autorizar($this->operador(['email' => 'sinmonitor@example.com', 'activarPicking' => 1]), 'private-sides-monitor.505094939')
+            ->assertForbidden();
+
+        $autorizar($this->operador(['email' => 'otra@example.com']), 'private-sides-monitor.999999999')
+            ->assertForbidden();
     }
 
     public function test_sin_permiso_de_monitor_no_entra(): void

@@ -6,6 +6,7 @@ use App\Models\Seped\Pedido;
 use App\Models\Sides\SidesCfg;
 use App\Services\Pedidos\PedidosException;
 use App\Services\Pedidos\PedidosService;
+use App\Support\Monitor\NotificarMonitor;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -92,26 +93,30 @@ class PedidosController extends Controller
             return back()->withInput()->with('error', $e->getMessage());
         }
 
+        NotificarMonitor::cambio($request->user()->codisb, 'pedidos.modificar', $pedido);
+
         return redirect()->route('pedidos.show', $pedido)->with('mensaje', "Pedido #{$pedido} modificado.");
     }
 
     public function resetear(Request $request, int $pedido): RedirectResponse
     {
-        return $this->ejecutar(fn () => $this->pedidos->resetear($request->user(), $pedido), $pedido, "Pedido #{$pedido} reseteado: volvió a RECIBIDO.");
+        return $this->ejecutar($request, fn () => $this->pedidos->resetear($request->user(), $pedido), $pedido, 'pedidos.resetear', "Pedido #{$pedido} reseteado: volvió a RECIBIDO.");
     }
 
     public function anular(Request $request, int $pedido): RedirectResponse
     {
-        return $this->ejecutar(fn () => $this->pedidos->anular($request->user(), $pedido), $pedido, "Pedido #{$pedido} anulado.");
+        return $this->ejecutar($request, fn () => $this->pedidos->anular($request->user(), $pedido), $pedido, 'pedidos.anular', "Pedido #{$pedido} anulado.");
     }
 
-    private function ejecutar(callable $accion, int $pedido, string $mensaje): RedirectResponse
+    private function ejecutar(Request $request, callable $accion, int $pedido, string $motivo, string $mensaje): RedirectResponse
     {
         try {
             $accion();
         } catch (PedidosException $e) {
             return redirect()->route('pedidos.show', $pedido)->with('error', $e->getMessage());
         }
+
+        NotificarMonitor::cambio($request->user()->codisb, $motivo, $pedido);
 
         return redirect()->route('pedidos.show', $pedido)->with('mensaje', $mensaje);
     }

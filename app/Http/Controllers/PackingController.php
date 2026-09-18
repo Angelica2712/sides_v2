@@ -11,6 +11,7 @@ use App\Services\Etiquetas\EtiquetasService;
 use App\Services\Packing\PackingException;
 use App\Services\Packing\PackingService;
 use App\Support\MenuSides;
+use App\Support\Monitor\NotificarMonitor;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -158,6 +159,8 @@ class PackingController extends Controller
             return back()->with('error', $e->getMessage());
         }
 
+        NotificarMonitor::cambio($request->user()->codisb, 'packing.terminar', $pedido);
+
         $mensaje = $resultado === 'ANULADO'
             ? "Pedido #{$pedido} anulado automáticamente: no tiene unidades para despachar."
             : "Pedido #{$pedido} enviado a facturar.";
@@ -194,6 +197,8 @@ class PackingController extends Controller
         } catch (PackingException $e) {
             return back()->with('error', $e->getMessage());
         }
+
+        NotificarMonitor::cambio($request->user()->codisb, 'packing.liberar', $pedido);
 
         return redirect()->route('packing.index')->with('mensaje', "Liberaste el pedido #{$pedido}. Otro empacador puede abrirlo.");
     }

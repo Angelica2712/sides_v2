@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Services\BatchPicking\BatchPickingException;
 use App\Services\BatchPicking\BatchPickingService;
+use App\Support\Monitor\NotificarMonitor;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -38,6 +39,8 @@ class BatchPickingController extends Controller
             return back()->with('error', $e->getMessage());
         }
 
+        NotificarMonitor::cambio($request->user()->codisb, 'batch.agrupar', $lote->id);
+
         $cantidad = count(array_unique($datos['pedidos']));
 
         return redirect()->route('batch.index')
@@ -53,6 +56,8 @@ class BatchPickingController extends Controller
         } catch (BatchPickingException $e) {
             return back()->with('error', $e->getMessage());
         }
+
+        NotificarMonitor::cambio($request->user()->codisb, 'batch.liberar');
 
         return redirect()->route('batch.index')
             ->with('mensaje', $liberados === 1 ? '1 pedido liberado al picking normal.' : "{$liberados} pedidos liberados al picking normal.");
@@ -85,6 +90,8 @@ class BatchPickingController extends Controller
             return back()->with('error', $e->getMessage());
         }
 
+        NotificarMonitor::cambio($request->user()->codisb, 'batch.iniciar', $lote);
+
         return redirect()->route('batch.picking', $lote)->with('mensaje', "Picking del lote #{$lote} iniciado.");
     }
 
@@ -95,6 +102,8 @@ class BatchPickingController extends Controller
         } catch (BatchPickingException $e) {
             return back()->with('error', $e->getMessage());
         }
+
+        NotificarMonitor::cambio($request->user()->codisb, 'batch.anular', $lote);
 
         return redirect()->route('batch.index')->with('mensaje', "Lote #{$lote} anulado. Sus pedidos vuelven a estar en espera.");
     }
@@ -140,6 +149,8 @@ class BatchPickingController extends Controller
         } catch (BatchPickingException $e) {
             return back()->with('error', $e->getMessage());
         }
+
+        NotificarMonitor::cambio($request->user()->codisb, 'batch.terminar', $lote);
 
         $partes = array_filter([
             $resultados['PACKING'] ? "{$resultados['PACKING']} a packing" : null,
