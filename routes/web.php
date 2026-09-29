@@ -9,6 +9,7 @@ use App\Http\Controllers\EtiquetasController;
 use App\Http\Controllers\FiltroMonitorController;
 use App\Http\Controllers\GuiasController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\InformesController;
 use App\Http\Controllers\ModuloPendienteController;
 use App\Http\Controllers\MonitorController;
 use App\Http\Controllers\PackingController;
@@ -139,6 +140,19 @@ Route::middleware('auth')->group(function () {
             Route::delete('{filtro}', 'destroy')->name('destroy');
         });
 
+    Route::prefix('informes')->name('informes.')->middleware('permiso:informes')
+        ->controller(InformesController::class)
+        ->where(['tipo' => 'picking|packing', 'vista' => 'productividad|inactividad'])
+        ->whereNumber(['usuario', 'registro'])
+        ->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('{tipo}/{vista}', 'reporte')->name('reporte');
+            Route::get('{tipo}/{vista}/excel', 'excel')->name('excel');
+            Route::get('{tipo}/{vista}/operario/{usuario}', 'operario')->name('operario');
+            Route::get('{tipo}/{vista}/operario/{usuario}/excel', 'excelOperario')->name('operario.excel');
+            Route::delete('{tipo}/inactividad/{registro}', 'quitarInactividad')->name('inactividad.destroy');
+        });
+
     Route::prefix('configuracion')->name('configuracion.')->middleware('permiso:configuracion')
         ->controller(ConfiguracionController::class)
         ->group(function () {
@@ -208,7 +222,7 @@ Route::middleware('auth')->group(function () {
 
     // Módulos aún no portados: al portar uno, se registra arriba con su controlador real
     // (mismo nombre "{clave}.index" y middleware permiso:{clave}) y se agrega a $portados.
-    $portados = ['monitor', 'picking', 'packing', 'batch', 'admin', 'etiquetas', 'pedidos', 'configuracion', 'usuarios', 'rutas', 'guias', 'despacho', 'resumen', 'filtromonitor'];
+    $portados = ['monitor', 'picking', 'packing', 'batch', 'admin', 'etiquetas', 'pedidos', 'configuracion', 'usuarios', 'rutas', 'guias', 'despacho', 'resumen', 'filtromonitor', 'informes'];
     foreach (MenuSides::MODULOS as $clave => [, $uri]) {
         if (in_array($clave, $portados, true)) {
             continue;
