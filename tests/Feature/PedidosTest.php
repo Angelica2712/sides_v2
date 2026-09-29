@@ -6,6 +6,8 @@ use App\Models\Seped\Pedido;
 use App\Models\Sides\SidesAlcabalaLote;
 use App\Models\Sides\SidesAlcabalaLotePedido;
 use App\Models\Sides\SidesEtiquetaPedido;
+use App\Models\Sides\SidesFacturaGrupo;
+use App\Models\Sides\SidesFacturaGrupoRen;
 use App\Models\Sides\SidesLogpacking;
 use App\Models\Sides\SidesLogpicking;
 use App\Models\Sides\SidesPedidoOperacion;
@@ -186,5 +188,35 @@ class PedidosTest extends TestCase
         $this->post('/pedidos/700/anular')->assertSessionHas('mensaje', 'Pedido #700 anulado.');
         $this->assertSame('ANULADO', Pedido::query()->find(700)->estado);
         $this->post('/pedidos/700/anular')->assertSessionHas('error', 'El pedido #700 ya está anulado.');
+    }
+
+    public function test_agrupa_pedidos_de_la_misma_farmacia_para_facturar_juntos(): void
+    {
+        $this->crearPedido(['id' => 800, 'codcli' => 'C001', 'nomcli' => 'FARMACIA SOL', 'estado' => 'FACTURANDO']);
+        $this->crearPedido(['id' => 801, 'codcli' => 'C001', 'nomcli' => 'FARMACIA SOL', 'estado' => 'PEND-FACTURA']);
+        $this->crearPedido(['id' => 802, 'codcli' => 'C002', 'nomcli' => 'FARMACIA LUNA', 'estado' => 'FACTURANDO']);
+        $this->actingAs($this->usuario);
+
+        $this->get('/pedidos?estado=FACTURANDO')->assertOk()->assertSee('Marca 2 o más pedidos');
+
+        $this->post('/pedidos/agrupar', ['pedidos' => [800, 801]])
+            ->assertRedirect()
+            ->assertSessionHas('mensaje', 'Grupo #1 creado con 2 pedidos.');
+
+        $grupo = SidesFacturaGrupo::query()->firstOrFail();
+        $this->assertSame(['505094939', 'C001', 'FARMACIA SOL', 'ana@example.com'], [$grupo->codisb, $grupo->codcli, $grupo->nomcli, $grupo->usuario]);
+        $this->assertSame([800, 801], SidesFacturaGrupoRen::query()->where('id_grupo', $grupo->id)->orderBy('id_pedido')->pluck('id_pedido')->all());
+
+        $this->get('/pedidos?estado=FACTURANDO')->assertSee("Grupo #{$grupo->id}");
+
+        $this->post('/pedidos/agrupar', ['pedidos' => [800]])->assertSessionHas('error', 'Selecciona al menos 2 pedidos de la misma farmacia para agrupar.');
+        $this->post('/pedidos/agrupar', ['pedidos' => [801, 802]])->assertSessionHas('error', 'Todos los pedidos de un grupo deben ser de la misma farmacia.');
+        $this->post('/pedidos/agrupar', ['pedidos' => [800, 801]])->assertSessionHas('error', 'Uno o más pedidos seleccionados ya pertenecen a otro grupo.');
+
+        $this->delete("/pedidos/agrupar/{$grupo->id}")
+            ->assertRedirect()
+            ->assertSessionHas('mensaje', "Grupo #{$grupo->id} deshecho.");
+        $this->assertSame(0, SidesFacturaGrupo::query()->count());
+        $this->assertSame(0, SidesFacturaGrupoRen::query()->count());
     }
 }

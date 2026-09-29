@@ -97,9 +97,11 @@ Route::middleware('auth')->group(function () {
         });
 
     Route::prefix('pedidos')->name('pedidos.')->middleware('permiso:pedidos')
-        ->controller(PedidosController::class)->whereNumber('pedido')
+        ->controller(PedidosController::class)->whereNumber(['pedido', 'grupo'])
         ->group(function () {
             Route::get('/', 'index')->name('index');
+            Route::post('agrupar', 'agrupar')->name('agrupar');
+            Route::delete('agrupar/{grupo}', 'desagrupar')->name('desagrupar');
             Route::get('{pedido}', 'show')->name('show');
             Route::get('{pedido}/modificar', 'edit')->name('edit');
             Route::put('{pedido}', 'update')->name('update');

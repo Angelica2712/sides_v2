@@ -114,6 +114,7 @@ trait TablasSides
             $table->dateTime('feccompletado')->nullable();
             $table->integer('numren')->default(0);
             $table->integer('numund')->default(0);
+            $table->decimal('total', 12, 2)->nullable();
             $table->string('observacion', 500)->nullable();
             $table->string('codtransp', 100)->nullable();
             $table->string('entrega', 250)->nullable();
@@ -133,6 +134,22 @@ trait TablasSides
             $table->dateTime('fecentregado')->nullable();
             $table->integer('guia')->nullable();
             $table->dateTime('feccargado')->nullable();
+        });
+
+        Schema::create('sides_factura_grupo', function (Blueprint $table) {
+            $table->increments('id');
+            $table->string('codisb', 20);
+            $table->string('codcli', 20);
+            $table->string('nomcli', 150);
+            $table->string('estado', 20)->default('ABIERTO');
+            $table->string('usuario', 150);
+            $table->dateTime('fecha');
+        });
+
+        Schema::create('sides_factura_grupo_ren', function (Blueprint $table) {
+            $table->increments('id');
+            $table->integer('id_grupo');
+            $table->integer('id_pedido')->unique();
         });
 
         Schema::create('sides_pedido_operacion', function (Blueprint $table) {

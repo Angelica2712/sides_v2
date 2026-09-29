@@ -6,6 +6,8 @@ use App\Models\Seped\Pedido;
 use App\Models\Sides\SidesAlcabalaLotePedido;
 use App\Models\Sides\SidesCfg;
 use App\Models\Sides\SidesEtiquetaPedido;
+use App\Models\Sides\SidesFacturaGrupo;
+use App\Models\Sides\SidesFacturaGrupoRen;
 use App\Models\Sides\SidesLogInacPacking;
 use App\Models\Sides\SidesLogInacPicking;
 use App\Models\Sides\SidesLogpacking;
@@ -61,13 +63,18 @@ class PedidosService
             ]);
     }
 
+    /** Estados que se pueden agrupar para facturar juntos (ver agrupar()). */
+    public const ESTADOS_AGRUPABLES = ['PEND-FACTURA', 'FACTURANDO'];
+
     /** @param  array{texto: string, estado: string, desde: string, hasta: string}  $filtros */
     public function listar(string $codisb, array $filtros): LengthAwarePaginator
     {
         $texto = $filtros['texto'];
+        $paraFacturar = in_array($filtros['estado'], self::ESTADOS_AGRUPABLES, true);
 
         return Pedido::query()
             ->leftJoin('sides_pedido_operacion as op', 'op.id_pedido', '=', 'pedido.id')
+            ->leftJoin('sides_factura_grupo_ren as fgr', 'fgr.id_pedido', '=', 'pedido.id')
             ->where('pedido.codisb', $codisb)
             ->when($texto !== '', function ($consulta) use ($texto) {
                 $consulta->where(function ($filtro) use ($texto) {
@@ -82,11 +89,12 @@ class PedidosService
             ->when($filtros['estado'] !== '', fn ($consulta) => $consulta->where('pedido.estado', $filtros['estado']))
             ->when($filtros['desde'] !== '', fn ($consulta) => $consulta->where('pedido.fecenviado', '>=', "{$filtros['desde']} 00:00:00"))
             ->when($filtros['hasta'] !== '', fn ($consulta) => $consulta->where('pedido.fecenviado', '<=', "{$filtros['hasta']} 23:59:59"))
+            ->when($paraFacturar, fn ($consulta) => $consulta->orderBy('pedido.codcli'))
             ->orderByDesc('pedido.id')
             ->select([
                 'pedido.id', 'pedido.codcli', 'pedido.nomcli', 'pedido.ruta', 'pedido.estado', 'pedido.documento',
-                'pedido.fecenviado', 'pedido.fecprocesado', 'pedido.numren', 'pedido.numund',
-                'op.recipiente', 'op.despachador',
+                'pedido.fecenviado', 'pedido.fecprocesado', 'pedido.numren', 'pedido.numund', 'pedido.total',
+                'op.recipiente', 'op.despachador', 'fgr.id_grupo as grupo_id',
             ])
             ->paginate(self::POR_PAGINA)
             ->withQueryString();
@@ -243,6 +251,76 @@ class PedidosService
 
             $this->registrar('ANULADO', $pedidoId, $usuario, "ESTADO ANTERIOR: {$anterior}");
         });
+    }
+
+    /**
+     * Agrupa varios pedidos PEND-FACTURA/FACTURANDO de la misma farmacia para que se facturen
+     * juntos en el ERP. Es solo organización dentro de SIDES: no cambia pedido.estado ni llama
+     * al ERP, el documento fiscal lo sigue emitiendo quien factura allá.
+     *
+     * @param  list<int>  $pedidoIds
+     */
+    public function agrupar(SidesUsers $usuario, array $pedidoIds): SidesFacturaGrupo
+    {
+        $ids = array_values(array_unique(array_map('intval', $pedidoIds)));
+
+        if (count($ids) < 2) {
+            throw new PedidosException('Selecciona al menos 2 pedidos de la misma farmacia para agrupar.');
+        }
+
+        return DB::transaction(function () use ($usuario, $ids) {
+            $pedidos = Pedido::query()
+                ->where('codisb', $usuario->codisb)
+                ->whereIn('id', $ids)
+                ->whereIn('estado', self::ESTADOS_AGRUPABLES)
+                ->lockForUpdate()
+                ->get();
+
+            if ($pedidos->count() !== count($ids)) {
+                throw new PedidosException('Alguno de los pedidos seleccionados ya no está disponible para agrupar.');
+            }
+
+            if ($pedidos->pluck('codcli')->unique()->count() > 1) {
+                throw new PedidosException('Todos los pedidos de un grupo deben ser de la misma farmacia.');
+            }
+
+            if (SidesFacturaGrupoRen::query()->whereIn('id_pedido', $ids)->exists()) {
+                throw new PedidosException('Uno o más pedidos seleccionados ya pertenecen a otro grupo.');
+            }
+
+            $grupo = SidesFacturaGrupo::query()->create([
+                'codisb' => $usuario->codisb,
+                'codcli' => $pedidos->first()->codcli,
+                'nomcli' => $pedidos->first()->nomcli,
+                'estado' => 'ABIERTO',
+                'usuario' => $usuario->email,
+                'fecha' => Carbon::now(),
+            ]);
+
+            foreach ($ids as $pedidoId) {
+                SidesFacturaGrupoRen::query()->create(['id_grupo' => $grupo->id, 'id_pedido' => $pedidoId]);
+            }
+
+            Log::info("GRUPO DE FACTURACION #{$grupo->id} CREADO POR: {$usuario->email} PEDIDOS: ".implode(',', $ids));
+
+            return $grupo;
+        });
+    }
+
+    public function desagruparFactura(SidesUsers $usuario, int $grupoId): void
+    {
+        $grupo = SidesFacturaGrupo::query()->where('codisb', $usuario->codisb)->find($grupoId);
+
+        if (! $grupo) {
+            throw new PedidosException("No se encontró el grupo #{$grupoId}.");
+        }
+
+        DB::transaction(function () use ($grupo) {
+            SidesFacturaGrupoRen::query()->where('id_grupo', $grupo->id)->delete();
+            $grupo->delete();
+        });
+
+        Log::info("GRUPO DE FACTURACION #{$grupo->id} DESHECHO POR: {$usuario->email}");
     }
 
     private function pedidoBloqueado(string $codisb, int $pedidoId): Pedido

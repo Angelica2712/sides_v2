@@ -98,6 +98,30 @@ class PedidosController extends Controller
         return redirect()->route('pedidos.show', $pedido)->with('mensaje', "Pedido #{$pedido} modificado.");
     }
 
+    public function agrupar(Request $request): RedirectResponse
+    {
+        $pedidos = array_map('intval', (array) $request->input('pedidos', []));
+
+        try {
+            $grupo = $this->pedidos->agrupar($request->user(), $pedidos);
+        } catch (PedidosException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('mensaje', "Grupo #{$grupo->id} creado con ".count($pedidos).' pedidos.');
+    }
+
+    public function desagrupar(Request $request, int $grupo): RedirectResponse
+    {
+        try {
+            $this->pedidos->desagruparFactura($request->user(), $grupo);
+        } catch (PedidosException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('mensaje', "Grupo #{$grupo} deshecho.");
+    }
+
     public function resetear(Request $request, int $pedido): RedirectResponse
     {
         return $this->ejecutar($request, fn () => $this->pedidos->resetear($request->user(), $pedido), $pedido, 'pedidos.resetear', "Pedido #{$pedido} reseteado: volvió a RECIBIDO.");

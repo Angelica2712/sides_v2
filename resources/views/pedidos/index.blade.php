@@ -1,10 +1,15 @@
 @php
+    use App\Services\Pedidos\PedidosService;
     use App\Support\FechaSeped;
 
     $numero = fn ($valor) => number_format((int) $valor, 0, ',', '.');
+    $monto = fn ($valor) => number_format((float) $valor, 2, ',', '.');
     $conFiltros = $filtros['texto'] !== '' || $filtros['estado'] !== '' || $filtros['desde'] !== '' || $filtros['hasta'] !== '';
     $filtrosSinEstado = array_filter(['buscar' => $filtros['texto'], 'desde' => $filtros['desde'], 'hasta' => $filtros['hasta']]);
     $chip = 'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold ring-1';
+    $paraFacturar = in_array($filtros['estado'], PedidosService::ESTADOS_AGRUPABLES, true);
+    $gruposEnPagina = $paraFacturar ? $pedidos->getCollection()->pluck('grupo_id')->filter()->unique()->values() : collect();
+    $codcliAnterior = null;
 @endphp
 
 <x-layouts.app titulo="Pedidos">
@@ -65,55 +70,122 @@
             </section>
         @else
             <p class="text-xs text-slate-500 xl:hidden">Usa la barra de arriba de la tabla para ver el resto de las columnas.</p>
-            <x-tabla-desplazable etiqueta="Lista de pedidos" class="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
-                <table class="min-w-full text-sm">
-                    <thead class="bg-slate-50 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
-                        <tr>
-                            <th scope="col" class="sticky left-0 z-10 bg-slate-50 px-4 py-3">Pedido</th>
-                            <th scope="col" class="px-4 py-3">Cliente</th>
-                            <th scope="col" class="px-4 py-3">Ruta</th>
-                            <th scope="col" class="px-4 py-3">Enviado</th>
-                            <th scope="col" class="px-4 py-3">Procesado</th>
-                            <th scope="col" class="px-4 py-3 text-right">Renglones</th>
-                            <th scope="col" class="px-4 py-3 text-right">Unidades</th>
-                            <th scope="col" class="px-4 py-3">Estado</th>
-                            <th scope="col" class="px-4 py-3">Recipiente</th>
-                            <th scope="col" class="px-4 py-3">Despachador</th>
-                            <th scope="col" class="px-4 py-3"><span class="sr-only">Acciones</span></th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-100">
-                        @foreach ($pedidos as $pedido)
-                            <tr class="group hover:bg-slate-50">
-                                {{-- El número de pedido queda fijo a la izquierda al desplazar la tabla. --}}
-                                <td class="sticky left-0 z-10 whitespace-nowrap bg-white px-4 py-3 shadow-[1px_0_0_var(--color-slate-100)] group-hover:bg-slate-50">
-                                    <a href="{{ route('pedidos.show', $pedido->id) }}" class="text-base font-black text-primary hover:underline">#{{ $pedido->id }}</a>
-                                </td>
-                                <td class="px-4 py-3">
-                                    <p class="max-w-64 truncate font-semibold text-slate-800">{{ $pedido->nomcli }}</p>
-                                    <p class="text-xs text-slate-500">{{ $pedido->codcli }}</p>
-                                </td>
-                                <td class="whitespace-nowrap px-4 py-3 font-semibold text-slate-700">{{ $pedido->ruta ?: '—' }}</td>
-                                <td class="whitespace-nowrap px-4 py-3 tabular-nums text-slate-600">{{ FechaSeped::mostrar($pedido->fecenviado, 'd-m-y H:i') }}</td>
-                                <td class="whitespace-nowrap px-4 py-3 tabular-nums text-slate-600">{{ FechaSeped::mostrar($pedido->fecprocesado, 'd-m-y H:i') }}</td>
-                                <td class="px-4 py-3 text-right tabular-nums font-semibold">{{ $numero($pedido->numren) }}</td>
-                                <td class="px-4 py-3 text-right tabular-nums font-semibold">{{ $numero($pedido->numund) }}</td>
-                                <td class="px-4 py-3">
-                                    <x-estado-pedido :estado="$pedido->estado" />
-                                    @if (filled($pedido->documento))
-                                        <p class="mt-1 max-w-40 truncate text-xs text-slate-500" title="Documento en el ERP">Doc. {{ $pedido->documento }}</p>
-                                    @endif
-                                </td>
-                                <td class="whitespace-nowrap px-4 py-3 text-slate-700">{{ $pedido->recipiente ?: '—' }}</td>
-                                <td class="whitespace-nowrap px-4 py-3 text-slate-700">{{ $pedido->despachador ?: '—' }}</td>
-                                <td class="whitespace-nowrap px-4 py-3 text-right">
-                                    <a href="{{ route('pedidos.edit', $pedido->id) }}" class="font-semibold text-slate-500 hover:text-primary">Modificar</a>
-                                </td>
+
+            @if ($paraFacturar)
+                <p class="text-xs text-slate-500">Marca 2 o más pedidos de la misma farmacia para agruparlos: es solo organización dentro de SIDES, no cambia el estado del pedido ni factura nada — el ERP sigue emitiendo el documento fiscal por su cuenta.</p>
+            @endif
+
+            <form method="POST" action="{{ route('pedidos.agrupar') }}"
+                  @if ($paraFacturar) x-data="{ marcados: [], farmacias: @js($pedidos->getCollection()->pluck('codcli', 'id')), puedeMarcar(id) { return this.marcados.length === 0 || this.farmacias[this.marcados[0]] === this.farmacias[id]; } }" @endif>
+                @csrf
+
+                @if ($paraFacturar)
+                    <div x-show="marcados.length > 0"
+                         class="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-slate-800 px-4 py-3 text-sm text-white">
+                        <span><span x-text="marcados.length"></span> pedido(s) seleccionados, de la misma farmacia</span>
+                        <button type="submit" :disabled="marcados.length < 2"
+                                class="rounded-xl bg-white px-4 py-2 text-sm font-bold text-slate-800 disabled:cursor-not-allowed disabled:opacity-50">
+                            Agrupar seleccionados
+                        </button>
+                    </div>
+                @endif
+
+                <x-tabla-desplazable etiqueta="Lista de pedidos" class="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
+                    <table class="min-w-full text-sm">
+                        <thead class="bg-slate-50 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
+                            <tr>
+                                @if ($paraFacturar)
+                                    <th scope="col" class="px-4 py-3"><span class="sr-only">Seleccionar</span></th>
+                                @endif
+                                <th scope="col" class="sticky left-0 z-10 bg-slate-50 px-4 py-3">Pedido</th>
+                                <th scope="col" class="px-4 py-3">Cliente</th>
+                                <th scope="col" class="px-4 py-3">Ruta</th>
+                                <th scope="col" class="px-4 py-3">Enviado</th>
+                                <th scope="col" class="px-4 py-3">Procesado</th>
+                                <th scope="col" class="px-4 py-3 text-right">Renglones</th>
+                                <th scope="col" class="px-4 py-3 text-right">Unidades</th>
+                                @if ($paraFacturar)
+                                    <th scope="col" class="px-4 py-3 text-right">Monto</th>
+                                @endif
+                                <th scope="col" class="px-4 py-3">Estado</th>
+                                <th scope="col" class="px-4 py-3">Recipiente</th>
+                                <th scope="col" class="px-4 py-3">Despachador</th>
+                                @if ($paraFacturar)
+                                    <th scope="col" class="px-4 py-3">Grupo</th>
+                                @endif
+                                <th scope="col" class="px-4 py-3"><span class="sr-only">Acciones</span></th>
                             </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </x-tabla-desplazable>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            @foreach ($pedidos as $pedido)
+                                @if ($paraFacturar && $pedido->codcli !== $codcliAnterior)
+                                    @php($codcliAnterior = $pedido->codcli)
+                                    <tr class="bg-slate-100">
+                                        <td colspan="14" class="px-4 py-2 text-xs font-bold text-slate-600">
+                                            {{ $pedido->nomcli }} <span class="font-normal text-slate-400">{{ $pedido->codcli }}</span>
+                                        </td>
+                                    </tr>
+                                @endif
+                                <tr class="group hover:bg-slate-50">
+                                    @if ($paraFacturar)
+                                        <td class="px-4 py-3">
+                                            @if ($pedido->grupo_id)
+                                                <span class="text-slate-400" title="Ya agrupado">✓</span>
+                                            @else
+                                                <input type="checkbox" name="pedidos[]" value="{{ $pedido->id }}" x-model="marcados" :disabled="!puedeMarcar({{ $pedido->id }})"
+                                                       class="size-5 rounded border-slate-300 text-primary focus:ring-primary disabled:opacity-30">
+                                            @endif
+                                        </td>
+                                    @endif
+                                    {{-- El número de pedido queda fijo a la izquierda al desplazar la tabla. --}}
+                                    <td class="sticky left-0 z-10 whitespace-nowrap bg-white px-4 py-3 shadow-[1px_0_0_var(--color-slate-100)] group-hover:bg-slate-50">
+                                        <a href="{{ route('pedidos.show', $pedido->id) }}" class="text-base font-black text-primary hover:underline">#{{ $pedido->id }}</a>
+                                    </td>
+                                    <td class="px-4 py-3">
+                                        <p class="max-w-64 truncate font-semibold text-slate-800">{{ $pedido->nomcli }}</p>
+                                        <p class="text-xs text-slate-500">{{ $pedido->codcli }}</p>
+                                    </td>
+                                    <td class="whitespace-nowrap px-4 py-3 font-semibold text-slate-700">{{ $pedido->ruta ?: '—' }}</td>
+                                    <td class="whitespace-nowrap px-4 py-3 tabular-nums text-slate-600">{{ FechaSeped::mostrar($pedido->fecenviado, 'd-m-y H:i') }}</td>
+                                    <td class="whitespace-nowrap px-4 py-3 tabular-nums text-slate-600">{{ FechaSeped::mostrar($pedido->fecprocesado, 'd-m-y H:i') }}</td>
+                                    <td class="px-4 py-3 text-right tabular-nums font-semibold">{{ $numero($pedido->numren) }}</td>
+                                    <td class="px-4 py-3 text-right tabular-nums font-semibold">{{ $numero($pedido->numund) }}</td>
+                                    @if ($paraFacturar)
+                                        <td class="px-4 py-3 text-right tabular-nums font-semibold">{{ $monto($pedido->total) }}</td>
+                                    @endif
+                                    <td class="px-4 py-3">
+                                        <x-estado-pedido :estado="$pedido->estado" />
+                                        @if (filled($pedido->documento))
+                                            <p class="mt-1 max-w-40 truncate text-xs text-slate-500" title="Documento en el ERP">Doc. {{ $pedido->documento }}</p>
+                                        @endif
+                                    </td>
+                                    <td class="whitespace-nowrap px-4 py-3 text-slate-700">{{ $pedido->recipiente ?: '—' }}</td>
+                                    <td class="whitespace-nowrap px-4 py-3 text-slate-700">{{ $pedido->despachador ?: '—' }}</td>
+                                    @if ($paraFacturar)
+                                        <td class="whitespace-nowrap px-4 py-3">
+                                            @if ($pedido->grupo_id)
+                                                <button type="submit" form="grupo-{{ $pedido->grupo_id }}" class="font-semibold text-slate-500 hover:text-rose-600">
+                                                    Grupo #{{ $pedido->grupo_id }} · deshacer
+                                                </button>
+                                            @endif
+                                        </td>
+                                    @endif
+                                    <td class="whitespace-nowrap px-4 py-3 text-right">
+                                        <a href="{{ route('pedidos.edit', $pedido->id) }}" class="font-semibold text-slate-500 hover:text-primary">Modificar</a>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </x-tabla-desplazable>
+            </form>
+
+            @foreach ($gruposEnPagina as $grupoId)
+                <form id="grupo-{{ $grupoId }}" method="POST" action="{{ route('pedidos.desagrupar', $grupoId) }}" class="hidden">
+                    @csrf
+                    @method('DELETE')
+                </form>
+            @endforeach
 
             @if ($pedidos->hasPages())
                 <nav aria-label="Paginación" class="flex flex-wrap items-center justify-between gap-3 text-sm">
