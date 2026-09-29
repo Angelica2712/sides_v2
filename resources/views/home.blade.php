@@ -18,10 +18,11 @@
                 <p class="mt-1 text-sm text-slate-500">Pide a un administrador de SIDES que te asigne permisos.</p>
             </section>
         @else
-            <section aria-labelledby="titulo-modulos">
-                <h2 id="titulo-modulos" class="mb-3 text-sm font-bold uppercase tracking-wide text-slate-500">Tus módulos</h2>
+            @foreach ($secciones as $seccion => $modulosSeccion)
+            <section aria-labelledby="seccion-{{ $loop->index }}">
+                <h2 id="seccion-{{ $loop->index }}" class="mb-3 text-sm font-bold uppercase tracking-wide text-slate-500">{{ $seccion }}</h2>
                 <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                    @foreach ($modulos as $modulo)
+                    @foreach ($modulosSeccion as $modulo)
                         <a href="{{ route($modulo['ruta']) }}"
                            class="group flex items-start gap-3 rounded-xl bg-white border border-slate-200 p-4 shadow-sm transition hover:border-primary hover:shadow-md">
                             <span class="flex items-center justify-center size-11 shrink-0 rounded-lg bg-primary-soft text-primary transition-colors group-hover:bg-primary group-hover:text-white">
@@ -37,6 +38,7 @@
                     @endforeach
                 </div>
             </section>
+            @endforeach
         @endif
     </div>
 </x-layouts.app>

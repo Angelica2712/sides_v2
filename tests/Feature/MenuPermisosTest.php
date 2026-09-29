@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Support\MenuSides;
 use Tests\Concerns\TablasSides;
 use Tests\TestCase;
 
@@ -27,8 +28,22 @@ class MenuPermisosTest extends TestCase
 
         $this->actingAs($usuario)->get('/home')
             ->assertOk()
-            ->assertSee('Hola, Operador Prueba')
-            ->assertSeeInOrder(['Monitor', 'Picking', 'Batch Picking', 'Packing', 'Etiquetas', 'Pedidos', 'Filtro monitor', 'Resumen', 'Usuarios', 'Informes', 'Configuración', 'Guías', 'Rutas']);
+            ->assertSee('Operador Prueba')
+            // Menú agrupado por secciones (MenuSides::SECCIONES).
+            ->assertSeeInOrder([
+                'Operación', 'Monitor', 'Picking', 'Batch Picking', 'Packing', 'Etiquetas',
+                'Despacho', 'Guías', 'Rutas',
+                'Consultas', 'Pedidos', 'Resumen', 'Informes',
+                'Ajustes', 'Filtro monitor', 'Configuración', 'Usuarios',
+            ]);
+    }
+
+    public function test_cada_modulo_esta_en_una_sola_seccion_del_menu(): void
+    {
+        $agrupados = array_merge(...array_values(MenuSides::SECCIONES));
+
+        $this->assertEqualsCanonicalizing(array_keys(MenuSides::MODULOS), $agrupados);
+        $this->assertSame(count($agrupados), count(array_unique($agrupados)));
     }
 
     public function test_usuario_de_guias_de_carga_no_ve_etiquetas(): void

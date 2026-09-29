@@ -16,6 +16,7 @@ class HomeController extends Controller
         return view('home', [
             'cfg' => $cfg,
             'modulos' => MenuSides::visibles($usuario, $cfg),
+            'secciones' => MenuSides::porSeccion($usuario, $cfg),
         ]);
     }
 }

@@ -37,6 +37,14 @@ class MenuSides
         'admin' => ['Administración', 'admin', 'shield', 'Droguerías y módulos que usa cada una.'],
     ];
 
+    /** Agrupación del menú lateral y del inicio, en el orden en que se muestran. */
+    public const SECCIONES = [
+        'Operación' => ['monitor', 'picking', 'batch', 'packing', 'etiquetas'],
+        'Despacho' => ['guias', 'despacho', 'rutas'],
+        'Consultas' => ['pedidos', 'resumen', 'informes'],
+        'Ajustes' => ['filtromonitor', 'configuracion', 'usuarios', 'admin'],
+    ];
+
     /** Módulos que el administrador activa por droguería. Una droguería nueva los tiene apagados. */
     public const OPCIONALES = ['batch', 'etiquetas', 'guias', 'rutas'];
 
@@ -84,6 +92,27 @@ class MenuSides
             'icono' => $icono,
             'descripcion' => $descripcion,
         ];
+    }
+
+    /**
+     * Módulos visibles agrupados por sección; las secciones sin módulos visibles no aparecen.
+     *
+     * @return array<string, list<array{clave: string, etiqueta: string, ruta: string, icono: string, descripcion: string}>>
+     */
+    public static function porSeccion(SidesUsers $usuario, ?SidesCfg $cfg): array
+    {
+        $secciones = [];
+        foreach (self::SECCIONES as $seccion => $claves) {
+            $modulos = array_values(array_map(
+                fn (string $clave) => self::modulo($clave),
+                array_filter($claves, fn (string $clave) => self::puede($usuario, $cfg, $clave)),
+            ));
+            if ($modulos) {
+                $secciones[$seccion] = $modulos;
+            }
+        }
+
+        return $secciones;
     }
 
     /** @return list<array{clave: string, etiqueta: string, ruta: string, icono: string, descripcion: string}> */

@@ -3,9 +3,10 @@
 @php
     $usuario = auth()->user();
     $cfg = $usuario->cfg;
-    $itemsMenu = array_merge(
-        [['etiqueta' => 'Inicio', 'ruta' => 'home', 'icono' => 'home']],
-        \App\Support\MenuSides::visibles($usuario, $cfg)
+    // Inicio va solo, arriba; el resto, agrupado por secciones (MenuSides::SECCIONES).
+    $seccionesMenu = array_merge(
+        ['' => [['etiqueta' => 'Inicio', 'ruta' => 'home', 'icono' => 'home']]],
+        \App\Support\MenuSides::porSeccion($usuario, $cfg)
     );
     $nombreCorto = $cfg?->nomcorto ?: ($cfg?->nombre ?: 'SIDES');
 @endphp
@@ -50,19 +51,27 @@
                     </a>
                 </div>
 
-                <nav class="flex-1 overflow-y-auto py-3 px-2.5 space-y-1" aria-label="Menú principal">
-                    @foreach ($itemsMenu as $item)
-                        @php $activo = request()->routeIs($item['ruta']); @endphp
-                        <a href="{{ route($item['ruta']) }}" title="{{ $item['etiqueta'] }}"
-                           @if ($activo) aria-current="page" @endif
-                           class="group flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm font-semibold transition-colors {{ $activo ? 'bg-primary text-white shadow-sm' : 'text-slate-300 hover:bg-primary hover:text-white' }}">
-                            <span class="flex items-center justify-center size-9 rounded-md shrink-0 transition-colors {{ $activo ? 'bg-primary-soft text-primary' : 'text-slate-400 group-hover:bg-white group-hover:text-primary' }}">
-                                <svg class="size-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                    {!! \App\Support\IconosSvg::path($item['icono']) !!}
-                                </svg>
-                            </span>
-                            <span x-show="!sidebarCollapsed" class="truncate">{{ $item['etiqueta'] }}</span>
-                        </a>
+                <nav class="flex-1 overflow-y-auto py-3 px-2.5" aria-label="Menú principal">
+                    @foreach ($seccionesMenu as $seccion => $itemsMenu)
+                        <div class="space-y-1 {{ $loop->first ? '' : 'mt-4' }}">
+                            @if ($seccion !== '')
+                                <p x-show="!sidebarCollapsed" class="px-2.5 pb-1 text-[11px] font-bold uppercase tracking-widest text-slate-500">{{ $seccion }}</p>
+                                <div x-show="sidebarCollapsed" x-cloak class="mx-2.5 mb-2 border-t border-sidebar-border" aria-hidden="true"></div>
+                            @endif
+                            @foreach ($itemsMenu as $item)
+                                @php $activo = request()->routeIs($item['ruta']); @endphp
+                                <a href="{{ route($item['ruta']) }}" title="{{ $item['etiqueta'] }}"
+                                   @if ($activo) aria-current="page" @endif
+                                   class="group flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm font-semibold transition-colors {{ $activo ? 'bg-primary text-white shadow-sm' : 'text-slate-300 hover:bg-primary hover:text-white' }}">
+                                    <span class="flex items-center justify-center size-9 rounded-md shrink-0 transition-colors {{ $activo ? 'bg-primary-soft text-primary' : 'text-slate-400 group-hover:bg-white group-hover:text-primary' }}">
+                                        <svg class="size-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                            {!! \App\Support\IconosSvg::path($item['icono']) !!}
+                                        </svg>
+                                    </span>
+                                    <span x-show="!sidebarCollapsed" class="truncate">{{ $item['etiqueta'] }}</span>
+                                </a>
+                            @endforeach
+                        </div>
                     @endforeach
                 </nav>
 
