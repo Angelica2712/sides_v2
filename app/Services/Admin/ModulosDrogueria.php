@@ -12,16 +12,16 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
-/** Guarda qué módulos opcionales usa una droguería (administración de SIDES v2). */
+/** Guarda qué módulos usa una droguería (administración de SIDES v2): básicos y opcionales. */
 class ModulosDrogueria
 {
     /**
-     * @param  list<string>  $activos  claves de MenuSides::OPCIONALES
+     * @param  list<string>  $activos  claves de MenuSides::CONTROLABLES que quedan encendidas
      * @param  array{activarPacking: bool, procAlcabalaPicking: bool, formatoPersEtiq?: ?string, activarImpTicket?: bool, activar_etiqueta_packing?: bool, mostrarEntrega?: bool}  $opciones
      */
     public function guardar(SidesCfg $cfg, array $activos, array $opciones, SidesUsers $admin): void
     {
-        $activos = array_values(array_intersect(MenuSides::OPCIONALES, $activos));
+        $activos = array_values(array_intersect(MenuSides::CONTROLABLES, $activos));
         $batchActivo = in_array('batch', $activos, true);
         $etiquetasActivo = in_array('etiquetas', $activos, true);
 
@@ -42,7 +42,7 @@ class ModulosDrogueria
                 'mostrarEntrega' => ($opciones['mostrarEntrega'] ?? false) ? 1 : 0,
             ])->save();
 
-            foreach (MenuSides::OPCIONALES as $modulo) {
+            foreach (MenuSides::CONTROLABLES as $modulo) {
                 SidesModuloSucursal::query()->updateOrCreate(
                     ['codisb' => $cfg->codisb, 'modulo' => $modulo],
                     ['activo' => in_array($modulo, $activos, true) ? 1 : 0, 'actualizado_por' => $admin->name, 'updated_at' => Carbon::now()]

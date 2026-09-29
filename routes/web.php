@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\AuditoriaController;
 use App\Http\Controllers\BatchPickingController;
 use App\Http\Controllers\ConfiguracionController;
 use App\Http\Controllers\DespachoController;
@@ -61,6 +62,8 @@ Route::middleware('auth')->group(function () {
             Route::get('droguerias/{codisb}', 'edit')->name('edit');
             Route::put('droguerias/{codisb}', 'update')->name('update');
         });
+
+    Route::get('admin/auditoria', AuditoriaController::class)->name('auditoria.index')->middleware('permiso:auditoria');
 
     Route::prefix('admin')->name('admin.webhooks.')->middleware('permiso:admin')
         ->controller(WebhooksController::class)->whereNumber(['webhook', 'entrega'])
@@ -222,7 +225,7 @@ Route::middleware('auth')->group(function () {
 
     // Módulos aún no portados: al portar uno, se registra arriba con su controlador real
     // (mismo nombre "{clave}.index" y middleware permiso:{clave}) y se agrega a $portados.
-    $portados = ['monitor', 'picking', 'packing', 'batch', 'admin', 'etiquetas', 'pedidos', 'configuracion', 'usuarios', 'rutas', 'guias', 'despacho', 'resumen', 'filtromonitor', 'informes'];
+    $portados = ['monitor', 'picking', 'packing', 'batch', 'admin', 'etiquetas', 'pedidos', 'configuracion', 'usuarios', 'rutas', 'guias', 'despacho', 'resumen', 'filtromonitor', 'informes', 'auditoria'];
     foreach (MenuSides::MODULOS as $clave => [, $uri]) {
         if (in_array($clave, $portados, true)) {
             continue;

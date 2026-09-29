@@ -1,8 +1,11 @@
 @php
     $nueva = ! $drogueria->exists;
     $activos = old('modulos', $activos);
-    $opcionales = collect(\App\Support\MenuSides::OPCIONALES)
-        ->map(fn ($clave) => ['clave' => $clave, 'nombre' => \App\Support\MenuSides::MODULOS[$clave][0], 'descripcion' => \App\Support\MenuSides::MODULOS[$clave][3]]);
+    $aModulo = fn ($clave) => ['clave' => $clave, 'nombre' => \App\Support\MenuSides::MODULOS[$clave][0], 'descripcion' => \App\Support\MenuSides::MODULOS[$clave][3]];
+    $grupos = [
+        'Módulos básicos' => ['ayuda' => 'Encendidos por defecto. Apágalos si esta droguería no debe usarlos.', 'modulos' => array_map($aModulo, \App\Support\MenuSides::BASICOS)],
+        'Módulos opcionales' => ['ayuda' => 'Apagados por defecto. Enciéndelos cuando la droguería los vaya a usar.', 'modulos' => array_map($aModulo, \App\Support\MenuSides::OPCIONALES)],
+    ];
 @endphp
 
 <x-layouts.app :titulo="$nueva ? 'Nueva droguería' : 'Configurar droguería'">
@@ -51,7 +54,7 @@
             <section class="space-y-3 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
                 <div>
                     <h3 class="text-lg font-extrabold text-slate-900">Módulos</h3>
-                    <p class="text-sm text-slate-500">Monitor, Picking, Pedidos, Resumen, Usuarios, Informes y Configuración están siempre activos.</p>
+                    <p class="text-sm text-slate-500">Lo que esta droguería puede usar. Un módulo apagado desaparece del menú de todos sus usuarios, sin importar sus permisos.</p>
                 </div>
 
                 <label class="flex cursor-pointer items-start gap-3 rounded-xl p-3 ring-1 ring-slate-200 has-checked:bg-primary-soft has-checked:ring-primary">
@@ -64,7 +67,12 @@
                     </span>
                 </label>
 
-                @foreach ($opcionales as $modulo)
+                @foreach ($grupos as $tituloGrupo => $grupo)
+                <div class="pt-2">
+                    <h4 class="text-xs font-bold uppercase tracking-wide text-slate-500">{{ $tituloGrupo }}</h4>
+                    <p class="text-xs text-slate-500">{{ $grupo['ayuda'] }}</p>
+                </div>
+                @foreach ($grupo['modulos'] as $modulo)
                     <div class="rounded-xl ring-1 ring-slate-200 has-[input[name='modulos[]']:checked]:bg-primary-soft has-[input[name='modulos[]']:checked]:ring-primary">
                         <label class="flex cursor-pointer items-start gap-3 p-3">
                             <input type="checkbox" name="modulos[]" value="{{ $modulo['clave'] }}" @checked(in_array($modulo['clave'], $activos, true))
@@ -115,6 +123,7 @@
                             </div>
                         @endif
                     </div>
+                @endforeach
                 @endforeach
             </section>
 

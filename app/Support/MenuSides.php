@@ -35,6 +35,7 @@ class MenuSides
         'despacho' => ['Carga y descarga', 'despacho', 'package', 'Carga de bultos al camión y entrega a los clientes.'],
         'rutas' => ['Rutas', 'rutas', 'truck', 'Rutas y clientes por ruta.'],
         'admin' => ['Administración', 'admin', 'shield', 'Droguerías y módulos que usa cada una.'],
+        'auditoria' => ['Auditoría', 'admin/auditoria', 'eye', 'Qué hace cada usuario en todas las droguerías.'],
     ];
 
     /** Agrupación del menú lateral y del inicio, en el orden en que se muestran. */
@@ -42,19 +43,36 @@ class MenuSides
         'Operación' => ['monitor', 'picking', 'batch', 'packing', 'etiquetas'],
         'Despacho' => ['guias', 'despacho', 'rutas'],
         'Consultas' => ['pedidos', 'resumen', 'informes'],
-        'Ajustes' => ['filtromonitor', 'configuracion', 'usuarios', 'admin'],
+        'Ajustes' => ['filtromonitor', 'configuracion', 'usuarios', 'admin', 'auditoria'],
     ];
 
     /** Módulos que el administrador activa por droguería. Una droguería nueva los tiene apagados. */
     public const OPCIONALES = ['batch', 'etiquetas', 'guias', 'rutas'];
 
-    /** Módulos que dependen de un opcional con otra clave. */
+    /**
+     * Módulos básicos: encendidos salvo que el administrador los apague para una droguería (fila
+     * con activo = 0 en sides_modulo_sucursal). Sin fila siguen encendidos, así las droguerías
+     * que ya existían no pierden nada.
+     */
+    public const BASICOS = ['monitor', 'picking', 'pedidos', 'filtromonitor', 'resumen', 'usuarios', 'informes', 'configuracion'];
+
+    /**
+     * Todos los módulos con interruptor por droguería en Administración. Packing tiene el suyo en
+     * sides_cfg.activarPacking (cambia el flujo del pedido), Carga y descarga sigue a Guías y
+     * Administración no se puede apagar.
+     */
+    public const CONTROLABLES = [...self::BASICOS, ...self::OPCIONALES];
+
+    /** Módulos que dependen de otro con otra clave. */
     private const DEPENDE_DE = ['despacho' => 'guias'];
 
     public static function puede(SidesUsers $usuario, ?SidesCfg $cfg, string $clave): bool
     {
-        $opcional = self::DEPENDE_DE[$clave] ?? $clave;
-        if (in_array($opcional, self::OPCIONALES, true) && ! $cfg?->tieneModulo($opcional)) {
+        $modulo = self::DEPENDE_DE[$clave] ?? $clave;
+        if (in_array($modulo, self::OPCIONALES, true) && ! $cfg?->tieneModulo($modulo)) {
+            return false;
+        }
+        if (in_array($modulo, self::BASICOS, true) && $cfg && ! $cfg->tieneModulo($modulo)) {
             return false;
         }
 
@@ -75,7 +93,8 @@ class MenuSides
             // Permiso propio de dromarko; droactiva y mastranto usaban activarUsuario.
             'informes' => (bool) $usuario->activarInformes,
             'despacho' => $usuario->activarGuiaCarga || $usuario->activarGuiaDescarga,
-            'admin' => (bool) $usuario->esAdmin,
+            // La auditoría es de la empresa: solo el administrador de SIDES.
+            'admin', 'auditoria' => (bool) $usuario->esAdmin,
             default => false,
         };
     }

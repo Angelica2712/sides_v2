@@ -3,16 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Models\Sides\SidesCfg;
-use App\Models\Sides\SidesModuloSucursal;
 use App\Services\Admin\ModulosDrogueria;
 use App\Support\FormatosEtiqueta;
+use App\Support\MenuSides;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
-/** Administración de SIDES v2: droguerías y los módulos opcionales que usa cada una. */
+/** Administración de SIDES v2: droguerías y los módulos que usa cada una. */
 class AdminController extends Controller
 {
     public function __construct(private readonly ModulosDrogueria $modulos)
@@ -21,17 +21,19 @@ class AdminController extends Controller
 
     public function index(): View
     {
+        $droguerias = SidesCfg::query()->orderBy('nombre')->get();
+
         return view('admin.index', [
-            'droguerias' => SidesCfg::query()->orderBy('nombre')->get(),
-            'modulosActivos' => SidesModuloSucursal::query()->where('activo', 1)->get()->groupBy('codisb')
-                ->map(fn ($filas) => $filas->pluck('modulo')->all()),
+            'droguerias' => $droguerias,
+            'modulosActivos' => $droguerias->mapWithKeys(fn (SidesCfg $cfg) => [$cfg->codisb => $cfg->modulosEncendidos()]),
             'usuarios' => DB::table('sides_users')->selectRaw('codisb, COUNT(*) as total')->groupBy('codisb')->pluck('total', 'codisb'),
         ]);
     }
 
     public function create(): View
     {
-        return view('admin.form', ['drogueria' => new SidesCfg(['activarPacking' => 1]), 'activos' => []]);
+        // Una droguería nueva arranca con los módulos básicos; los opcionales se encienden a mano.
+        return view('admin.form', ['drogueria' => new SidesCfg(['activarPacking' => 1]), 'activos' => MenuSides::BASICOS]);
     }
 
     public function store(Request $request): RedirectResponse
@@ -58,7 +60,7 @@ class AdminController extends Controller
 
         return view('admin.form', [
             'drogueria' => $drogueria,
-            'activos' => $drogueria->modulos()->where('activo', 1)->pluck('modulo')->all(),
+            'activos' => $drogueria->modulosEncendidos(),
         ]);
     }
 

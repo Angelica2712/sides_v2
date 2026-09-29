@@ -94,6 +94,27 @@ trait TablasSides
             $table->string('codisb', 20);
         });
 
+        // RegistrarAuditoria escribe en cada acción, así que toda prueba la necesita.
+        Schema::create('sides_auditoria', function (Blueprint $table) {
+            $table->id();
+            $table->dateTime('fecha');
+            $table->string('codisb', 20)->nullable();
+            $table->unsignedBigInteger('usuario_id')->nullable();
+            $table->string('usuario', 150)->nullable();
+            $table->string('nombre', 150)->nullable();
+            $table->string('modulo', 40);
+            $table->string('accion', 80);
+            $table->string('descripcion', 500);
+            $table->string('referencia', 60)->nullable();
+            $table->string('resultado', 10)->default('OK');
+            $table->string('detalle_resultado', 500)->nullable();
+            $table->json('datos')->nullable();
+            $table->string('metodo', 10)->nullable();
+            $table->string('ruta', 255)->nullable();
+            $table->string('ip', 45)->nullable();
+            $table->string('agente', 255)->nullable();
+        });
+
         // NotificarMonitor registra webhooks en cada acción, así que toda prueba las necesita.
         $this->crearTablasWebhooks();
     }

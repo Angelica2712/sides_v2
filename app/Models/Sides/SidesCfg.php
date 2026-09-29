@@ -2,6 +2,7 @@
 
 namespace App\Models\Sides;
 
+use App\Support\MenuSides;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -14,18 +15,25 @@ class SidesCfg extends Model
     protected $primaryKey = 'codisb';
     protected $fillable = ['codisb', 'nombre', 'nomcorto', 'rif', 'direccion', 'contacto', 'telefono', 'localidad', 'activarPacking', 'fecha', 'pedidoxAprobar', 'valorIva', 'modoAlcabala', 'activarValPicking', 'activarEtiPacking', 'claveValPicking', 'ordenPedSides', 'EtiPieNota', 'ModoCesta', 'pitarPacking', 'activarValPacking', 'EstiloPicking', 'TamLetraMonitor', 'activarVerOperadorMonitor', 'MostrarTituloMonitor', 'formatoPersEtiq', 'mostrarEntrega', 'mostrarDepPiking', 'nomdominio', 'imagenPdfRutaAbsoluta', 'nomsubdominio', 'activarImpTicket', 'mostrarObsMonitor', 'mostrarTranMonitor', 'dominioapiSeped', 'titulopagina', 'mostrarExiRealPick', 'activar_separador_automatico', 'activar_etiqueta_packing', 'latitud', 'longitud', 'activarSincronizacionRutas', 'procAlcabalaPicking'];
 
-    /** Módulos opcionales activos, leídos una vez por instancia. */
-    private ?array $modulosActivos = null;
+    /** modulo => activo, leído una vez por instancia. */
+    private ?array $estadoModulos = null;
 
     public function modulos(): HasMany
     {
         return $this->hasMany(SidesModuloSucursal::class, 'codisb', 'codisb');
     }
 
+    /** Sin fila en sides_modulo_sucursal: los básicos están encendidos y los opcionales apagados. */
     public function tieneModulo(string $modulo): bool
     {
-        $this->modulosActivos ??= $this->modulos()->where('activo', 1)->pluck('modulo')->all();
+        $this->estadoModulos ??= $this->modulos()->pluck('activo', 'modulo')->map(fn ($activo) => (bool) $activo)->all();
 
-        return in_array($modulo, $this->modulosActivos, true);
+        return $this->estadoModulos[$modulo] ?? in_array($modulo, MenuSides::BASICOS, true);
+    }
+
+    /** @return list<string> módulos con interruptor que la droguería tiene encendidos */
+    public function modulosEncendidos(): array
+    {
+        return array_values(array_filter(MenuSides::CONTROLABLES, fn (string $modulo) => $this->tieneModulo($modulo)));
     }
 }
