@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Events\MonitorActualizado;
+use App\Models\Sides\SidesMonitor;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Event;
 use Tests\Concerns\TablasSides;
@@ -235,5 +236,92 @@ class MonitorTest extends TestCase
         $this->crearCfg();
 
         $this->actingAs($this->operador(['activarPicking' => 1]))->get('/monitor')->assertForbidden();
+    }
+
+    private function pedidosConRutas(): void
+    {
+        $this->crearCfg();
+        $this->crearPedido(['id' => 1, 'estado' => 'RECIBIDO', 'ruta' => 'Caracas Este', 'nomcli' => 'CLIENTE CARACAS']);
+        $this->crearPedido(['id' => 2, 'estado' => 'PICKING', 'ruta' => 'LOS TEQUES', 'nomcli' => 'CLIENTE TEQUES']);
+        $this->crearPedido(['id' => 3, 'estado' => 'PACKING', 'ruta' => 'CIUDAD GUAYANA', 'nomcli' => 'CLIENTE GUAYANA']);
+        $this->crearPedido(['id' => 4, 'estado' => 'RECIBIDO', 'ruta' => null, 'nomcli' => 'CLIENTE SIN RUTA']);
+        $this->crearPedido(['id' => 5, 'estado' => 'FACTURADO', 'ruta' => 'CARACAS', 'nomcli' => 'CLIENTE FACTURADO']);
+    }
+
+    public function test_sin_filtros_no_muestra_pestanas(): void
+    {
+        $this->pedidosConRutas();
+
+        $this->actingAs($this->operador())->get('/monitor')
+            ->assertOk()
+            ->assertViewHas('pestanas', [])
+            ->assertDontSee('Filtros del monitor');
+    }
+
+    public function test_pestanas_con_conteo_y_filtro_por_fragmento_de_ruta(): void
+    {
+        $this->pedidosConRutas();
+        $centro = SidesMonitor::query()->create(['descrip' => 'Centro', 'criterio' => 'caracas, TEQUES', 'codisb' => '505094939']);
+        SidesMonitor::query()->create(['descrip' => 'Oriente', 'criterio' => 'GUAYANA', 'codisb' => '505094939']);
+        SidesMonitor::query()->create(['descrip' => 'De otra sucursal', 'criterio' => 'CARACAS', 'codisb' => '999999999']);
+
+        $this->actingAs($this->operador())->get('/monitor')
+            ->assertOk()
+            ->assertViewHas('pestanas', fn (array $pestanas) => array_column($pestanas, 'total', 'nombre') === [
+                'Todos' => 4, 'Centro' => 2, 'Oriente' => 1,
+            ])
+            ->assertDontSee('De otra sucursal');
+
+        $this->get("/monitor?filtro={$centro->id}")
+            ->assertOk()
+            ->assertViewHas('filtro', fn ($filtro) => $filtro->is($centro))
+            ->assertViewHas('pedidos', fn ($pedidos) => $pedidos->pluck('id')->sort()->values()->all() === [1, 2])
+            ->assertDontSee('CLIENTE GUAYANA')
+            ->assertDontSee('CLIENTE SIN RUTA');
+
+        // El fragmento que refresca en vivo respeta el filtro elegido.
+        $this->get("/monitor/contenido?filtro={$centro->id}")
+            ->assertOk()
+            ->assertSee('CLIENTE TEQUES')
+            ->assertDontSee('CLIENTE GUAYANA');
+    }
+
+    public function test_filtro_de_otra_sucursal_o_inexistente_muestra_todos(): void
+    {
+        $this->pedidosConRutas();
+        $ajeno = SidesMonitor::query()->create(['descrip' => 'Ajeno', 'criterio' => 'GUAYANA', 'codisb' => '999999999']);
+
+        $this->actingAs($this->operador());
+
+        foreach ([$ajeno->id, 9999, 'abc'] as $valor) {
+            $this->get("/monitor?filtro={$valor}")
+                ->assertOk()
+                ->assertViewHas('filtro', null)
+                ->assertViewHas('pedidos', fn ($pedidos) => $pedidos->count() === 4);
+        }
+    }
+
+    public function test_filtro_sin_pedidos_explica_el_criterio(): void
+    {
+        $this->pedidosConRutas();
+        $filtro = SidesMonitor::query()->create(['descrip' => 'Occidente', 'criterio' => 'MARACAIBO', 'codisb' => '505094939']);
+
+        $this->actingAs($this->operador())->get("/monitor?filtro={$filtro->id}")
+            ->assertOk()
+            ->assertSee('No hay pedidos en proceso en «Occidente»')
+            ->assertSee('MARACAIBO');
+    }
+
+    public function test_marca_los_pedidos_que_caen_en_un_filtro(): void
+    {
+        $this->pedidosConRutas();
+        SidesMonitor::query()->create(['descrip' => 'Centro', 'criterio' => 'CARACAS', 'caracterLogo' => 'CTR', 'codisb' => '505094939']);
+        SidesMonitor::query()->create(['descrip' => 'Oriente', 'criterio' => 'GUAYANA', 'caracterLogo' => 'N/A', 'codisb' => '505094939']);
+
+        $this->actingAs($this->operador())->get('/monitor')
+            ->assertOk()
+            ->assertViewHas('marcas', fn (array $marcas) => $marcas[1] === [['texto' => 'CTR', 'filtro' => 'Centro']]
+                && $marcas[2] === [] && $marcas[3] === [] && $marcas[4] === [])
+            ->assertSee('title="Filtro Centro"', false);
     }
 }

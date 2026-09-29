@@ -62,13 +62,34 @@ $numero = fn ($valor) => number_format((int) $valor, 0, ',', '.');
     </section>
 @endif
 
+{{-- Filtros con nombre (se administran en Filtro monitor). Son enlaces con ?filtro={id}: el
+     filtro elegido queda en la URL y monitor.js la reenvía al pedir este fragmento. --}}
+@if ($pestanas)
+    <nav aria-label="Filtros del monitor" class="flex gap-2 overflow-x-auto pb-1">
+        @foreach ($pestanas as $pestana)
+            @php $activa = $pestana['id'] === $filtro?->id; @endphp
+            <a href="{{ route('monitor.index', array_filter(['filtro' => $pestana['id']])) }}"
+               @if ($activa) aria-current="page" @endif
+               class="flex shrink-0 items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-bold shadow-sm ring-1 transition-colors {{ $activa ? 'bg-primary text-white ring-primary' : 'bg-white text-slate-700 ring-slate-200 hover:bg-slate-50' }}">
+                {{ $pestana['nombre'] }}
+                <span class="rounded-full px-2 py-0.5 text-xs font-black tabular-nums {{ $activa ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-700' }}">{{ $numero($pestana['total']) }}</span>
+            </a>
+        @endforeach
+    </nav>
+@endif
+
 @if ($pedidos->isEmpty())
     <section class="rounded-2xl bg-white p-12 text-center shadow-sm ring-1 ring-slate-200">
         <span class="mx-auto flex size-14 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
             <svg class="size-7" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{!! \App\Support\IconosSvg::path('check') !!}</svg>
         </span>
-        <h2 class="mt-4 text-lg font-bold text-slate-900">No hay pedidos en proceso</h2>
-        <p class="mt-1 text-sm text-slate-500">Cuando SEPED apruebe un pedido para esta sucursal, aparecerá aquí.</p>
+        @if ($filtro)
+            <h2 class="mt-4 text-lg font-bold text-slate-900">No hay pedidos en proceso en «{{ $filtro->descrip }}»</h2>
+            <p class="mt-1 text-sm text-slate-500">Entran los pedidos cuya ruta contiene: {{ $filtro->criterio }}.</p>
+        @else
+            <h2 class="mt-4 text-lg font-bold text-slate-900">No hay pedidos en proceso</h2>
+            <p class="mt-1 text-sm text-slate-500">Cuando SEPED apruebe un pedido para esta sucursal, aparecerá aquí.</p>
+        @endif
     </section>
 @else
     {{-- Vista tablero --}}
@@ -106,7 +127,12 @@ $numero = fn ($valor) => number_format((int) $valor, 0, ',', '.');
                         <article class="rounded-xl border-l-4 bg-white p-4 shadow-sm ring-1 ring-slate-200/80 transition-shadow hover:shadow-md {{ $nivel['borde'] }}">
                             <div class="flex items-start justify-between gap-3">
                                 <div class="min-w-0">
-                                    <p class="truncate text-xs font-bold uppercase tracking-wide text-slate-500">{{ $pedido->ruta ?: 'Sin ruta' }}</p>
+                                    <p class="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-slate-500">
+                                        <span class="truncate">{{ $pedido->ruta ?: 'Sin ruta' }}</span>
+                                        @foreach ($marcas[$pedido->id] as $marca)
+                                            <span class="shrink-0 rounded bg-violet-100 px-1.5 py-0.5 text-[10px] font-black normal-case tracking-normal text-violet-800" title="Filtro {{ $marca['filtro'] }}">{{ $marca['texto'] }}</span>
+                                        @endforeach
+                                    </p>
                                     <p class="font-black leading-tight text-slate-900 tabular-nums" style="font-size: {{ $tamNumeroPedido }}px">#{{ $pedido->id }}</p>
                                 </div>
                                 <span class="inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold ring-1 tabular-nums {{ $nivel['chip'] }}"
@@ -202,7 +228,12 @@ $numero = fn ($valor) => number_format((int) $valor, 0, ',', '.');
                         @endphp
                         <tr class="even:bg-slate-50/70 hover:bg-primary-soft">
                             <td class="px-3 py-2 align-top">
-                                <div class="font-extrabold">{{ $pedido->ruta ?: 'S/RUTA' }}</div>
+                                <div class="font-extrabold">
+                                    {{ $pedido->ruta ?: 'S/RUTA' }}
+                                    @foreach ($marcas[$pedido->id] as $marca)
+                                        <span class="ml-1 rounded bg-violet-100 px-1.5 py-0.5 align-middle text-[0.6em] font-black text-violet-800" title="Filtro {{ $marca['filtro'] }}">{{ $marca['texto'] }}</span>
+                                    @endforeach
+                                </div>
                                 <div class="max-w-72 truncate text-[0.6em] font-medium text-slate-500" title="{{ $pedido->nomcli }}">
                                     {{ $pedido->codcli }} · {{ $pedido->nomcli }}
                                 </div>

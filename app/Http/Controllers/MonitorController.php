@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Seped\Pedido;
+use App\Support\Monitor\FiltrosMonitor;
 use App\Support\Monitor\TiemposPedido;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -21,6 +22,8 @@ use Illuminate\View\View;
  * - No se refresca por tiempo (el legacy y la primera versión de v2 recargaban la página cada
  *   60 segundos): el navegador escucha el canal sides-monitor.{codisb} y pide `contenido`
  *   apenas algo cambia. Ver App\Events\MonitorActualizado.
+ * - Los filtros con nombre (sides_monitor) son pestañas que se eligen con ?filtro={id}; el
+ *   legacy los aplicaba en otra pantalla (Adminmonitor2Controller). Ver FiltrosMonitor.
  */
 class MonitorController extends Controller
 {
@@ -49,10 +52,26 @@ class MonitorController extends Controller
         $codisb = $usuario->codisb;
         $ahora = Carbon::now();
 
+        // Pedidos en proceso por ruta: de acá salen el conteo de cada pestaña y las rutas que
+        // entran al filtro elegido.
+        $porRuta = Pedido::query()
+            ->where('codisb', $codisb)
+            ->whereIn('estado', self::ESTADOS)
+            ->selectRaw('ruta, COUNT(*) as total')
+            ->groupBy('ruta')
+            ->get()
+            ->map(fn ($fila) => ['ruta' => $fila->ruta, 'total' => (int) $fila->total]);
+
+        $filtros = FiltrosMonitor::deSucursal($codisb);
+        $filtro = $filtros->buscar($request->query('filtro'));
+
         $pedidos = Pedido::query()
             ->leftJoin('sides_pedido_operacion as op', 'op.id_pedido', '=', 'pedido.id')
             ->where('pedido.codisb', $codisb)
             ->whereIn('pedido.estado', self::ESTADOS)
+            ->when($filtro, fn ($consulta) => $consulta->whereIn(
+                'pedido.ruta', FiltrosMonitor::rutasDe($filtro, $porRuta->pluck('ruta'))
+            ))
             ->orderBy('pedido.fecenviado')
             ->orderBy('pedido.nomcli')
             ->select([
@@ -61,7 +80,8 @@ class MonitorController extends Controller
                 'pedido.numren', 'pedido.numund', 'pedido.observacion', 'pedido.codtransp',
                 'op.recipiente', 'op.despachador',
             ])
-            ->paginate(100);
+            ->paginate(100)
+            ->withQueryString();
 
         $porEstado = Pedido::query()
             ->where('codisb', $codisb)
@@ -86,6 +106,19 @@ class MonitorController extends Controller
             'cfg' => $cfg,
             'codisb' => $codisb,
             'pedidos' => $pedidos,
+            'filtro' => $filtro,
+            // Pestañas: "Todos" y un filtro por fila de sides_monitor, con los pedidos en proceso de cada uno.
+            'pestanas' => $filtros->todos()->isEmpty() ? [] : [
+                ['id' => null, 'nombre' => 'Todos', 'total' => $porRuta->sum('total')],
+                ...$filtros->todos()->map(fn ($f) => [
+                    'id' => $f->id,
+                    'nombre' => $f->descrip,
+                    'total' => $porRuta->filter(fn ($r) => FiltrosMonitor::coincide($f, $r['ruta']))->sum('total'),
+                ])->all(),
+            ],
+            'marcas' => $filas
+                ->mapWithKeys(fn (Pedido $pedido) => [$pedido->id => $filtros->marcas($pedido->ruta)])
+                ->all(),
             // Vista tablero: una columna por estado, conservando el orden por fecha de envío.
             'columnas' => collect(self::ESTADOS)
                 ->reject(fn (string $estado) => $estado === 'PACKING' && ! ($cfg?->activarPacking ?? true))

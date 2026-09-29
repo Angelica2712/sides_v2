@@ -84,6 +84,14 @@ trait TablasSides
             $table->timestamp('updated_at')->nullable();
             $table->unique(['codisb', 'modulo']);
         });
+
+        Schema::create('sides_monitor', function (Blueprint $table) {
+            $table->increments('id');
+            $table->string('descrip', 100);
+            $table->string('criterio', 100);
+            $table->string('caracterLogo', 10)->nullable();
+            $table->string('codisb', 20);
+        });
     }
 
     /** `pedido` de SEPED (solo columnas que usa SIDES) y sides_pedido_operacion. */

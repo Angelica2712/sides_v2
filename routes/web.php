@@ -6,6 +6,7 @@ use App\Http\Controllers\BatchPickingController;
 use App\Http\Controllers\ConfiguracionController;
 use App\Http\Controllers\DespachoController;
 use App\Http\Controllers\EtiquetasController;
+use App\Http\Controllers\FiltroMonitorController;
 use App\Http\Controllers\GuiasController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ModuloPendienteController;
@@ -105,6 +106,17 @@ Route::middleware('auth')->group(function () {
             Route::post('{pedido}/anular', 'anular')->name('anular');
         });
 
+    Route::prefix('filtro-monitor')->name('filtromonitor.')->middleware('permiso:filtromonitor')
+        ->controller(FiltroMonitorController::class)->whereNumber('filtro')
+        ->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('nuevo', 'create')->name('create');
+            Route::post('/', 'store')->name('store');
+            Route::get('{filtro}', 'edit')->name('edit');
+            Route::put('{filtro}', 'update')->name('update');
+            Route::delete('{filtro}', 'destroy')->name('destroy');
+        });
+
     Route::prefix('configuracion')->name('configuracion.')->middleware('permiso:configuracion')
         ->controller(ConfiguracionController::class)
         ->group(function () {
@@ -174,7 +186,7 @@ Route::middleware('auth')->group(function () {
 
     // Módulos aún no portados: al portar uno, se registra arriba con su controlador real
     // (mismo nombre "{clave}.index" y middleware permiso:{clave}) y se agrega a $portados.
-    $portados = ['monitor', 'picking', 'packing', 'batch', 'admin', 'etiquetas', 'pedidos', 'configuracion', 'usuarios', 'rutas', 'guias', 'despacho'];
+    $portados = ['monitor', 'picking', 'packing', 'batch', 'admin', 'etiquetas', 'pedidos', 'configuracion', 'usuarios', 'rutas', 'guias', 'despacho', 'filtromonitor'];
     foreach (MenuSides::MODULOS as $clave => [, $uri]) {
         if (in_array($clave, $portados, true)) {
             continue;
