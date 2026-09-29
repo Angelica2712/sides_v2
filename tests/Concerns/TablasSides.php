@@ -47,6 +47,7 @@ trait TablasSides
             $table->integer('mostrarTranMonitor')->default(0);
             $table->string('ordenPedSides', 20)->default('DESCRIPCION');
             $table->integer('activarValPicking')->default(0);
+            $table->tinyInteger('pickingOrdenLibre')->default(0);
             $table->string('claveValPicking', 20)->default('123456');
             $table->integer('mostrarExiRealPick')->default(0);
             $table->integer('mostrarDepPiking')->default(0);

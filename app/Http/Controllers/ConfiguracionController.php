@@ -30,7 +30,7 @@ class ConfiguracionController extends Controller
 
     public const INTERRUPTORES = [
         'MostrarTituloMonitor', 'activarVerOperadorMonitor', 'mostrarObsMonitor', 'mostrarTranMonitor',
-        'activarValPicking', 'mostrarExiRealPick', 'mostrarDepPiking',
+        'activarValPicking', 'pickingOrdenLibre', 'mostrarExiRealPick', 'mostrarDepPiking',
         'activarValPacking', 'activar_separador_automatico',
     ];
 

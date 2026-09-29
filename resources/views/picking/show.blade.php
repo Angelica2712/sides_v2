@@ -6,6 +6,7 @@
             'alerta' => route('picking.alerta', $pedido->id),
         ],
         'requiereClave' => (bool) $cfg?->activarValPicking,
+        'ordenLibre' => (bool) $cfg?->pickingOrdenLibre,
     ];
     $mostrarExistencia = (bool) $cfg?->mostrarExiRealPick;
     $mostrarDeposito = (bool) $cfg?->mostrarDepPiking;
@@ -70,6 +71,9 @@
                 <button type="submit" class="rounded-2xl bg-slate-800 px-5 text-sm font-bold text-white hover:bg-slate-900">Buscar</button>
             </form>
             <x-lector-opciones />
+            <p x-show="ordenLibre" x-cloak class="text-xs text-slate-500">
+                Puedes escanear <span class="font-semibold">cualquier producto pendiente</span>, en el orden que te quede más cómodo.
+            </p>
         </div>
 
         <p x-show="mensaje" x-cloak aria-live="polite"
@@ -80,7 +84,7 @@
         <template x-if="actual">
             <section class="overflow-hidden rounded-2xl bg-white shadow-md ring-2 ring-primary" aria-labelledby="producto-actual">
                 <div class="flex flex-wrap items-center justify-between gap-2 bg-primary px-5 py-3 text-white">
-                    <span id="producto-actual" class="text-xs font-bold uppercase tracking-widest text-white/80">Siguiente producto</span>
+                    <span id="producto-actual" class="text-xs font-bold uppercase tracking-widest text-white/80" x-text="elegido ? 'Producto elegido' : 'Siguiente producto'">Siguiente producto</span>
                     <span class="text-xs font-semibold text-white/80">Ubicación</span>
                 </div>
                 <div class="grid gap-4 p-5 sm:grid-cols-[1fr_auto]">
@@ -159,11 +163,15 @@
         {{-- Siguientes y revisados --}}
         <div class="grid gap-4 lg:grid-cols-2">
             <section class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
-                <h3 class="mb-2 text-sm font-bold uppercase tracking-wide text-slate-500">Siguientes (<span x-text="Math.max(pendientes.length - 1, 0)"></span>)</h3>
-                <p x-show="pendientes.length <= 1" class="py-3 text-sm text-slate-400">No hay más productos pendientes.</p>
+                <h3 class="mb-2 text-sm font-bold uppercase tracking-wide text-slate-500">Siguientes (<span x-text="siguientes.length"></span>)</h3>
+                <p x-show="ordenLibre && siguientes.length" x-cloak class="-mt-1 mb-2 text-xs text-slate-500">Toca un producto para recogerlo ahora.</p>
+                <p x-show="siguientes.length === 0" class="py-3 text-sm text-slate-400">No hay más productos pendientes.</p>
                 <ul class="divide-y divide-slate-100">
-                    <template x-for="renglon in pendientes.slice(1)" :key="renglon.item">
-                        <li class="flex items-center justify-between gap-3 py-2">
+                    <template x-for="renglon in siguientes" :key="renglon.item">
+                        <li class="flex items-center justify-between gap-3 py-2"
+                            :class="ordenLibre && !seleccionado ? 'cursor-pointer rounded-lg px-2 -mx-2 hover:bg-primary-soft' : ''"
+                            :role="ordenLibre ? 'button' : null" :tabindex="ordenLibre ? 0 : null"
+                            @click="elegir(renglon)" @keydown.enter.prevent="elegir(renglon)">
                             <div class="min-w-0">
                                 <p class="truncate text-sm font-semibold text-slate-800" x-text="renglon.desprod"></p>
                                 <p class="text-xs text-slate-500" x-text="renglon.codprod + ' · ' + renglon.barra"></p>

@@ -67,6 +67,18 @@ class ConfiguracionTest extends TestCase
             $cfg->activarValPicking, $cfg->activarValPacking, $cfg->activar_separador_automatico,
         ]));
         $this->assertSame('OTRA SUCURSAL', SidesCfg::query()->find('OTRA')->nombre);
+        $this->assertSame(0, (int) $cfg->pickingOrdenLibre);
+    }
+
+    public function test_escanear_en_cualquier_orden_se_guarda_como_casilla(): void
+    {
+        $this->actingAs($this->usuario)->get('/configuracion')->assertSee('Escanear en cualquier orden');
+
+        $this->put('/configuracion', [...$this->formulario(), 'pickingOrdenLibre' => '1']);
+        $this->assertSame(1, (int) SidesCfg::query()->find('505094939')->pickingOrdenLibre);
+
+        $this->put('/configuracion', $this->formulario());
+        $this->assertSame(0, (int) SidesCfg::query()->find('505094939')->pickingOrdenLibre);
     }
 
     public function test_no_toca_packing_ni_modulos_del_administrador(): void

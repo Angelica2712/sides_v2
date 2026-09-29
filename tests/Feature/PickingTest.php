@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Seped\Pedido;
+use App\Models\Sides\SidesCfg;
 use App\Models\Sides\SidesLogInacPicking;
 use App\Models\Sides\SidesLogpicking;
 use App\Models\Sides\SidesPedidoOperacion;
@@ -133,6 +134,26 @@ class PickingTest extends TestCase
             ->assertViewHas('renglones', fn (array $renglones) => array_column($renglones, 'ubicacion') === ['A-01', 'B-02']);
 
         $this->assertSame('2026-09-15 10:00:00', (string) SidesPedidoOperacion::query()->find(500)->fecpicking2);
+    }
+
+    public function test_escanear_en_cualquier_orden_llega_a_la_pantalla_y_el_servidor_acepta_otro_producto(): void
+    {
+        $this->tomado(500);
+
+        // Apagado (por defecto): la pantalla exige el orden.
+        $this->actingAs($this->operario)->get('/picking/500')->assertSee('ordenLibre\u0022:false', false);
+
+        SidesCfg::query()->whereKey('505094939')->update(['pickingOrdenLibre' => 1]);
+        // Usuario fresco: el anterior guarda en memoria la configuración de la primera petición.
+        $this->actingAs($this->operario->fresh())->get('/picking/500')
+            ->assertSee('ordenLibre\u0022:true', false)
+            ->assertSee('Puedes escanear');
+
+        // El item 1 (B-02) va segundo en la lista por ubicación: se guarda antes que el primero.
+        $this->postJson('/picking/500/cantidad', ['item' => 1, 'cantidad' => 3, 'manual' => false])
+            ->assertOk()->assertJson(['cantdesp' => 3]);
+        $this->assertSame(3, (int) SidesPedrenOperacion::query()->where('id_pedido', 500)->where('item', 1)->value('cantdesp'));
+        $this->assertSame(-1, (int) SidesPedrenOperacion::query()->where('id_pedido', 500)->where('item', 2)->value('cantdesp'));
     }
 
     public function test_guardar_cantidad_valida_el_rango_y_la_clave_de_supervisor(): void

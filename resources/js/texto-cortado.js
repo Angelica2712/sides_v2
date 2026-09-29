@@ -16,7 +16,8 @@ function estaCortado(elemento) {
 export default function textoCortado() {
     document.addEventListener('click', (evento) => {
         const elemento = evento.target.closest(`.truncate, .${EXPANDIDO}`);
-        if (!elemento) return;
+        // Dentro de algo que se toca para elegirlo (role="button", p. ej. Siguientes en Picking), el toque elige.
+        if (!elemento || elemento.closest('[role="button"]')) return;
 
         const expandido = elemento.classList.contains(EXPANDIDO);
         if (!expandido && !estaCortado(elemento)) return;
