@@ -36,6 +36,7 @@ trait TablasSides
             $table->string('telefono', 50)->nullable();
             $table->string('localidad', 100)->nullable();
             $table->integer('activarPacking')->default(1);
+            $table->integer('pedidoxAprobar')->default(0);
             $table->integer('activarEtiPacking')->default(0);
             $table->integer('ModoCesta')->default(0);
             $table->tinyInteger('procAlcabalaPicking')->default(0);

@@ -14,6 +14,7 @@ use App\Http\Controllers\MonitorController;
 use App\Http\Controllers\PackingController;
 use App\Http\Controllers\PedidosController;
 use App\Http\Controllers\PickingController;
+use App\Http\Controllers\ResumenController;
 use App\Http\Controllers\RutasController;
 use App\Http\Controllers\UsuariosController;
 use App\Support\MenuSides;
@@ -106,6 +107,12 @@ Route::middleware('auth')->group(function () {
             Route::post('{pedido}/anular', 'anular')->name('anular');
         });
 
+    Route::prefix('resumen')->name('resumen.')->middleware('permiso:resumen')
+        ->controller(ResumenController::class)
+        ->group(function () {
+            Route::get('/', 'index')->name('index');
+        });
+
     Route::prefix('filtro-monitor')->name('filtromonitor.')->middleware('permiso:filtromonitor')
         ->controller(FiltroMonitorController::class)->whereNumber('filtro')
         ->group(function () {
@@ -186,7 +193,7 @@ Route::middleware('auth')->group(function () {
 
     // Módulos aún no portados: al portar uno, se registra arriba con su controlador real
     // (mismo nombre "{clave}.index" y middleware permiso:{clave}) y se agrega a $portados.
-    $portados = ['monitor', 'picking', 'packing', 'batch', 'admin', 'etiquetas', 'pedidos', 'configuracion', 'usuarios', 'rutas', 'guias', 'despacho', 'filtromonitor'];
+    $portados = ['monitor', 'picking', 'packing', 'batch', 'admin', 'etiquetas', 'pedidos', 'configuracion', 'usuarios', 'rutas', 'guias', 'despacho', 'resumen', 'filtromonitor'];
     foreach (MenuSides::MODULOS as $clave => [, $uri]) {
         if (in_array($clave, $portados, true)) {
             continue;
