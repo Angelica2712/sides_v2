@@ -85,7 +85,7 @@
                 </div>
                 <div class="grid gap-4 p-5 sm:grid-cols-[1fr_auto]">
                     <div class="min-w-0 space-y-1.5">
-                        <p class="text-xl font-extrabold leading-snug text-slate-900" x-text="actual.desprod"></p>
+                        <p class="text-xl font-extrabold leading-snug text-slate-900 [overflow-wrap:anywhere]" x-text="actual.desprod"></p>
                         <p class="text-sm text-slate-600">
                             Código <span class="font-bold text-slate-800" x-text="actual.codprod"></span>
                             · Barra <span class="font-mono font-bold text-slate-800" x-text="actual.barra"></span>

@@ -32,3 +32,16 @@
 [x-cloak] {
     display: none !important;
 }
+
+/* Palabras muy largas sin espacios (p. ej. "IBUTANCOL/IBUPROFENO/TIOCOLCHICOSIDO") se parten en
+   vez de salirse de su recuadro. break-word no cambia el ancho mínimo de tablas ni columnas. */
+main {
+    overflow-wrap: break-word;
+}
+
+/* Texto que estaba cortado con "…" y el usuario tocó para verlo completo (resources/js/texto-cortado.js). */
+.texto-expandido {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    cursor: pointer;
+}

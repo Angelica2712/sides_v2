@@ -128,7 +128,7 @@
                         @forelse ($renglones as $renglon)
                             <tr>
                                 <td class="px-4 py-3">
-                                    <p class="font-semibold text-slate-800">{{ $renglon->desprod }}</p>
+                                    <p class="font-semibold text-slate-800 [overflow-wrap:anywhere]">{{ $renglon->desprod }}</p>
                                     <p class="text-xs text-slate-500">{{ $renglon->codprod }} · <span class="font-mono">{{ $renglon->barra }}</span></p>
                                 </td>
                                 @php $vence = \App\Services\Despacho\RenglonesPedido::limpiarFecha($renglon->feclote); @endphp

@@ -78,7 +78,7 @@
                             {{-- Ubicaciones tipo "A01/Existencias/Picking/Area A/A01PICKPAE05A": el código final va en grande. --}}
                             <p class="text-2xl font-black tracking-tight text-slate-900" x-text="(producto.ubicacion || '').split('/').pop() || 'Sin ubicación'"></p>
                             <p x-show="producto.ubicacion.includes('/')" class="text-[11px] text-slate-400" x-text="producto.ubicacion"></p>
-                            <p class="font-bold text-slate-900" x-text="producto.desprod"></p>
+                            <p class="truncate font-bold text-slate-900" x-text="producto.desprod"></p>
                             <p class="text-xs text-slate-500">
                                 <span x-text="producto.codprod"></span> · <span class="font-mono" x-text="producto.barra"></span>
                                 <span x-show="producto.marca"> · <span x-text="producto.marca"></span></span>
@@ -123,7 +123,7 @@
         <dialog x-ref="elegirLote" class="m-auto w-[min(26rem,calc(100%-2rem))] rounded-2xl p-0 shadow-xl backdrop:bg-slate-900/60">
             <form @submit.prevent="confirmarLote()" class="space-y-4 p-6">
                 <h3 class="text-lg font-extrabold text-slate-900">¿Qué lote tienes en la mano?</h3>
-                <p class="text-sm text-slate-600" x-text="opcionesLote[0]?.desprod"></p>
+                <p class="text-sm text-slate-600 [overflow-wrap:anywhere]" x-text="opcionesLote[0]?.desprod"></p>
                 <fieldset class="space-y-2">
                     <legend class="sr-only">Lotes disponibles</legend>
                     <template x-for="(opcion, indice) in opcionesLote" :key="opcion.clave">
@@ -150,7 +150,7 @@
             <div class="space-y-4 p-6" x-show="actual">
                 <div>
                     <p class="text-2xl font-black text-slate-900" x-text="(actual?.ubicacion || '').split('/').pop() || 'Sin ubicación'"></p>
-                    <p class="font-bold text-slate-900" x-text="actual?.desprod"></p>
+                    <p class="font-bold text-slate-900 [overflow-wrap:anywhere]" x-text="actual?.desprod"></p>
                     <p class="text-xs text-slate-500" x-show="actual?.lote">Lote <span x-text="actual?.lote"></span></p>
                 </div>
                 <p class="text-slate-700">¿Recogiste las <span class="font-black" x-text="actual?.requerido"></span> unidades para todo el lote?</p>
@@ -166,7 +166,7 @@
             <form @submit.prevent="guardarEdicion()" class="space-y-4 p-6" x-show="actual">
                 <div>
                     <h3 class="text-lg font-extrabold text-slate-900">Cantidad recogida</h3>
-                    <p class="text-sm text-slate-600" x-text="actual?.desprod"></p>
+                    <p class="text-sm text-slate-600 [overflow-wrap:anywhere]" x-text="actual?.desprod"></p>
                 </div>
                 <label for="cantidad-lote" class="block text-sm font-semibold text-slate-700">Unidades para todo el lote (máximo <span x-text="actual?.requerido"></span>)</label>
                 <div class="flex items-stretch gap-2">

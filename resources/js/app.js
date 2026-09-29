@@ -8,8 +8,10 @@ import monitorEnVivo from './monitor';
 import packingPedido from './packing';
 import pickingPedido from './picking';
 import tablaDesplazable from './tabla-desplazable';
+import textoCortado from './texto-cortado';
 
 window.Alpine = Alpine;
+textoCortado();
 
 Alpine.data('pickingPedido', pickingPedido);
 Alpine.data('tablaDesplazable', tablaDesplazable);

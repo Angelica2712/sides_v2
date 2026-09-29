@@ -106,7 +106,7 @@
                     }">
                     <div class="flex flex-wrap items-start justify-between gap-3">
                         <div class="min-w-0 flex-1">
-                            <p class="font-bold text-slate-900" x-text="renglon.desprod"></p>
+                            <p class="truncate font-bold text-slate-900" x-text="renglon.desprod"></p>
                             <p class="text-xs text-slate-500">
                                 <span x-text="renglon.codprod"></span> · <span class="font-mono" x-text="renglon.barra"></span>
                                 <span x-show="renglon.marca"> · <span x-text="renglon.marca"></span></span>
@@ -171,7 +171,7 @@
             <form @submit.prevent="guardarAjuste()" class="space-y-4 p-6" x-show="ajuste">
                 <div>
                     <h3 class="text-lg font-extrabold text-slate-900">Ajustar cantidad</h3>
-                    <p class="mt-1 text-sm text-slate-600" x-text="ajuste?.desprod"></p>
+                    <p class="mt-1 text-sm text-slate-600 [overflow-wrap:anywhere]" x-text="ajuste?.desprod"></p>
                 </div>
                 <div>
                     <label for="cantidad-ajuste" class="block text-sm font-semibold text-slate-700">Unidades que se despachan (máximo <span x-text="ajuste?.cantidad"></span>)</label>
