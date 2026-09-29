@@ -17,6 +17,7 @@ use App\Http\Controllers\PickingController;
 use App\Http\Controllers\ResumenController;
 use App\Http\Controllers\RutasController;
 use App\Http\Controllers\UsuariosController;
+use App\Http\Controllers\WebhooksController;
 use App\Support\MenuSides;
 use Illuminate\Support\Facades\Route;
 
@@ -58,6 +59,18 @@ Route::middleware('auth')->group(function () {
             Route::post('droguerias', 'store')->name('store');
             Route::get('droguerias/{codisb}', 'edit')->name('edit');
             Route::put('droguerias/{codisb}', 'update')->name('update');
+        });
+
+    Route::prefix('admin')->name('admin.webhooks.')->middleware('permiso:admin')
+        ->controller(WebhooksController::class)->whereNumber(['webhook', 'entrega'])
+        ->group(function () {
+            Route::get('droguerias/{codisb}/webhooks', 'index')->name('index');
+            Route::post('droguerias/{codisb}/webhooks', 'store')->name('store');
+            Route::put('webhooks/{webhook}', 'update')->name('update');
+            Route::delete('webhooks/{webhook}', 'destroy')->name('destroy');
+            Route::post('webhooks/{webhook}/secreto', 'secreto')->name('secreto');
+            Route::post('webhooks/{webhook}/probar', 'probar')->middleware('throttle:10,1')->name('probar');
+            Route::post('webhooks/entregas/{entrega}/reintentar', 'reintentar')->middleware('throttle:10,1')->name('reintentar');
         });
 
     Route::prefix('batch-picking')->name('batch.')->middleware('permiso:batch')

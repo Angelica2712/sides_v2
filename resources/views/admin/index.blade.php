@@ -24,7 +24,10 @@
                                 Código {{ $drogueria->codisb }} · {{ $usuarios[$drogueria->codisb] ?? 0 }} usuarios
                             </p>
                         </div>
-                        <a href="{{ route('admin.edit', $drogueria->codisb) }}" class="shrink-0 rounded-xl bg-white px-3 py-2 text-sm font-semibold text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50">Configurar</a>
+                        <div class="flex shrink-0 gap-2">
+                            <a href="{{ route('admin.webhooks.index', $drogueria->codisb) }}" class="rounded-xl bg-white px-3 py-2 text-sm font-semibold text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50">Webhooks</a>
+                            <a href="{{ route('admin.edit', $drogueria->codisb) }}" class="rounded-xl bg-white px-3 py-2 text-sm font-semibold text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50">Configurar</a>
+                        </div>
                     </div>
 
                     <div class="flex flex-wrap gap-1.5" aria-label="Módulos opcionales">

@@ -9,3 +9,4 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('sides:sincronizar-rutas')->hourly()->withoutOverlapping();
+Schedule::command('sides:enviar-webhooks')->everyMinute()->withoutOverlapping();

@@ -93,6 +93,40 @@ trait TablasSides
             $table->string('caracterLogo', 10)->nullable();
             $table->string('codisb', 20);
         });
+
+        // NotificarMonitor registra webhooks en cada acción, así que toda prueba las necesita.
+        $this->crearTablasWebhooks();
+    }
+
+    protected function crearTablasWebhooks(): void
+    {
+        Schema::create('sides_webhooks', function (Blueprint $table) {
+            $table->increments('id');
+            $table->string('codisb', 20);
+            $table->string('nombre', 100);
+            $table->string('url', 500);
+            $table->text('secreto');
+            $table->text('token')->nullable();
+            $table->json('eventos')->nullable();
+            $table->tinyInteger('activo')->default(1);
+            $table->string('creado_por', 100)->nullable();
+            $table->timestamps();
+        });
+
+        Schema::create('sides_webhook_entregas', function (Blueprint $table) {
+            $table->increments('id');
+            $table->uuid('uuid')->unique();
+            $table->integer('webhook_id');
+            $table->string('evento', 40);
+            $table->json('payload');
+            $table->string('estado', 15)->default('PENDIENTE');
+            $table->integer('intentos')->default(0);
+            $table->integer('ultimo_codigo')->nullable();
+            $table->string('ultimo_error', 500)->nullable();
+            $table->dateTime('proximo_intento_at')->nullable();
+            $table->dateTime('entregado_at')->nullable();
+            $table->timestamp('created_at')->nullable();
+        });
     }
 
     /** `pedido` de SEPED (solo columnas que usa SIDES) y sides_pedido_operacion. */
