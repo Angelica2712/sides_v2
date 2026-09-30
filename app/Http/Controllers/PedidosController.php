@@ -40,20 +40,28 @@ class PedidosController extends Controller
     public function show(Request $request, int $pedido): View
     {
         $usuario = $request->user();
+        $encontrado = $this->buscar($request, $pedido);
 
         return view('pedidos.show', [
-            'pedido' => $this->buscar($request, $pedido),
+            'pedido' => $encontrado,
             'renglones' => $this->pedidos->renglones($pedido),
             'lote' => $this->pedidos->loteDe($pedido),
+            'enErp' => $this->pedidos->enManosDelErp($encontrado),
             'puedeResetear' => (bool) $usuario->activarResetear,
             'puedeAnular' => (bool) $usuario->eliminarPedido,
         ]);
     }
 
-    public function edit(Request $request, int $pedido): View
+    public function edit(Request $request, int $pedido): View|RedirectResponse
     {
+        $encontrado = $this->buscar($request, $pedido);
+        if ($this->pedidos->enManosDelErp($encontrado)) {
+            return redirect()->route('pedidos.show', $pedido)
+                ->with('error', "El pedido #{$pedido} está en {$encontrado->estado}: ya lo tiene el sistema administrativo y no se puede cambiar desde SIDES.");
+        }
+
         return view('pedidos.edit', [
-            'pedido' => $this->buscar($request, $pedido),
+            'pedido' => $encontrado,
             'estados' => $this->pedidos->estadosEditables(SidesCfg::query()->find($request->user()->codisb)),
         ]);
     }

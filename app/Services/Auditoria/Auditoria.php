@@ -106,6 +106,7 @@ class Auditoria
 
         return match ($clave) {
             'sesion' => 'Sesión',
+            'siad' => 'SIAD',
             'admin' => str_starts_with($accion, 'admin.webhooks.') ? 'Webhooks' : 'Administración',
             default => MenuSides::MODULOS[$clave][0] ?? ucfirst($clave),
         };

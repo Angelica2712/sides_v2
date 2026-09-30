@@ -54,15 +54,22 @@
                     <p class="mt-1 truncate text-lg font-semibold text-slate-700">{{ $pedido->nomcli }}</p>
                 </div>
 
-                <div class="flex flex-wrap gap-2">
-                    <a href="{{ route('pedidos.edit', $pedido->id) }}" class="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50">Modificar</a>
-                    @if ($puedeResetear)
-                        <button type="button" @click="$refs.resetear.showModal()" class="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-amber-700 ring-1 ring-amber-300 hover:bg-amber-50">Resetear</button>
-                    @endif
-                    @if ($puedeAnular && $pedido->estado !== 'ANULADO')
-                        <button type="button" @click="$refs.anular.showModal()" class="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-rose-700 ring-1 ring-rose-300 hover:bg-rose-50">Anular pedido</button>
-                    @endif
-                </div>
+                @if ($enErp)
+                    {{-- FACTURANDO/FACTURADO/PROCESADO los maneja el SIAD: cambiarlos desde SIDES duplicaría la factura. --}}
+                    <p class="max-w-xs rounded-xl bg-slate-50 px-4 py-2 text-sm text-slate-600 ring-1 ring-slate-200">
+                        Este pedido ya lo tiene el sistema administrativo: no se puede modificar, resetear ni anular desde SIDES.
+                    </p>
+                @else
+                    <div class="flex flex-wrap gap-2">
+                        <a href="{{ route('pedidos.edit', $pedido->id) }}" class="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50">Modificar</a>
+                        @if ($puedeResetear)
+                            <button type="button" @click="$refs.resetear.showModal()" class="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-amber-700 ring-1 ring-amber-300 hover:bg-amber-50">Resetear</button>
+                        @endif
+                        @if ($puedeAnular && $pedido->estado !== 'ANULADO')
+                            <button type="button" @click="$refs.anular.showModal()" class="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-rose-700 ring-1 ring-rose-300 hover:bg-rose-50">Anular pedido</button>
+                        @endif
+                    </div>
+                @endif
             </div>
 
             <dl class="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">

@@ -177,6 +177,17 @@ trait TablasSides
             $table->text('documento')->nullable();
             $table->dateTime('fecrecibido')->nullable();
             $table->string('tipedido', 10)->default('NORMAL');
+            // Columnas de SEPED que la API del SIAD devuelve (y sobre las que superpone la operación de SIDES).
+            $table->string('despachador', 100)->nullable();
+            $table->string('embalador', 10)->nullable();
+            $table->string('recipiente', 50)->nullable();
+            $table->string('cantBultos', 100)->default('1');
+            $table->text('num_cesta_ped')->nullable();
+            $table->integer('despasignado')->default(0);
+            $table->dateTime('fecpicking2')->default('2020-01-01 00:00:00');
+            $table->dateTime('fecpacking2')->default('2020-01-01 00:00:00');
+            $table->integer('comprometeunidades')->default(0);
+            $table->integer('pedido_recibido')->default(0);
         });
 
         Schema::create('sides_etiqueta_pedido', function (Blueprint $table) {
@@ -219,6 +230,7 @@ trait TablasSides
             $table->dateTime('fecpacking2')->nullable();
             $table->string('cantBultos', 100)->default('1');
             $table->text('num_cesta_ped')->nullable();
+            $table->integer('comprometeunidades')->nullable();
         });
 
         Schema::create('pedren', function (Blueprint $table) {
@@ -239,6 +251,14 @@ trait TablasSides
             $table->integer('refrigerado')->default(0);
             $table->integer('psicotropico')->default(0);
             $table->string('listalote', 3000)->nullable();
+            $table->integer('bulto')->default(1);
+            $table->integer('packing')->default(0);
+            $table->integer('chequeado')->default(0);
+            $table->integer('alertalote')->default(0);
+            $table->integer('ExiRealPick')->default(0);
+            $table->integer('marcarDelete')->default(0);
+            $table->string('despachador', 60)->nullable();
+            $table->string('recipiente', 50)->default('1');
             $table->primary(['id', 'item']);
         });
 

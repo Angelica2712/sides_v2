@@ -14,44 +14,59 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
     <body class="font-sans antialiased bg-page text-slate-800">
-        <main class="min-h-screen grid lg:grid-cols-2">
-            <section class="hidden lg:flex flex-col justify-between bg-primary text-white p-12">
-                <div class="flex items-center gap-3">
-                    <img src="{{ asset('img/logo-sides.png') }}" alt="SIDES" class="size-14 rounded-full shadow-md">
-                    <span class="text-sm font-semibold tracking-widest uppercase text-white/80">SIDES V2</span>
-                </div>
+        @php
+            $funciones = ['Picking y packing con escáner', 'Batch picking por lotes', 'Guías, rutas y choferes', 'Monitor de pedidos en vivo'];
+        @endphp
 
-                <div>
-                    <h1 class="text-4xl font-extrabold leading-tight">Despacho de pedidos</h1>
-                    <p class="mt-3 max-w-md text-lg text-white/85">
-                        Picking, packing, guías y rutas en un solo lugar, conectado con SEPED.
-                    </p>
-                </div>
+        <main class="min-h-screen flex flex-col items-center justify-center gap-5 p-4 sm:p-8">
+            <div class="w-full max-w-4xl overflow-hidden rounded-3xl bg-white shadow-xl ring-1 ring-slate-200 grid md:grid-cols-2">
 
-                <p class="text-sm font-semibold text-white/75">{{ $cfg?->nombre ?? 'Sistema de despacho' }}</p>
-            </section>
+                {{-- Publicidad: qué es SIDES. Se oculta en teléfono para dejar solo el formulario. --}}
+                <section class="relative hidden md:flex flex-col justify-center overflow-hidden bg-gradient-to-br from-primary to-primary-dark p-10 text-white">
+                    <div aria-hidden="true" class="pointer-events-none absolute -right-20 -top-20 size-64 rounded-full bg-white/10"></div>
 
-            <section class="relative flex items-center justify-center p-6 pb-14 sm:p-10 sm:pb-14">
-                <div class="w-full max-w-sm">
-                    <div class="lg:hidden mb-8 flex items-center gap-3">
-                        <img src="{{ asset('img/logo-sides.png') }}" alt="SIDES" class="size-11 rounded-full shadow-md">
-                        <span class="text-sm font-semibold tracking-widest uppercase text-slate-500">SIDES V2</span>
+                    <div class="relative">
+                        <p class="text-xs font-bold uppercase tracking-widest text-white/70">Sistema de despacho</p>
+                        <h1 class="mt-3 text-3xl font-extrabold leading-tight">
+                            Del pedido al camión,<br>sin perder de vista nada.
+                        </h1>
+                        <p class="mt-3 max-w-xs text-sm text-white/80">
+                            SIDES lleva los pedidos de SEPED por picking, packing, facturación y entrega.
+                        </p>
+
+                        <ul class="mt-8 space-y-3">
+                            @foreach ($funciones as $f)
+                                <li class="flex items-center gap-3 text-sm font-semibold">
+                                    <svg class="size-5 shrink-0 text-white/70" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    {{ $f }}
+                                </li>
+                            @endforeach
+                        </ul>
+                    </div>
+                </section>
+
+                {{-- Formulario --}}
+                <section class="flex flex-col justify-center px-6 py-8 sm:px-10">
+                    <div class="flex flex-col items-center text-center">
+                        <img src="{{ asset('img/logo-sides.png') }}" alt="" class="size-20 rounded-full shadow-lg ring-4 ring-primary/15">
+                        <p class="mt-2.5 text-3xl font-extrabold tracking-tight text-primary leading-none">SIDES</p>
+                        <p class="mt-1.5 text-xs font-bold uppercase tracking-[0.25em] text-slate-400">by FULLTECH360</p>
+                        <p class="mt-4 text-sm text-slate-500">
+                            Entra con tu usuario de {{ $cfg ? ($cfg->nomcorto ?: $cfg->nombre) : 'SIDES' }}.
+                        </p>
                     </div>
 
-                    <h2 class="text-2xl font-extrabold text-slate-900">Iniciar sesión</h2>
-                    <p class="mt-1 text-sm text-slate-500">
-                        Entra con tu usuario de {{ $cfg ? ($cfg->nomcorto ?: $cfg->nombre) : 'SIDES' }}.
-                    </p>
-
-                    <form method="POST" action="{{ route('login') }}" class="mt-8 space-y-5" novalidate>
+                    <form method="POST" action="{{ route('login') }}" class="mt-5 space-y-4" novalidate>
                         @csrf
 
                         <div>
-                            <label for="email" class="block text-sm font-semibold text-slate-700">Correo</label>
+                            <label for="email" class="block text-sm font-semibold text-slate-700">Correo electrónico</label>
                             <input id="email" name="email" type="email" value="{{ old('email') }}"
                                    required autofocus autocomplete="username"
                                    @error('email') aria-invalid="true" aria-describedby="email-error" @enderror
-                                   class="mt-1.5 block w-full rounded-xl border-slate-300 bg-white px-3.5 py-2.5 text-sm shadow-sm focus:border-primary focus:ring-primary">
+                                   class="mt-1.5 block w-full rounded-xl border-slate-300 bg-slate-50 px-3.5 py-2.5 text-sm shadow-sm focus:border-primary focus:bg-white focus:ring-primary">
                             @error('email')
                                 <p id="email-error" class="mt-1.5 text-sm text-rose-600">{{ $message }}</p>
                             @enderror
@@ -62,7 +77,7 @@
                             <input id="password" name="password" type="password"
                                    required autocomplete="current-password"
                                    @error('password') aria-invalid="true" aria-describedby="password-error" @enderror
-                                   class="mt-1.5 block w-full rounded-xl border-slate-300 bg-white px-3.5 py-2.5 text-sm shadow-sm focus:border-primary focus:ring-primary">
+                                   class="mt-1.5 block w-full rounded-xl border-slate-300 bg-slate-50 px-3.5 py-2.5 text-sm shadow-sm focus:border-primary focus:bg-white focus:ring-primary">
                             @error('password')
                                 <p id="password-error" class="mt-1.5 text-sm text-rose-600">{{ $message }}</p>
                             @enderror
@@ -74,14 +89,18 @@
                         </label>
 
                         <button type="submit"
-                                class="w-full rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-primary-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
-                            Entrar
+                                class="w-full rounded-xl bg-gradient-to-r from-primary to-primary-dark px-5 py-2.5 text-sm font-bold text-white shadow-md transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+                            Ingresar
                         </button>
                     </form>
-                </div>
 
-                <x-creditos class="absolute inset-x-0 bottom-4 px-6" />
-            </section>
+                    @if ($cfg?->nombre)
+                        <p class="mt-6 text-center text-xs font-semibold text-slate-400">{{ $cfg->nombre }}</p>
+                    @endif
+                </section>
+            </div>
+
+            <x-creditos />
         </main>
     </body>
 </html>

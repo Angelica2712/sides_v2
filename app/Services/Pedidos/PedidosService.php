@@ -35,7 +35,14 @@ use Illuminate\Support\Facades\Log;
  */
 class PedidosService
 {
-    public const ESTADOS_EDITABLES = ['RECIBIDO', 'PICKING', 'PACKING', 'PEND-FACTURA', 'FACTURANDO', 'FACTURADO', 'ANULADO', 'CERRADO'];
+    /** Sin FACTURANDO/FACTURADO: esos estados solo los pone el SIAD (upd_pedido en SEPED). */
+    public const ESTADOS_EDITABLES = ['RECIBIDO', 'PICKING', 'PACKING', 'PEND-FACTURA', 'ANULADO', 'CERRADO'];
+
+    /**
+     * Estados en los que el pedido ya lo tiene el SIAD/ERP. SIDES no lo modifica, resetea ni anula:
+     * si lo devolviera a otro estado, el SIAD lo volvería a bajar y se duplicaría la factura.
+     */
+    public const ESTADOS_DEL_ERP = ['FACTURANDO', 'FACTURADO', 'PROCESADO'];
 
     public const POR_PAGINA = 50;
 
@@ -173,6 +180,7 @@ class PedidosService
     {
         DB::transaction(function () use ($usuario, $pedidoId, $datos) {
             $pedido = $this->pedidoBloqueado($usuario->codisb, $pedidoId);
+            $this->exigirFueraDelErp($pedido);
 
             if ($datos['estado'] !== $pedido->estado) {
                 $this->exigirSinLoteEnCurso($pedidoId);
@@ -208,6 +216,7 @@ class PedidosService
 
         DB::transaction(function () use ($usuario, $pedidoId) {
             $pedido = $this->pedidoBloqueado($usuario->codisb, $pedidoId);
+            $this->exigirFueraDelErp($pedido);
             $this->exigirSinLoteEnCurso($pedidoId);
 
             $cargada = SidesEtiquetaPedido::query()->where('numepedi', (string) $pedidoId)->whereIn('estado', ['EN GUIA', 'CARGADO', 'ENTREGADO'])->first();
@@ -244,6 +253,7 @@ class PedidosService
             if ($pedido->estado === 'ANULADO') {
                 throw new PedidosException("El pedido #{$pedidoId} ya está anulado.");
             }
+            $this->exigirFueraDelErp($pedido);
             $this->exigirSinLoteEnCurso($pedidoId);
 
             $anterior = $pedido->estado;
@@ -331,6 +341,18 @@ class PedidosService
         }
 
         return $pedido;
+    }
+
+    public function enManosDelErp(Pedido $pedido): bool
+    {
+        return in_array($pedido->estado, self::ESTADOS_DEL_ERP, true);
+    }
+
+    private function exigirFueraDelErp(Pedido $pedido): void
+    {
+        if ($this->enManosDelErp($pedido)) {
+            throw new PedidosException("El pedido #{$pedido->id} está en {$pedido->estado}: ya lo tiene el sistema administrativo y no se puede cambiar desde SIDES.");
+        }
     }
 
     private function exigirSinLoteEnCurso(int $pedidoId): void

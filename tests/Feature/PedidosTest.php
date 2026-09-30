@@ -121,18 +121,35 @@ class PedidosTest extends TestCase
         $this->get('/pedidos/400/modificar')->assertOk()->assertSee('Modificar pedido #400');
 
         $this->put('/pedidos/400', [
-            'estado' => 'FACTURADO', 'fecrecibido' => '', 'fecpicking' => '2026-09-15T08:30', 'fecpacking' => '',
+            'estado' => 'CERRADO', 'fecrecibido' => '', 'fecpicking' => '2026-09-15T08:30', 'fecpacking' => '',
             'feccompletado' => '', 'fecfacturado' => '2026-09-15T09:45', 'recipiente' => 'C9', 'observacion' => 'Revisado por Ana',
         ])->assertRedirect(route('pedidos.show', 400))->assertSessionHas('mensaje', 'Pedido #400 modificado.');
 
         $pedido = Pedido::query()->find(400);
         $this->assertSame(
-            ['FACTURADO', '2026-09-15 08:30:00', '2026-09-15 09:45:00', '2020-01-01 00:00:00', 'Revisado por Ana'],
+            ['CERRADO', '2026-09-15 08:30:00', '2026-09-15 09:45:00', '2020-01-01 00:00:00', 'Revisado por Ana'],
             [$pedido->estado, (string) $pedido->fecpicking, (string) $pedido->fecfacturado, (string) $pedido->fecrecibido, $pedido->observacion]
         );
         $this->assertSame('C9', SidesPedidoOperacion::query()->find(400)->recipiente);
 
         $this->put('/pedidos/400', ['estado' => 'INVENTADO'])->assertSessionHasErrors(['estado' => 'Elige un estado de la lista.']);
+        // FACTURANDO/FACTURADO solo los pone el SIAD.
+        $this->put('/pedidos/400', ['estado' => 'FACTURADO'])->assertSessionHasErrors(['estado' => 'Elige un estado de la lista.']);
+    }
+
+    public function test_un_pedido_en_manos_del_siad_no_se_cambia_desde_sides(): void
+    {
+        $this->crearPedido(['id' => 800, 'estado' => 'FACTURANDO']);
+        $this->actingAs($this->jefe());
+        $mensaje = 'El pedido #800 está en FACTURANDO: ya lo tiene el sistema administrativo y no se puede cambiar desde SIDES.';
+
+        $this->get('/pedidos/800')->assertOk()->assertSee('ya lo tiene el sistema administrativo')->assertDontSee('>Modificar</a>', false);
+        $this->get('/pedidos/800/modificar')->assertRedirect(route('pedidos.show', 800))->assertSessionHas('error', $mensaje);
+        $this->put('/pedidos/800', ['estado' => 'PEND-FACTURA'])->assertSessionHas('error', $mensaje);
+        $this->post('/pedidos/800/resetear')->assertSessionHas('error', $mensaje);
+        $this->post('/pedidos/800/anular')->assertSessionHas('error', $mensaje);
+
+        $this->assertSame('FACTURANDO', Pedido::query()->find(800)->estado);
     }
 
     public function test_resetear_devuelve_el_pedido_a_recibido_y_limpia_el_trabajo_de_sides(): void
@@ -168,7 +185,7 @@ class PedidosTest extends TestCase
     {
         $this->crearPedido(['id' => 600, 'estado' => 'PICKING']);
         $lote = $this->lote('CONFIRMADO', 600);
-        $this->crearPedido(['id' => 700, 'estado' => 'FACTURADO']);
+        $this->crearPedido(['id' => 700, 'estado' => 'PEND-FACTURA']);
         SidesEtiquetaPedido::query()->insert(['numepedi' => '700', 'etiqueta' => '700-01', 'codcli' => 'C001', 'nomcli' => 'CLIENTE', 'ruta' => 'RUTA 1', 'estado' => 'EN GUIA', 'guia' => 12]);
 
         $this->actingAs($this->usuario);

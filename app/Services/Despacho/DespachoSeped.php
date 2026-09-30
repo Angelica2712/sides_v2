@@ -9,6 +9,9 @@ use Illuminate\Support\Facades\DB;
  * (fin de packing, o fin de picking si la sucursal no usa packing). Es la única escritura de
  * SIDES sobre pedren y replica el upd_pedren del legacy:
  * <=0 NO FACTURADO, menos de lo solicitado PARCIAL, completo FACTURADO.
+ *
+ * El resto del despacho (lote, despachador, embalador, bultos...) se queda en sides_*_operacion:
+ * la API del SIAD lo superpone al responder (App\Services\Siad\SiadPedidosService).
  */
 class DespachoSeped
 {
