@@ -134,6 +134,7 @@ $numero = fn ($valor) => number_format((int) $valor, 0, ',', '.');
                                         @endforeach
                                     </p>
                                     <p class="font-black leading-tight text-slate-900 tabular-nums" style="font-size: {{ $tamNumeroPedido }}px">#{{ $pedido->id }}</p>
+                                    <x-parte-pedido :parte="$partes[$pedido->id] ?? null" class="mt-1" />
                                 </div>
                                 <span class="inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold ring-1 tabular-nums {{ $nivel['chip'] }}"
                                       title="{{ $nivel['texto'] }}: {{ TiemposPedido::formatear($enEtapa) }} {{ mb_strtolower($meta['titulo']) }}">
@@ -238,7 +239,10 @@ $numero = fn ($valor) => number_format((int) $valor, 0, ',', '.');
                                     {{ $pedido->codcli }} · {{ $pedido->nomcli }}
                                 </div>
                             </td>
-                            <td class="px-3 py-2 align-top font-extrabold text-rose-600 tabular-nums">{{ $pedido->id }}</td>
+                            <td class="px-3 py-2 align-top font-extrabold text-rose-600 tabular-nums">
+                                {{ $pedido->id }}
+                                <x-parte-pedido :parte="$partes[$pedido->id] ?? null" class="block w-fit" />
+                            </td>
                             <td class="whitespace-nowrap px-3 py-2 align-top tabular-nums">{{ $fecha($pedido->fecenviado) }}</td>
                             <td class="px-3 py-2 text-right align-top tabular-nums">{{ $numero($pedido->numren) }}</td>
                             <td class="px-3 py-2 text-right align-top tabular-nums">{{ $numero($pedido->numund) }}</td>

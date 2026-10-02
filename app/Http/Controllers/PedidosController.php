@@ -7,6 +7,7 @@ use App\Models\Sides\SidesCfg;
 use App\Services\Pedidos\PedidosException;
 use App\Services\Pedidos\PedidosService;
 use App\Support\Monitor\NotificarMonitor;
+use App\Support\PartesPedido;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -30,8 +31,11 @@ class PedidosController extends Controller
 
         $this->pedidos->anularFacturandoViejos($codisb);
 
+        $pedidos = $this->pedidos->listar($codisb, $filtros);
+
         return view('pedidos.index', [
-            'pedidos' => $this->pedidos->listar($codisb, $filtros),
+            'pedidos' => $pedidos,
+            'partes' => PartesPedido::deLista($codisb, $pedidos->getCollection()),
             'contadores' => $this->pedidos->contadores($codisb),
             'filtros' => $filtros,
         ]);
@@ -46,6 +50,7 @@ class PedidosController extends Controller
             'pedido' => $encontrado,
             'renglones' => $this->pedidos->renglones($pedido),
             'lote' => $this->pedidos->loteDe($pedido),
+            'familia' => PartesPedido::familia($encontrado),
             'enErp' => $this->pedidos->enManosDelErp($encontrado),
             'puedeResetear' => (bool) $usuario->activarResetear,
             'puedeAnular' => (bool) $usuario->eliminarPedido,

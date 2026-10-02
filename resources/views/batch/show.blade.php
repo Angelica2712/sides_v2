@@ -43,7 +43,10 @@
                     <tbody class="divide-y divide-slate-100 text-slate-700">
                         @foreach ($pedidos as $pedido)
                             <tr>
-                                <td class="px-4 py-2 font-bold text-slate-900 tabular-nums">#{{ $pedido->id }}</td>
+                                <td class="px-4 py-2 font-bold text-slate-900 tabular-nums">
+                                    #{{ $pedido->id }}
+                                    <x-parte-pedido :parte="$partes[$pedido->id] ?? null" class="ml-1" />
+                                </td>
                                 <td class="px-4 py-2">{{ $pedido->nomcli }} <span class="text-xs text-slate-400">{{ $pedido->codcli }}</span></td>
                                 <td class="px-4 py-2">{{ $pedido->ruta ?: '—' }}</td>
                                 <td class="px-4 py-2">{{ $pedido->estado }}</td>

@@ -82,6 +82,37 @@
             </dl>
         </section>
 
+        @if ($familia->isNotEmpty())
+            @php $raiz = \App\Support\PartesPedido::raiz($pedido); @endphp
+            {{-- SEPED parte el pedido cuando pasa de cfg.numRengPedido renglones: cada parte lleva el número del original en idori. --}}
+            <section class="rounded-2xl bg-sky-50 p-5 ring-1 ring-sky-200">
+                <h3 class="font-extrabold text-sky-900">Pedido partido por exceso de renglones</h3>
+                <p class="mt-1 text-sm text-sky-800">
+                    @if ($raiz === (int) $pedido->id)
+                        SEPED separó este pedido en {{ $familia->count() }} partes al pasarlo a SIDES.
+                    @else
+                        Este pedido es una parte del pedido original <strong>#{{ $raiz }}</strong>, que SEPED separó al pasarlo a SIDES.
+                    @endif
+                </p>
+                @if (! $familia->contains('id', $raiz))
+                    <p class="mt-1 text-xs text-sky-700">El pedido original #{{ $raiz }} ya no está en la base de datos.</p>
+                @endif
+                <ul class="mt-3 flex flex-wrap gap-2">
+                    @foreach ($familia as $miembro)
+                        @php $actual = (int) $miembro->id === (int) $pedido->id; @endphp
+                        <li>
+                            <a href="{{ route('pedidos.show', $miembro->id) }}" @if ($actual) aria-current="page" @endif
+                               class="flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm ring-1 {{ $actual ? 'ring-2 ring-primary' : 'ring-sky-200 hover:ring-primary' }}">
+                                <span class="font-black tabular-nums text-slate-900">#{{ $miembro->id }}</span>
+                                <span class="text-xs text-slate-500">{{ (int) $miembro->id === $raiz ? 'original' : 'parte' }} · {{ $numero($miembro->numren) }} reng.</span>
+                                <x-estado-pedido :estado="$miembro->estado" />
+                            </a>
+                        </li>
+                    @endforeach
+                </ul>
+            </section>
+        @endif
+
         <div class="grid gap-4 lg:grid-cols-3">
             <section class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200 lg:col-span-2">
                 <h3 class="font-extrabold text-slate-900">Datos del pedido</h3>

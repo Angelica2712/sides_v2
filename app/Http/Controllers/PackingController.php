@@ -12,6 +12,7 @@ use App\Services\Packing\PackingException;
 use App\Services\Packing\PackingService;
 use App\Support\MenuSides;
 use App\Support\Monitor\NotificarMonitor;
+use App\Support\PartesPedido;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -39,16 +40,21 @@ class PackingController extends Controller
                     $filtro->where('pedido.id', 'like', "%{$buscar}%")
                         ->orWhere('op.recipiente', $buscar)
                         ->orWhere('pedido.codcli', 'like', "%{$buscar}%")
-                        ->orWhere('pedido.nomcli', 'like', "%{$buscar}%");
+                        ->orWhere('pedido.nomcli', 'like', "%{$buscar}%")
+                        ->orWhere('pedido.idori', $buscar);
                 });
             })
             ->orderBy('pedido.fecpacking')
             ->get([
                 'pedido.id', 'pedido.codcli', 'pedido.nomcli', 'pedido.ruta', 'pedido.fecpacking',
-                'pedido.numren', 'pedido.numund', 'op.recipiente', 'op.despachador', 'op.embalador',
+                'pedido.numren', 'pedido.numund', 'pedido.idori', 'op.recipiente', 'op.despachador', 'op.embalador',
             ]);
 
-        return view('packing.index', ['pedidos' => $pedidos, 'buscar' => $buscar]);
+        return view('packing.index', [
+            'pedidos' => $pedidos,
+            'partes' => PartesPedido::deLista($request->user()->codisb, $pedidos),
+            'buscar' => $buscar,
+        ]);
     }
 
     public function show(Request $request, int $pedido): View|RedirectResponse
@@ -86,6 +92,7 @@ class PackingController extends Controller
 
         return view('packing.show', [
             'pedido' => $datosPedido,
+            'parte' => PartesPedido::deLista($usuario->codisb, [$datosPedido])[(int) $datosPedido->id] ?? null,
             'renglones' => $renglones,
             'cfg' => $cfg,
         ]);

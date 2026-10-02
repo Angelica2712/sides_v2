@@ -188,6 +188,8 @@ trait TablasSides
             $table->dateTime('fecpacking2')->default('2020-01-01 00:00:00');
             $table->integer('comprometeunidades')->default(0);
             $table->integer('pedido_recibido')->default(0);
+            // Número del pedido original cuando SEPED lo partió por exceso de renglones.
+            $table->string('idori', 50)->nullable();
         });
 
         Schema::create('sides_etiqueta_pedido', function (Blueprint $table) {

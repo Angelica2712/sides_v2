@@ -68,7 +68,7 @@ class BatchPickingService
             ->orderBy('pedido.id')
             ->get([
                 'pedido.id', 'pedido.codcli', 'pedido.nomcli', 'pedido.ruta', 'pedido.estado', 'pedido.fecha',
-                'pedido.fecprocesado', 'pedido.numren', 'pedido.numund',
+                'pedido.fecprocesado', 'pedido.numren', 'pedido.numund', 'pedido.idori',
             ]);
     }
 
@@ -130,7 +130,7 @@ class BatchPickingService
             ->orderBy('pedido.id')
             ->get([
                 'pedido.id', 'pedido.codcli', 'pedido.nomcli', 'pedido.ruta', 'pedido.estado', 'pedido.fecha',
-                'pedido.numren', 'pedido.numund', 'op.recipiente', 'op.despachador', 'op.despasignado',
+                'pedido.numren', 'pedido.numund', 'pedido.idori', 'op.recipiente', 'op.despachador', 'op.despasignado',
             ]);
     }
 

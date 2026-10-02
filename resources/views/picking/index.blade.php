@@ -78,6 +78,7 @@
                         <div class="min-w-0 flex-1">
                             <div class="flex flex-wrap items-center gap-2">
                                 <span class="text-2xl font-black text-slate-900 tabular-nums">#{{ $pedido->id }}</span>
+                                <x-parte-pedido :parte="$partes[$pedido->id] ?? null" />
                                 <span class="rounded-full px-2.5 py-0.5 text-xs font-bold ring-1 {{ $pedido->estado === 'PICKING' ? 'bg-amber-50 text-amber-700 ring-amber-200' : 'bg-slate-100 text-slate-700 ring-slate-200' }}">
                                     {{ $pedido->estado }}
                                 </span>

@@ -11,6 +11,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use App\Support\MenuSides;
 use App\Support\Monitor\NotificarMonitor;
+use App\Support\PartesPedido;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
@@ -44,18 +45,20 @@ class PickingController extends Controller
                         ->orWhere('op.recipiente', $buscar)
                         ->orWhere('pedido.codcli', 'like', "%{$buscar}%")
                         ->orWhere('pedido.nomcli', 'like', "%{$buscar}%")
-                        ->orWhere('pedido.ruta', 'like', "%{$buscar}%");
+                        ->orWhere('pedido.ruta', 'like', "%{$buscar}%")
+                        ->orWhere('pedido.idori', $buscar);
                 });
             })
             ->orderBy('pedido.fecprocesado')
             ->get([
                 'pedido.id', 'pedido.codcli', 'pedido.nomcli', 'pedido.ruta', 'pedido.estado',
-                'pedido.fecprocesado', 'pedido.numren', 'pedido.numund',
+                'pedido.fecprocesado', 'pedido.numren', 'pedido.numund', 'pedido.idori',
                 'op.recipiente', 'op.despachador', 'op.despasignado',
             ]);
 
         return view('picking.index', [
             'pedidos' => $pedidos,
+            'partes' => PartesPedido::deLista($usuario->codisb, $pedidos),
             'buscar' => $buscar,
             'miPedido' => $this->picking->pedidoActivoDe($usuario),
             'lotes' => MenuSides::puede($usuario, $usuario->cfg, 'batch')
@@ -115,6 +118,7 @@ class PickingController extends Controller
 
         return view('picking.show', [
             'pedido' => $operacion,
+            'parte' => PartesPedido::deLista($usuario->codisb, [$operacion])[(int) $operacion->id] ?? null,
             'renglones' => $renglones,
             'cfg' => $cfg,
         ]);

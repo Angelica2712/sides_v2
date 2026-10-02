@@ -81,6 +81,7 @@
                                 <span class="min-w-0 flex-1">
                                     <span class="flex flex-wrap items-center gap-2">
                                         <span class="text-lg font-black text-slate-900 tabular-nums">#{{ $pedido->id }}</span>
+                                        <x-parte-pedido :parte="$partes[$pedido->id] ?? null" />
                                         <span class="rounded-full px-2 py-0.5 text-[11px] font-bold ring-1 {{ $pedido->estado === 'ALCABALA' ? 'bg-amber-50 text-amber-700 ring-amber-200' : 'bg-slate-100 text-slate-600 ring-slate-200' }}">
                                             {{ $pedido->estado === 'ALCABALA' ? 'En espera' : 'Recibido' }}
                                         </span>

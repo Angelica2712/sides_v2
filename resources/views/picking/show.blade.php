@@ -22,6 +22,7 @@
                     <a href="{{ route('picking.index') }}" class="text-sm font-semibold text-primary hover:underline">← Volver a la lista</a>
                     <div class="mt-1 flex flex-wrap items-center gap-2">
                         <h2 class="text-2xl font-black text-slate-900 tabular-nums">Pedido #{{ $pedido->id }}</h2>
+                        <x-parte-pedido :parte="$parte" class="text-xs" />
                         <span class="rounded-lg bg-primary px-2.5 py-1 text-sm font-bold text-white">Recipiente {{ $pedido->recipiente }}</span>
                     </div>
                     <p class="mt-1 truncate text-sm text-slate-600">{{ $pedido->ruta ?: 'Sin ruta' }} · {{ $pedido->codcli }} · {{ $pedido->nomcli }}</p>

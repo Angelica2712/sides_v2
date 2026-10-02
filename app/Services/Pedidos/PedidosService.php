@@ -90,7 +90,9 @@ class PedidosService
                         ->orWhere('pedido.nomcli', 'like', "%{$texto}%")
                         ->orWhere('pedido.estado', 'like', "%{$texto}%")
                         ->orWhere('pedido.ruta', 'like', "%{$texto}%")
-                        ->orWhere('op.recipiente', $texto);
+                        ->orWhere('op.recipiente', $texto)
+                        // Buscar el número de un pedido partido trae también sus partes.
+                        ->orWhere('pedido.idori', $texto);
                 });
             })
             ->when($filtros['estado'] !== '', fn ($consulta) => $consulta->where('pedido.estado', $filtros['estado']))
@@ -101,7 +103,7 @@ class PedidosService
             ->select([
                 'pedido.id', 'pedido.codcli', 'pedido.nomcli', 'pedido.ruta', 'pedido.estado', 'pedido.documento',
                 'pedido.fecenviado', 'pedido.fecprocesado', 'pedido.numren', 'pedido.numund', 'pedido.total',
-                'op.recipiente', 'op.despachador', 'fgr.id_grupo as grupo_id',
+                'pedido.idori', 'op.recipiente', 'op.despachador', 'fgr.id_grupo as grupo_id',
             ])
             ->paginate(self::POR_PAGINA)
             ->withQueryString();

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Services\BatchPicking\BatchPickingException;
 use App\Services\BatchPicking\BatchPickingService;
 use App\Support\Monitor\NotificarMonitor;
+use App\Support\PartesPedido;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,6 +24,7 @@ class BatchPickingController extends Controller
 
         return view('batch.index', [
             'pedidos' => $pedidos,
+            'partes' => PartesPedido::deLista($usuario->codisb, $pedidos),
             'renglones' => $this->batch->renglonesDe($pedidos->pluck('id')->all()),
             'lotes' => $this->batch->lotesEnCurso($usuario->codisb),
             'puedeLiberar' => (bool) $usuario->activarLiberarAlcabala,
@@ -76,6 +78,7 @@ class BatchPickingController extends Controller
         return view('batch.show', [
             'lote' => $modelo,
             'pedidos' => $pedidos,
+            'partes' => PartesPedido::deLista($request->user()->codisb, $pedidos),
             'responsable' => $pedidos->firstWhere('despasignado', 1)?->despachador,
         ]);
     }

@@ -140,6 +140,7 @@
                                     {{-- El número de pedido queda fijo a la izquierda al desplazar la tabla. --}}
                                     <td class="sticky left-0 z-10 whitespace-nowrap bg-white px-4 py-3 shadow-[1px_0_0_var(--color-slate-100)] group-hover:bg-slate-50">
                                         <a href="{{ route('pedidos.show', $pedido->id) }}" class="text-base font-black text-primary hover:underline">#{{ $pedido->id }}</a>
+                                        <x-parte-pedido :parte="$partes[$pedido->id] ?? null" class="mt-0.5 flex w-fit" />
                                     </td>
                                     <td class="px-4 py-3">
                                         <p class="max-w-64 truncate font-semibold text-slate-800">{{ $pedido->nomcli }}</p>

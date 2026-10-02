@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Seped\Pedido;
 use App\Support\Monitor\FiltrosMonitor;
 use App\Support\Monitor\TiemposPedido;
+use App\Support\PartesPedido;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\View\View;
@@ -77,7 +78,7 @@ class MonitorController extends Controller
             ->select([
                 'pedido.id', 'pedido.codcli', 'pedido.nomcli', 'pedido.ruta', 'pedido.estado',
                 'pedido.fecenviado', 'pedido.fecprocesado', 'pedido.fecpicking', 'pedido.fecpacking',
-                'pedido.numren', 'pedido.numund', 'pedido.observacion', 'pedido.codtransp',
+                'pedido.numren', 'pedido.numund', 'pedido.observacion', 'pedido.codtransp', 'pedido.idori',
                 'op.recipiente', 'op.despachador',
             ])
             ->paginate(100)
@@ -119,6 +120,7 @@ class MonitorController extends Controller
             'marcas' => $filas
                 ->mapWithKeys(fn (Pedido $pedido) => [$pedido->id => $filtros->marcas($pedido->ruta)])
                 ->all(),
+            'partes' => PartesPedido::deLista($codisb, $filas),
             // Vista tablero: una columna por estado, conservando el orden por fecha de envío.
             'columnas' => collect(self::ESTADOS)
                 ->reject(fn (string $estado) => $estado === 'PACKING' && ! ($cfg?->activarPacking ?? true))
