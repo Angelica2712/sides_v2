@@ -13,7 +13,7 @@ class SidesCfg extends Model
     protected $keyType = 'string';
     public $incrementing = false;
     protected $primaryKey = 'codisb';
-    protected $fillable = ['codisb', 'nombre', 'nomcorto', 'rif', 'direccion', 'contacto', 'telefono', 'localidad', 'activarPacking', 'fecha', 'pedidoxAprobar', 'valorIva', 'modoAlcabala', 'activarValPicking', 'activarEtiPacking', 'claveValPicking', 'ordenPedSides', 'EtiPieNota', 'ModoCesta', 'pitarPacking', 'activarValPacking', 'EstiloPicking', 'TamLetraMonitor', 'activarVerOperadorMonitor', 'MostrarTituloMonitor', 'formatoPersEtiq', 'mostrarEntrega', 'mostrarDepPiking', 'nomdominio', 'imagenPdfRutaAbsoluta', 'nomsubdominio', 'activarImpTicket', 'mostrarObsMonitor', 'mostrarTranMonitor', 'dominioapiSeped', 'titulopagina', 'mostrarExiRealPick', 'activar_separador_automatico', 'activar_etiqueta_packing', 'latitud', 'longitud', 'activarSincronizacionRutas', 'procAlcabalaPicking', 'pickingOrdenLibre'];
+    protected $fillable = ['codisb', 'nombre', 'nomcorto', 'rif', 'direccion', 'contacto', 'telefono', 'localidad', 'activarPacking', 'fecha', 'pedidoxAprobar', 'valorIva', 'modoAlcabala', 'activarValPicking', 'activarEtiPacking', 'claveValPicking', 'ordenPedSides', 'EtiPieNota', 'ModoCesta', 'pitarPacking', 'activarValPacking', 'EstiloPicking', 'TamLetraMonitor', 'activarVerOperadorMonitor', 'MostrarTituloMonitor', 'formatoPersEtiq', 'mostrarEntrega', 'mostrarDepPiking', 'nomdominio', 'imagenPdfRutaAbsoluta', 'nomsubdominio', 'activarImpTicket', 'mostrarObsMonitor', 'mostrarTranMonitor', 'dominioapiSeped', 'titulopagina', 'mostrarExiRealPick', 'activar_separador_automatico', 'activar_etiqueta_packing', 'latitud', 'longitud', 'activarSincronizacionRutas', 'procAlcabalaPicking', 'pickingOrdenLibre', 'logo'];
 
     /** modulo => activo, leído una vez por instancia. */
     private ?array $estadoModulos = null;
@@ -29,6 +29,12 @@ class SidesCfg extends Model
         $this->estadoModulos ??= $this->modulos()->pluck('activo', 'modulo')->map(fn ($activo) => (bool) $activo)->all();
 
         return $this->estadoModulos[$modulo] ?? in_array($modulo, MenuSides::BASICOS, true);
+    }
+
+    /** URL pública del logo de la droguería; null si no tiene (se usa el de SIDES). */
+    public function urlLogo(): ?string
+    {
+        return $this->logo ? asset('storage/'.$this->logo) : null;
     }
 
     /** @return list<string> módulos con interruptor que la droguería tiene encendidos */

@@ -53,7 +53,8 @@ class AdminTest extends TestCase
             'formatoPersEtiq' => 'rptetiqueta10x7',
             'activar_etiqueta_packing' => '1',
             'activarImpTicket' => '1',
-        ])->assertRedirect(route('admin.index'))->assertSessionHas('mensaje', 'Droguería Droguería Uno creada.');
+        ])->assertRedirect(route('admin.edit', 'DROGA1'))
+            ->assertSessionHas('mensaje', 'Droguería Droguería Uno creada. Ahora crea su usuario encargado para que pueda entrar.');
 
         $drogueria = SidesCfg::query()->find('DROGA1');
         $this->assertSame(['Droguería Uno', 1, 0], [$drogueria->nombre, (int) $drogueria->activarPacking, (int) $drogueria->procAlcabalaPicking]);

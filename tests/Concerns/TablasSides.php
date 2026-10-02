@@ -59,6 +59,7 @@ trait TablasSides
             $table->integer('activar_etiqueta_packing')->default(0);
             $table->integer('mostrarEntrega')->default(0);
             $table->integer('activarSincronizacionRutas')->default(0);
+            $table->string('logo', 255)->nullable();
         });
 
         Schema::create('sides_users', function (Blueprint $table) {

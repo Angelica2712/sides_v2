@@ -11,8 +11,8 @@ use Illuminate\View\View;
 /**
  * Configuración de la sucursal del usuario (legacy AdminconfigController).
  *
- * Packing, los módulos opcionales y las opciones de etiquetas los define el administrador
- * (AdminController). No se portan los campos que en v2 ya no tienen efecto: dominio de la API
+ * Packing, los módulos opcionales, las opciones de etiquetas y los datos de la droguería
+ * (nombre, RIF, dirección, logo…) los define el administrador de FULLTECH360 (AdminController). No se portan los campos que en v2 ya no tienen efecto: dominio de la API
  * de SEPED (base compartida), ModoCesta, pitarPacking (el sonido del lector es por usuario),
  * EstiloPicking, título de la página y los datos de pie de etiqueta.
  */
@@ -48,13 +48,6 @@ class ConfiguracionController extends Controller
     {
         $cfg = $this->cfg($request);
         $datos = $request->validate([
-            'nombre' => ['required', 'string', 'max:150'],
-            'nomcorto' => ['nullable', 'string', 'max:20'],
-            'rif' => ['nullable', 'string', 'max:20'],
-            'direccion' => ['nullable', 'string', 'max:150'],
-            'localidad' => ['nullable', 'string', 'max:100'],
-            'contacto' => ['nullable', 'string', 'max:50'],
-            'telefono' => ['nullable', 'string', 'max:50'],
             'TamLetraMonitor' => ['required', 'integer', Rule::in(self::TAMANOS_LETRA)],
             'ordenPedSides' => ['required', Rule::in(array_keys(self::ORDENES))],
             'claveValPicking' => [
@@ -62,17 +55,11 @@ class ConfiguracionController extends Controller
                 'nullable', 'string', 'min:4', 'max:20',
             ],
         ], [
-            'nombre.required' => 'Escribe el nombre de la sucursal.',
             'TamLetraMonitor.*' => 'Elige un tamaño de letra de la lista.',
             'ordenPedSides.*' => 'Elige un orden de productos de la lista.',
             'claveValPicking.required' => 'Escribe la clave de supervisor: la piden Picking o Packing.',
             'claveValPicking.min' => 'La clave de supervisor debe tener al menos 4 caracteres.',
             'claveValPicking.max' => 'La clave de supervisor no puede pasar de 20 caracteres.',
-            '*.max' => 'El campo :attribute es demasiado largo.',
-        ], [
-            'nomcorto' => 'nombre corto',
-            'direccion' => 'dirección',
-            'telefono' => 'teléfono',
         ]);
 
         foreach (self::INTERRUPTORES as $campo) {

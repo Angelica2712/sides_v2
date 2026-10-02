@@ -9,6 +9,7 @@
         \App\Support\MenuSides::porSeccion($usuario, $cfg)
     );
     $nombreCorto = $cfg?->nomcorto ?: ($cfg?->nombre ?: 'SIDES');
+    $logoDrogueria = $cfg?->urlLogo();
 @endphp
 
 <!DOCTYPE html>
@@ -41,10 +42,18 @@
 
                 <div class="shrink-0 min-h-20 px-3 py-3 flex flex-col items-center justify-center bg-primary border-b border-primary-dark text-white">
                     <a href="{{ route('home') }}" class="flex flex-col items-center text-center group">
-                        {{-- El logo es un círculo azul: el halo blanco lo despega del fondo azul del encabezado. --}}
-                        <img src="{{ asset('img/logo-sides.png') }}" alt="SIDES"
-                             :class="sidebarCollapsed ? 'size-11' : 'size-14'"
-                             class="rounded-full shadow-[0_0_12px_2px_rgba(255,255,255,0.45)] transition-all duration-300 group-hover:scale-105">
+                        @if ($logoDrogueria)
+                            {{-- Logo de la droguería (cualquier forma y color): sobre una placa blanca para que se lea en el azul. --}}
+                            <span :class="sidebarCollapsed ? 'h-11 w-14 p-1' : 'h-16 w-[200px] p-1.5'"
+                                  class="flex items-center justify-center rounded-xl bg-white shadow-md transition-all duration-300 group-hover:scale-105">
+                                <img src="{{ $logoDrogueria }}" alt="{{ $cfg->nombre }}" class="max-h-full max-w-full object-contain">
+                            </span>
+                        @else
+                            {{-- El logo es un círculo azul: el halo blanco lo despega del fondo azul del encabezado. --}}
+                            <img src="{{ asset('img/logo-sides.png') }}" alt="SIDES"
+                                 :class="sidebarCollapsed ? 'size-11' : 'size-14'"
+                                 class="rounded-full shadow-[0_0_12px_2px_rgba(255,255,255,0.45)] transition-all duration-300 group-hover:scale-105">
+                        @endif
                         <span x-show="!sidebarCollapsed" class="mt-1.5 max-w-[210px] truncate text-sm font-bold leading-tight">{{ $nombreCorto }}</span>
                         <span x-show="!sidebarCollapsed" class="text-xs font-semibold tracking-widest uppercase text-white/75">SIDES V2</span>
                     </a>

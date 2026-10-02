@@ -54,27 +54,33 @@
                 </div>
             @endif
 
+            {{-- Nombre, RIF y logo los define FULLTECH360 en Administración: aquí solo se ven. --}}
             <section class="space-y-4 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
-                <h3 class="text-lg font-extrabold text-slate-900">Datos de la sucursal</h3>
-                <div class="grid gap-4 sm:grid-cols-2">
-                    <div class="sm:col-span-2">
-                        <label for="nombre" class="block text-sm font-semibold text-slate-700">Nombre</label>
-                        <input id="nombre" name="nombre" type="text" maxlength="150" required value="{{ $valor('nombre') }}" class="{{ $campo }}">
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                        <h3 class="text-lg font-extrabold text-slate-900">Datos de la droguería</h3>
+                        <p class="text-sm text-slate-500">Salen en las etiquetas, el ticket y las guías. Para cambiarlos o cambiar el logo, pídelo a FULLTECH360.</p>
                     </div>
+                    @if ($cfg->logo)
+                        <img src="{{ $cfg->urlLogo() }}" alt="Logo de {{ $cfg->nombre }}" class="h-16 max-w-40 rounded-lg bg-white object-contain p-1 ring-1 ring-slate-200">
+                    @endif
+                </div>
+                <dl class="grid gap-x-4 gap-y-3 text-sm sm:grid-cols-2">
                     @foreach ([
-                        'nomcorto' => ['Nombre corto', 20],
-                        'rif' => ['RIF', 20],
-                        'contacto' => ['Contacto', 50],
-                        'telefono' => ['Teléfono', 50],
-                        'localidad' => ['Localidad', 100],
-                        'direccion' => ['Dirección', 150],
-                    ] as $nombre => [$etiqueta, $largo])
-                        <div>
-                            <label for="{{ $nombre }}" class="block text-sm font-semibold text-slate-700">{{ $etiqueta }}</label>
-                            <input id="{{ $nombre }}" name="{{ $nombre }}" type="text" maxlength="{{ $largo }}" value="{{ $valor($nombre) }}" class="{{ $campo }}">
+                        'nombre' => 'Nombre',
+                        'nomcorto' => 'Nombre corto',
+                        'rif' => 'RIF',
+                        'contacto' => 'Contacto',
+                        'telefono' => 'Teléfono',
+                        'localidad' => 'Localidad',
+                        'direccion' => 'Dirección',
+                    ] as $nombre => $etiqueta)
+                        <div @class(['sm:col-span-2' => in_array($nombre, ['nombre', 'direccion'], true)])>
+                            <dt class="font-semibold text-slate-500">{{ $etiqueta }}</dt>
+                            <dd class="mt-0.5 font-semibold text-slate-900">{{ $cfg->{$nombre} ?: '—' }}</dd>
                         </div>
                     @endforeach
-                </div>
+                </dl>
             </section>
 
             @foreach ($secciones as $titulo => $interruptores)

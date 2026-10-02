@@ -61,6 +61,8 @@ Route::middleware('auth')->group(function () {
             Route::post('droguerias', 'store')->name('store');
             Route::get('droguerias/{codisb}', 'edit')->name('edit');
             Route::put('droguerias/{codisb}', 'update')->name('update');
+            Route::post('droguerias/{codisb}/encargado', 'encargado')->name('encargado');
+            Route::post('droguerias/{codisb}/usuarios/{usuario}/clave', 'clave')->whereNumber('usuario')->name('clave');
         });
 
     Route::get('admin/auditoria', AuditoriaController::class)->name('auditoria.index')->middleware('permiso:auditoria');

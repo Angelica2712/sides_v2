@@ -48,7 +48,9 @@ class ConfiguracionTest extends TestCase
     {
         $this->actingAs($this->usuario)->get('/configuracion')->assertOk()
             ->assertSee('Parámetros de la sucursal 505094939')
-            ->assertSee('value="DROGUERIA ACTIVA,C.A"', false)
+            ->assertSee('DROGUERIA ACTIVA,C.A')
+            ->assertSee('pídelo a FULLTECH360')
+            ->assertDontSee('name="nombre"', false)
             ->assertSee('value="viejaclave"', false)
             ->assertSeeInOrder(['Módulos', 'Packing', 'activo', 'Batch Picking', 'activo', 'Etiquetas', 'apagado']);
     }
@@ -60,7 +62,9 @@ class ConfiguracionTest extends TestCase
             ->assertSessionHas('mensaje', 'Configuración guardada.');
 
         $cfg = SidesCfg::query()->find('505094939');
-        $this->assertSame(['DROGUERIA ACTIVA 2', 'J-123', 'Caracas', 24, 'UBICACION', 'nueva1'], [$cfg->nombre, $cfg->rif, $cfg->localidad, (int) $cfg->TamLetraMonitor, $cfg->ordenPedSides, $cfg->claveValPicking]);
+        $this->assertSame([24, 'UBICACION', 'nueva1'], [(int) $cfg->TamLetraMonitor, $cfg->ordenPedSides, $cfg->claveValPicking]);
+        // Nombre, RIF y demás datos de la droguería solo los cambia FULLTECH360 en Administración.
+        $this->assertSame(['DROGUERIA ACTIVA,C.A', null, null], [$cfg->nombre, $cfg->rif, $cfg->localidad]);
         // Casillas ausentes = apagadas.
         $this->assertSame([1, 1, 0, 0, 1, 0], array_map('intval', [
             $cfg->MostrarTituloMonitor, $cfg->mostrarTranMonitor, $cfg->mostrarObsMonitor,
@@ -95,11 +99,11 @@ class ConfiguracionTest extends TestCase
     public function test_valida_clave_de_supervisor_y_listas(): void
     {
         $this->actingAs($this->usuario)->from('/configuracion')
-            ->put('/configuracion', $this->formulario(['claveValPicking' => '', 'TamLetraMonitor' => '13', 'ordenPedSides' => 'PRECIO', 'nombre' => '']))
+            ->put('/configuracion', $this->formulario(['claveValPicking' => '', 'TamLetraMonitor' => '13', 'ordenPedSides' => 'PRECIO']))
             ->assertRedirect('/configuracion')
-            ->assertSessionHasErrors(['claveValPicking', 'TamLetraMonitor', 'ordenPedSides', 'nombre']);
+            ->assertSessionHasErrors(['claveValPicking', 'TamLetraMonitor', 'ordenPedSides']);
 
-        $this->assertSame('DROGUERIA ACTIVA,C.A', SidesCfg::query()->find('505094939')->nombre);
+        $this->assertSame(12, (int) SidesCfg::query()->find('505094939')->TamLetraMonitor);
 
         // Si ni Picking ni Packing piden clave, puede quedar vacía y se conserva la anterior.
         $this->put('/configuracion', $this->formulario(['activarValPacking' => null, 'claveValPicking' => '']))

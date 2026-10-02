@@ -21,11 +21,21 @@
                 @php $activos = $modulosActivos[$drogueria->codisb] ?? []; @endphp
                 <li class="flex flex-col gap-3 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
                     <div class="flex items-start justify-between gap-3">
+                        <div class="flex min-w-0 items-center gap-3">
+                            @if ($drogueria->logo)
+                                <img src="{{ $drogueria->urlLogo() }}" alt="" class="h-12 w-16 shrink-0 rounded-lg bg-white object-contain p-1 ring-1 ring-slate-200">
+                            @endif
                         <div class="min-w-0">
                             <p class="truncate text-lg font-black text-slate-900">{{ $drogueria->nombre ?: $drogueria->codisb }}</p>
                             <p class="text-xs text-slate-500">
-                                Código {{ $drogueria->codisb }} · {{ $usuarios[$drogueria->codisb] ?? 0 }} usuarios
+                                Código {{ $drogueria->codisb }} ·
+                                @if ($usuarios[$drogueria->codisb] ?? 0)
+                                    {{ $usuarios[$drogueria->codisb] }} usuarios
+                                @else
+                                    <span class="font-bold text-rose-600">sin usuarios: crea su encargado</span>
+                                @endif
                             </p>
+                        </div>
                         </div>
                         <div class="flex shrink-0 gap-2">
                             <a href="{{ route('admin.webhooks.index', $drogueria->codisb) }}" class="rounded-xl bg-white px-3 py-2 text-sm font-semibold text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50">Webhooks</a>

@@ -13,6 +13,8 @@
         .guia { width: 215.9mm; min-height: 279.4mm; padding: 12mm; font-size: 3.2mm; line-height: 1.35; overflow: visible; }
         .encabezado { display: flex; justify-content: space-between; align-items: flex-start; gap: 6mm; padding-bottom: 3mm; border-bottom: .5mm solid #000; }
         .encabezado h1 { margin: 0; font-size: 5.5mm; }
+        .marca { display: flex; align-items: flex-start; gap: 4mm; }
+        .marca .logo { flex: none; max-width: 45mm; max-height: 22mm; object-fit: contain; }
         .encabezado h2 { margin: 0; font-size: 4mm; }
         .datos { display: grid; grid-template-columns: auto auto; gap: .5mm 3mm; margin-top: 2mm; }
         .datos dt { font-weight: 700; }
@@ -31,6 +33,10 @@
 
     <article class="hoja guia">
         <header class="encabezado">
+            <div class="marca">
+                @if ($cfg?->logo)
+                    <img class="logo" src="{{ $cfg->urlLogo() }}" alt="">
+                @endif
             <div>
                 <h1>{{ $cfg?->nombre ?: 'SIDES' }}</h1>
                 <dl class="datos">
@@ -43,6 +49,7 @@
                         <dt>Auxiliar:</dt><dd>{{ $guia->chof_aux_nom }}</dd>
                     @endif
                 </dl>
+            </div>
             </div>
             <div>
                 <h2>Guía de despacho N° {{ $guia->id }}</h2>

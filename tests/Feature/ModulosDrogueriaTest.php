@@ -73,7 +73,7 @@ class ModulosDrogueriaTest extends TestCase
             'nombre' => 'Droguería Nueva',
             'modulos' => MenuSides::BASICOS,
             'activarPacking' => '1',
-        ])->assertRedirect(route('admin.index'));
+        ])->assertRedirect(route('admin.edit', 'NUEVA'));
 
         $filas = SidesModuloSucursal::query()->where('codisb', 'NUEVA')->pluck('activo', 'modulo')->map(fn ($a) => (int) $a)->all();
         $this->assertEqualsCanonicalizing(MenuSides::CONTROLABLES, array_keys($filas));
