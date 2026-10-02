@@ -18,12 +18,14 @@ class AuthenticatedSessionController extends Controller
 
     /**
      * El login muestra el logo de la droguería cuando se sabe cuál es: por su enlace de
-     * entrada (/login/{codisb}, lo copia FULLTECH360 en Administración), por el equipo,
-     * que recuerda la droguería del último que entró, o si solo hay una configurada.
+     * entrada (/login/{codisb}, lo copia FULLTECH360 en Administración), por la droguería
+     * de esta instalación (SIDES_CODISB), por el equipo, que recuerda la droguería del
+     * último que entró, o si solo hay una configurada.
      */
     public function create(Request $request, ?string $codisb = null): View
     {
         $cfg = $this->drogueria($codisb)
+            ?? $this->drogueria(config('sides.codisb'))
             ?? $this->drogueria($request->cookie(self::COOKIE_DROGUERIA))
             ?? (SidesCfg::query()->count() === 1 ? SidesCfg::query()->first() : null);
 

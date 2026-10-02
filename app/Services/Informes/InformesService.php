@@ -215,6 +215,9 @@ class InformesService
         return DB::table("{$tabla} as l")
             ->join('pedido as p', 'p.id', '=', 'l.id_pedido')
             ->where('p.codisb', $codisb)
+            // Lo que hizo el FT (FULLTECH360) no cuenta como trabajo de un operario de la droguería.
+            ->whereNotExists(fn ($q) => $q->select(DB::raw(1))->from('sides_users as ft')
+                ->whereColumn('ft.email', 'l.usuario')->whereNotNull('ft.seped_user_id'))
             ->whereBetween("l.{$fecha}", [
                 $desde->copy()->startOfDay()->toDateTimeString(),
                 $hasta->copy()->endOfDay()->toDateTimeString(),

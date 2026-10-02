@@ -23,7 +23,7 @@ class UsuariosController extends Controller
     {
         $buscar = trim((string) $request->query('buscar', ''));
 
-        $usuarios = SidesUsers::query()
+        $usuarios = SidesUsers::query()->deLaDrogueria()
             ->where('codisb', $request->user()->codisb)
             ->when($buscar !== '', fn ($consulta) => $consulta->where(fn ($q) => $q
                 ->where('name', 'like', "%{$buscar}%")
@@ -115,7 +115,8 @@ class UsuariosController extends Controller
 
     private function buscar(Request $request, int $id): SidesUsers
     {
-        $usuario = SidesUsers::query()->where('codisb', $request->user()->codisb)->findOrFail($id);
+        // El FT da 404 (no 403): así no se sabe que existe.
+        $usuario = SidesUsers::query()->deLaDrogueria()->where('codisb', $request->user()->codisb)->findOrFail($id);
 
         // Si un operario con permiso de Usuarios pudiera cambiarle la contraseña al administrador, entraría como él.
         abort_if($usuario->esAdmin && ! $request->user()->esAdmin, 403, 'Solo el administrador de SIDES puede modificar a otro administrador.');

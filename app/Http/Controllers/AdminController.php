@@ -38,7 +38,7 @@ class AdminController extends Controller
         return view('admin.index', [
             'droguerias' => $droguerias,
             'modulosActivos' => $droguerias->mapWithKeys(fn (SidesCfg $cfg) => [$cfg->codisb => $cfg->modulosEncendidos()]),
-            'usuarios' => DB::table('sides_users')->selectRaw('codisb, COUNT(*) as total')->groupBy('codisb')->pluck('total', 'codisb'),
+            'usuarios' => DB::table('sides_users')->whereNull('seped_user_id')->selectRaw('codisb, COUNT(*) as total')->groupBy('codisb')->pluck('total', 'codisb'),
         ]);
     }
 
@@ -70,7 +70,7 @@ class AdminController extends Controller
         return view('admin.form', [
             'drogueria' => $drogueria,
             'activos' => $drogueria->modulosEncendidos(),
-            'usuarios' => SidesUsers::query()->where('codisb', $codisb)->orderByDesc('activarUsuario')->orderBy('name')->get(),
+            'usuarios' => SidesUsers::query()->deLaDrogueria()->where('codisb', $codisb)->orderByDesc('activarUsuario')->orderBy('name')->get(),
         ]);
     }
 
@@ -130,7 +130,7 @@ class AdminController extends Controller
     /** Contraseña nueva para un usuario de la droguería (por ejemplo, el encargado la olvidó). */
     public function clave(Request $request, string $codisb, int $usuario): RedirectResponse
     {
-        $registro = SidesUsers::query()->where('codisb', $codisb)->where('esAdmin', 0)->findOrFail($usuario);
+        $registro = SidesUsers::query()->deLaDrogueria()->where('codisb', $codisb)->where('esAdmin', 0)->findOrFail($usuario);
         $datos = $request->validateWithBag("clave{$registro->id}", self::REGLAS_CLAVE, self::MENSAJES_CLAVE);
         $clave = $this->claveElegida($datos);
         $registro->forceFill(['password' => $clave])->save();

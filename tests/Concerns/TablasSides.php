@@ -76,6 +76,21 @@ trait TablasSides
                 $table->integer($flag)->default(0);
             }
             $table->tinyInteger('esAdmin')->default(0);
+            // El FT que copia SEPED (users.id de SEPED); nulo en los usuarios de la droguería.
+            $table->unsignedBigInteger('seped_user_id')->nullable()->unique();
+        });
+
+        // Pases de un solo uso entre SEPED y SIDES (la tabla la crea SEPED).
+        Schema::create('sso_pases', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->char('token_hash', 64)->unique();
+            $table->unsignedBigInteger('seped_user_id');
+            $table->string('origen', 10);
+            $table->string('destino', 10);
+            $table->dateTime('expira_at');
+            $table->dateTime('usado_at')->nullable();
+            $table->string('ip', 45)->nullable();
+            $table->timestamp('created_at')->nullable();
         });
 
         Schema::create('sides_modulo_sucursal', function (Blueprint $table) {

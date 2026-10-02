@@ -99,6 +99,8 @@ class Auditoria
         'sesion.entrar' => 'Inició sesión',
         'sesion.salir' => 'Cerró sesión',
         'sesion.fallida' => 'Intento fallido de inicio de sesión',
+        'sso.desde_seped' => 'Entró desde SEPED con el botón (sin contraseña)',
+        'sso.ir_a_seped' => 'Pasó a SEPED con el botón',
     ];
 
     /** Nombre del módulo al que pertenece una acción (su primer segmento). */
@@ -107,7 +109,7 @@ class Auditoria
         $clave = Str::before($accion, '.');
 
         return match ($clave) {
-            'sesion' => 'Sesión',
+            'sesion', 'sso' => 'Sesión',
             'siad' => 'SIAD',
             'admin' => str_starts_with($accion, 'admin.webhooks.') ? 'Webhooks' : 'Administración',
             default => MenuSides::MODULOS[$clave][0] ?? ucfirst($clave),

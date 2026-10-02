@@ -106,7 +106,7 @@ class InformesController extends Controller
     /** Solo operarios de la misma sucursal: la ficha no expone usuarios de otras droguerías. */
     private function operarioDeSucursal(Request $request, int $usuario): SidesUsers
     {
-        return SidesUsers::query()
+        return SidesUsers::query()->deLaDrogueria()
             ->whereKey($usuario)
             ->where('codisb', $request->user()->codisb)
             ->firstOrFail();

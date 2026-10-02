@@ -83,6 +83,19 @@
                     @endforeach
                 </nav>
 
+                {{-- Solo el FT (viene de SEPED) y si SEPED_URL está configurado: pasa a SEPED sin contraseña. --}}
+                @if (auth()->user()?->esFt() && \App\Http\Controllers\SsoController::urlSeped())
+                    <a href="{{ route('sso.seped') }}" title="Ir a SEPED"
+                       class="group shrink-0 mx-2.5 mt-2.5 flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm font-semibold text-slate-300 transition-colors hover:bg-primary hover:text-white">
+                        <span class="flex items-center justify-center size-9 rounded-md shrink-0 text-slate-400 group-hover:text-white">
+                            <svg class="size-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M15 3h6v6" /><path d="M10 14 21 3" /><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                            </svg>
+                        </span>
+                        <span x-show="!sidebarCollapsed">Ir a SEPED</span>
+                    </a>
+                @endif
+
                 <form method="POST" action="{{ route('logout') }}" class="shrink-0 p-2.5 border-t border-sidebar-border">
                     @csrf
                     <button type="submit" title="Cerrar sesión"

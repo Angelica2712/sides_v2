@@ -18,12 +18,17 @@ use App\Http\Controllers\PedidosController;
 use App\Http\Controllers\PickingController;
 use App\Http\Controllers\ResumenController;
 use App\Http\Controllers\RutasController;
+use App\Http\Controllers\SsoController;
 use App\Http\Controllers\UsuariosController;
 use App\Http\Controllers\WebhooksController;
 use App\Support\MenuSides;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => redirect()->route(auth()->check() ? 'home' : 'login'));
+
+// El FT llega desde SEPED con un pase de un solo uso. Fuera de guest: si ya tenía una sesión
+// abierta, guest lo mandaría a home antes de leer el pase.
+Route::middleware('throttle:20,1')->get('sso', [SsoController::class, 'recibir'])->name('sso.recibir');
 
 Route::middleware('guest')->group(function () {
     Route::get('login', [AuthenticatedSessionController::class, 'create'])->name('login');
@@ -35,6 +40,7 @@ Route::middleware('guest')->group(function () {
 
 Route::middleware('auth')->group(function () {
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
+    Route::get('ir-a-seped', [SsoController::class, 'irASeped'])->name('sso.seped');
 
     Route::get('home', HomeController::class)->name('home');
 
