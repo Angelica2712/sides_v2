@@ -14,12 +14,19 @@
         <a href="{{ route('admin.index') }}" class="text-sm font-semibold text-primary hover:underline">← Volver a droguerías</a>
 
         @unless ($nueva)
-            @php $credenciales = session('credenciales'); @endphp
+            @php
+                $credenciales = session('credenciales');
+                $enlaceEntrada = route('login.drogueria', $drogueria->codisb);
+            @endphp
             @if ($credenciales)
                 <div role="status" class="space-y-2 rounded-2xl bg-amber-50 p-4 text-sm ring-1 ring-amber-300">
                     <p class="font-bold text-amber-900">Copia estos datos ahora: la contraseña no se vuelve a mostrar.</p>
                     <p class="text-amber-800">Entrégaselos al encargado. Desde Usuarios podrá cambiar su contraseña y crear a los demás usuarios de la droguería.</p>
                     <dl class="grid gap-2 sm:grid-cols-2">
+                        <div class="sm:col-span-2">
+                            <dt class="font-semibold text-amber-900">Enlace para entrar</dt>
+                            <dd><input type="text" readonly value="{{ $enlaceEntrada }}" onclick="this.select()" aria-label="Enlace para entrar" class="mt-1 block w-full rounded-xl border-amber-300 bg-white px-3.5 py-2.5 font-mono text-sm"></dd>
+                        </div>
                         <div>
                             <dt class="font-semibold text-amber-900">Correo</dt>
                             <dd><input type="text" readonly value="{{ $credenciales['correo'] }}" onclick="this.select()" aria-label="Correo" class="mt-1 block w-full rounded-xl border-amber-300 bg-white px-3.5 py-2.5 font-mono text-sm"></dd>
@@ -36,6 +43,19 @@
                 <div>
                     <h3 class="text-lg font-extrabold text-slate-900">Usuarios de la droguería</h3>
                     <p class="text-sm text-slate-500">El encargado entra con todos los permisos de su droguería y desde Usuarios crea a los demás.</p>
+                </div>
+
+                {{-- Por este enlace el login sale con el logo de la droguería (después el equipo lo recuerda). --}}
+                <div x-data="{ copiado: false }" class="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-200">
+                    <label for="enlace_entrada" class="block text-sm font-semibold text-slate-700">Enlace para entrar</label>
+                    <div class="mt-1 flex gap-2">
+                        <input id="enlace_entrada" type="text" readonly value="{{ $enlaceEntrada }}" onclick="this.select()"
+                               class="block w-full min-w-0 rounded-xl border-slate-300 bg-white px-3 py-2 font-mono text-sm">
+                        <button type="button" @click="navigator.clipboard.writeText(@js($enlaceEntrada)); copiado = true; setTimeout(() => copiado = false, 2000)"
+                                class="shrink-0 rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 ring-1 ring-slate-300 hover:bg-white"
+                                x-text="copiado ? 'Copiado' : 'Copiar'">Copiar</button>
+                    </div>
+                    <p class="mt-1 text-xs text-slate-500">Con este enlace el inicio de sesión muestra el logo de la droguería. Después de entrar una vez, ese equipo lo recuerda.</p>
                 </div>
 
                 @forelse ($usuarios as $usuarioDrogueria)
@@ -114,7 +134,7 @@
             <section class="space-y-4 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
                 <div>
                     <h2 class="text-lg font-extrabold text-slate-900">{{ $nueva ? 'Nueva droguería' : $drogueria->nombre }}</h2>
-                    <p class="text-sm text-slate-500">Estos datos y el logo salen en el encabezado de SIDES, las etiquetas, el ticket y las guías. Solo se cambian desde aquí.</p>
+                    <p class="text-sm text-slate-500">Estos datos y el logo salen en el inicio de sesión, el encabezado de SIDES, las etiquetas, el ticket y las guías. Solo se cambian desde aquí.</p>
                 </div>
 
                 <div class="grid gap-4 sm:grid-cols-2">

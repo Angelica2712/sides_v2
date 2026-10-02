@@ -16,6 +16,7 @@
     <body class="font-sans antialiased bg-page text-slate-800">
         @php
             $funciones = ['Picking y packing con escáner', 'Batch picking por lotes', 'Guías, rutas y choferes', 'Monitor de pedidos en vivo'];
+            $logoDrogueria = $cfg?->urlLogo();
         @endphp
 
         <main class="min-h-screen flex flex-col items-center justify-center gap-5 p-4 sm:p-8">
@@ -50,9 +51,15 @@
                 {{-- Formulario --}}
                 <section class="flex flex-col justify-center px-6 py-8 sm:px-10">
                     <div class="flex flex-col items-center text-center">
-                        <img src="{{ asset('img/logo-sides.png') }}" alt="" class="size-20 rounded-full shadow-lg ring-4 ring-primary/15">
-                        <p class="mt-2.5 text-3xl font-extrabold tracking-tight text-primary leading-none">SIDES</p>
-                        <p class="mt-1.5 text-xs font-bold uppercase tracking-[0.25em] text-slate-400">by FULLTECH360</p>
+                        @if ($logoDrogueria)
+                            {{-- Droguería conocida (su enlace o este equipo): su logo manda; el de SIDES queda abajo, pequeño. --}}
+                            <img src="{{ $logoDrogueria }}" alt="{{ $cfg->nombre }}" class="h-28 w-auto max-w-72 object-contain">
+                            <p class="mt-3 text-xl font-extrabold leading-tight text-slate-900">{{ $cfg->nomcorto ?: $cfg->nombre }}</p>
+                        @else
+                            <img src="{{ asset('img/logo-sides.png') }}" alt="" class="size-20 rounded-full shadow-lg ring-4 ring-primary/15">
+                            <p class="mt-2.5 text-3xl font-extrabold tracking-tight text-primary leading-none">SIDES</p>
+                            <p class="mt-1.5 text-xs font-bold uppercase tracking-[0.25em] text-slate-400">by FULLTECH360</p>
+                        @endif
                         <p class="mt-4 text-sm text-slate-500">
                             Entra con tu usuario de {{ $cfg ? ($cfg->nomcorto ?: $cfg->nombre) : 'SIDES' }}.
                         </p>
@@ -94,7 +101,12 @@
                         </button>
                     </form>
 
-                    @if ($cfg?->nombre)
+                    @if ($logoDrogueria)
+                        <p class="mt-6 flex items-center justify-center gap-2 text-xs font-semibold text-slate-400">
+                            <img src="{{ asset('img/logo-sides.png') }}" alt="" class="size-6 rounded-full">
+                            <span><span class="font-extrabold text-primary">SIDES</span> by FULLTECH360</span>
+                        </p>
+                    @elseif ($cfg?->nombre)
                         <p class="mt-6 text-center text-xs font-semibold text-slate-400">{{ $cfg->nombre }}</p>
                     @endif
                 </section>

@@ -27,6 +27,9 @@ Route::get('/', fn () => redirect()->route(auth()->check() ? 'home' : 'login'));
 
 Route::middleware('guest')->group(function () {
     Route::get('login', [AuthenticatedSessionController::class, 'create'])->name('login');
+    // Enlace de entrada de cada droguería: el login sale con su logo.
+    Route::get('login/{codisb}', [AuthenticatedSessionController::class, 'create'])
+        ->where('codisb', '[A-Za-z0-9_-]+')->name('login.drogueria');
     Route::post('login', [AuthenticatedSessionController::class, 'store']);
 });
 
