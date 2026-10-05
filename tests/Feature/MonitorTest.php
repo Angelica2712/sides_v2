@@ -161,6 +161,20 @@ class MonitorTest extends TestCase
             ->assertDontSee('Pedidos en proceso');
     }
 
+    public function test_la_paginacion_del_fragmento_apunta_a_la_pantalla_del_monitor(): void
+    {
+        $this->crearCfg();
+        foreach (range(1, 101) as $n) {
+            $this->crearPedido(['id' => 92000 + $n, 'estado' => 'RECIBIDO']);
+        }
+
+        // Si los enlaces llevaran a monitor/contenido, la página 2 abriría el fragmento sin estilos.
+        $this->actingAs($this->operador())->get('/monitor/contenido')
+            ->assertOk()
+            ->assertViewHas('pedidos', fn ($pedidos) => $pedidos->url(2) === route('monitor.index').'?page=2')
+            ->assertDontSee('monitor/contenido?', false);
+    }
+
     public function test_contenido_pide_el_mismo_permiso_que_el_monitor(): void
     {
         $this->crearCfg();

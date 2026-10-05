@@ -82,6 +82,9 @@ class MonitorController extends Controller
                 'op.recipiente', 'op.despachador',
             ])
             ->paginate(100)
+            // Sin esto, cuando el fragmento se pide por `contenido` los enlaces de página apuntan
+            // al fragmento (sin layout ni estilos) en vez de a la pantalla del monitor.
+            ->withPath(route('monitor.index'))
             ->withQueryString();
 
         $porEstado = Pedido::query()
