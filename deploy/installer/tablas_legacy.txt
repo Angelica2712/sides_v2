@@ -1,0 +1,23 @@
+# Tablas del SIDES viejo que se traen a la base compartida, y como se llaman en SIDES v2.
+# Formato: <tabla vieja> <tabla nueva>. Las lee deploy/installer/lib/legacy.sh.
+#
+# No van `pedido` ni `pedren`: SIDES v2 trabaja directo sobre los de SEPED v2, que ya los
+# trae el instalador de SEPED. Tampoco `api_keys` / `api_access_logs` (la API vieja por llave
+# no existe en v2).
+users                    sides_users
+cfg                      sides_cfg
+monitor                  sides_monitor
+rutas                    sides_rutas
+rutasren                 sides_rutasren
+guia                     sides_guia
+guia_ren                 sides_guia_ren
+logpicking               sides_logpicking
+logpacking               sides_logpacking
+log_inac_picking         sides_log_inac_picking
+log_inac_packing         sides_log_inac_packing
+cestasig                 sides_cestasig
+etiqueta_pedido          sides_etiqueta_pedido
+alcabala_lote            sides_alcabala_lote
+alcabala_lote_pedido     sides_alcabala_lote_pedido
+alcabala_pedido_liberado sides_alcabala_pedido_liberado
+alcabala_perfil_config   sides_alcabala_perfil_config

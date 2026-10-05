@@ -22,3 +22,8 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Instalador (deploy/installer): lo que deja en el servidor
+.env.anterior
+/storage/instalador_reemplazo.estado*
+/storage/crontab_antes_del_reemplazo.txt
