@@ -8,6 +8,8 @@
 use App\Support\Monitor\TiemposPedido;
 
 // Opciones de sides_cfg que ya usaba el monitor legacy.
+// $tamLetra es la letra de la vista Tabla; sus textos secundarios (cliente, estado, encabezados) van
+// en proporción a ella, con 12 px de piso.
 $tamLetra = max(12, min(40, (int) ($cfg?->TamLetraMonitor ?: 14)));
 $tamNumeroPedido = max(18, min(36, $tamLetra));
 $conPacking = (bool) ($cfg?->activarPacking ?? true);
@@ -189,7 +191,7 @@ $numero = fn ($valor) => number_format((int) $valor, 0, ',', '.');
     <section x-show="vista === 'tabla'" x-cloak class="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-slate-200" style="font-size: {{ $tamLetra }}px">
-                <thead class="bg-slate-50 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
+                <thead class="bg-slate-50 text-left text-[max(0.75em,12px)] font-bold uppercase tracking-wide text-slate-500">
                     <tr>
                         <th scope="col" class="px-3 py-2.5">Ruta</th>
                         <th scope="col" class="px-3 py-2.5">Pedido</th>
@@ -228,10 +230,10 @@ $numero = fn ($valor) => number_format((int) $valor, 0, ',', '.');
                                 <div class="font-extrabold">
                                     {{ $pedido->ruta ?: 'S/RUTA' }}
                                     @foreach ($marcas[$pedido->id] as $marca)
-                                        <span class="ml-1 rounded bg-violet-100 px-1.5 py-0.5 align-middle text-[0.6em] font-black text-violet-800" title="Filtro {{ $marca['filtro'] }}">{{ $marca['texto'] }}</span>
+                                        <span class="ml-1 rounded bg-violet-100 px-1.5 py-0.5 align-middle text-[max(0.75em,12px)] font-black text-violet-800" title="Filtro {{ $marca['filtro'] }}">{{ $marca['texto'] }}</span>
                                     @endforeach
                                 </div>
-                                <div class="max-w-72 truncate text-[0.6em] font-medium text-slate-500" title="{{ $pedido->nomcli }}">
+                                <div class="max-w-72 truncate text-[max(0.75em,12px)] font-medium text-slate-500" title="{{ $pedido->nomcli }}">
                                     {{ $pedido->codcli }} · {{ $pedido->nomcli }}
                                 </div>
                             </td>
@@ -244,7 +246,7 @@ $numero = fn ($valor) => number_format((int) $valor, 0, ',', '.');
                             <td class="px-3 py-2 text-right align-top tabular-nums">{{ $numero($pedido->numund) }}</td>
                             <td class="whitespace-nowrap px-3 py-2 align-top tabular-nums">{{ $fecha($pedido->fecprocesado) }}</td>
                             <td class="px-3 py-2 align-top">
-                                <span class="inline-flex rounded-full border px-2.5 py-0.5 text-[0.7em] font-bold {{ $estilosEstado[$pedido->estado] ?? 'border-slate-200 bg-slate-100 text-slate-700' }}">
+                                <span class="inline-flex rounded-full border px-2.5 py-0.5 text-[max(0.8em,12px)] font-bold {{ $estilosEstado[$pedido->estado] ?? 'border-slate-200 bg-slate-100 text-slate-700' }}">
                                     {{ $pedido->estado }}
                                 </span>
                             </td>
@@ -256,7 +258,7 @@ $numero = fn ($valor) => number_format((int) $valor, 0, ',', '.');
                                 <td class="px-3 py-2 align-top">{{ $pedido->despachador }}</td>
                             @endif
                             @if ($verObservacion)
-                                <td class="px-3 py-2 align-top text-[0.7em] font-medium">{{ $pedido->observacion }}</td>
+                                <td class="px-3 py-2 align-top text-[max(0.8em,12px)] font-medium">{{ $pedido->observacion }}</td>
                             @endif
                             @if ($verTransporte)
                                 <td class="px-3 py-2 align-top">{{ $pedido->codtransp }}</td>
