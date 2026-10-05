@@ -5,7 +5,7 @@
 
 <x-layouts.app :titulo="'Ruta '.$ruta->nombre">
     <div class="mx-auto max-w-7xl space-y-4">
-        <a href="{{ route('rutas.index') }}" class="text-sm font-semibold text-primary hover:underline">← Volver a rutas</a>
+        <a href="{{ route('rutas.index') }}" class="text-sm font-semibold text-primary-ink hover:underline">← Volver a rutas</a>
 
         <div class="flex flex-wrap items-end justify-between gap-3">
             <div>
@@ -14,7 +14,7 @@
             </div>
             <div class="flex flex-wrap gap-2">
                 <a href="{{ route('rutas.descargar', $ruta->id) }}" class="rounded-xl bg-white px-4 py-2 text-sm font-bold text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50">Descargar Excel</a>
-                <a href="{{ route('rutas.agregar', $ruta->id) }}" class="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white hover:bg-primary-dark">Agregar clientes</a>
+                <a href="{{ route('rutas.agregar', $ruta->id) }}" class="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-on-primary hover:bg-primary-dark">Agregar clientes</a>
             </div>
         </div>
 
@@ -64,7 +64,7 @@
             <section class="rounded-2xl bg-white p-12 text-center shadow-sm ring-1 ring-slate-200">
                 <h3 class="text-lg font-bold text-slate-900">{{ $buscar !== '' ? 'Ningún cliente coincide con la búsqueda' : 'La ruta no tiene clientes' }}</h3>
                 @if ($buscar === '')
-                    <a href="{{ route('rutas.agregar', $ruta->id) }}" class="mt-3 inline-block font-semibold text-primary hover:underline">Agregar clientes</a>
+                    <a href="{{ route('rutas.agregar', $ruta->id) }}" class="mt-3 inline-block font-semibold text-primary-ink hover:underline">Agregar clientes</a>
                 @endif
             </section>
         @else
@@ -104,7 +104,7 @@
                                 <td class="px-4 py-3">
                                     <label class="inline-flex cursor-pointer items-center gap-2">
                                         <input form="{{ $form }}" name="retiraLocal" type="checkbox" value="1" @checked($cliente->retiraLocal)
-                                               class="size-5 rounded border-slate-300 text-primary focus:ring-primary">
+                                               class="size-5 rounded border-slate-300 text-primary-ink focus:ring-primary">
                                         <span class="text-slate-700">Sí</span>
                                     </label>
                                 </td>

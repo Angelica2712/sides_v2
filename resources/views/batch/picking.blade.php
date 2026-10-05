@@ -11,10 +11,10 @@
         <section class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 sm:p-5">
             <div class="flex flex-wrap items-start justify-between gap-3">
                 <div class="min-w-0">
-                    <a href="{{ route('picking.index') }}" class="text-sm font-semibold text-primary hover:underline">← Volver a picking</a>
+                    <a href="{{ route('picking.index') }}" class="text-sm font-semibold text-primary-ink hover:underline">← Volver a picking</a>
                     <div class="mt-1 flex flex-wrap items-center gap-2">
                         <h2 class="text-2xl font-black text-slate-900">Lote #{{ $lote->id }}</h2>
-                        <span class="rounded-lg bg-primary px-2.5 py-1 text-sm font-bold text-white">Recipiente {{ $recipiente }}</span>
+                        <span class="rounded-lg bg-primary px-2.5 py-1 text-sm font-bold text-on-primary">Recipiente {{ $recipiente }}</span>
                     </div>
                     <details class="mt-1 text-sm text-slate-600">
                         <summary class="cursor-pointer font-semibold">{{ $pedidos->count() }} pedidos en el lote</summary>
@@ -105,7 +105,7 @@
                         </div>
                     </div>
                     <details class="mt-2">
-                        <summary class="cursor-pointer text-xs font-semibold text-primary">Reparto por pedido</summary>
+                        <summary class="cursor-pointer text-xs font-semibold text-primary-ink">Reparto por pedido</summary>
                         <ul class="mt-1 divide-y divide-slate-100 text-xs">
                             <template x-for="parte in producto.reparto" :key="parte.numped + '-' + parte.item">
                                 <li class="flex justify-between gap-3 py-1">
@@ -129,18 +129,18 @@
                     <template x-for="(opcion, indice) in opcionesLote" :key="opcion.clave">
                         <label class="flex cursor-pointer items-center gap-3 rounded-xl p-3 ring-1"
                                :class="loteElegido === opcion.clave ? 'bg-primary-soft ring-primary' : 'ring-slate-200'">
-                            <input type="radio" name="lote-elegido" :value="opcion.clave" x-model="loteElegido" class="text-primary focus:ring-primary">
+                            <input type="radio" name="lote-elegido" :value="opcion.clave" x-model="loteElegido" class="text-primary-ink focus:ring-primary">
                             <span class="text-sm">
                                 <span class="font-bold" x-text="opcion.lote ? 'Lote ' + opcion.lote : 'Sin lote'"></span>
                                 <span x-show="opcion.vence" class="text-slate-500"> · vence <span x-text="opcion.vence"></span></span>
-                                <span x-show="indice === 0" class="ml-1 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-white">vence primero</span>
+                                <span x-show="indice === 0" class="ml-1 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-on-primary">vence primero</span>
                             </span>
                         </label>
                     </template>
                 </fieldset>
                 <div class="flex justify-end gap-2">
                     <button type="button" @click="$refs.elegirLote.close()" class="rounded-xl px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100">Cancelar</button>
-                    <button type="submit" class="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white hover:bg-primary-dark">Continuar</button>
+                    <button type="submit" class="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-on-primary hover:bg-primary-dark">Continuar</button>
                 </div>
             </form>
         </dialog>
@@ -178,7 +178,7 @@
                 <p x-show="errorCantidad" x-text="errorCantidad" class="text-sm font-semibold text-rose-700"></p>
                 <div class="flex justify-end gap-2">
                     <button type="button" @click="$refs.editar.close()" class="rounded-xl px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100">Cancelar</button>
-                    <button type="submit" :disabled="guardando" class="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white hover:bg-primary-dark disabled:opacity-60">Guardar</button>
+                    <button type="submit" :disabled="guardando" class="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-on-primary hover:bg-primary-dark disabled:opacity-60">Guardar</button>
                 </div>
             </form>
         </dialog>

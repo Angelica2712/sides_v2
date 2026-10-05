@@ -12,7 +12,7 @@
 
 <x-layouts.app :titulo="'Guía #'.$guia->id">
     <div class="mx-auto max-w-7xl space-y-4">
-        <a href="{{ route('guias.index') }}" class="text-sm font-semibold text-primary hover:underline">← Volver a guías</a>
+        <a href="{{ route('guias.index') }}" class="text-sm font-semibold text-primary-ink hover:underline">← Volver a guías</a>
 
         <section class="space-y-4 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
             <div class="flex flex-wrap items-start justify-between gap-3">
@@ -77,7 +77,7 @@
                     <div class="flex items-center gap-3">
                         @if ($clientes->count() > 1)
                             <input type="checkbox" form="separar" name="clientes[]" value="{{ $cliente->codcli }}" aria-label="Separar a {{ $cliente->nomcli }}"
-                                   class="size-5 rounded border-slate-300 text-primary focus:ring-primary">
+                                   class="size-5 rounded border-slate-300 text-primary-ink focus:ring-primary">
                         @endif
                         <span class="flex size-8 shrink-0 items-center justify-center rounded-full bg-slate-800 text-sm font-black text-white" title="Orden de visita">{{ $posicion + 1 }}</span>
                         <div>
@@ -212,7 +212,7 @@
                             <li>
                                 <label class="flex cursor-pointer items-center gap-3 px-4 py-2.5 hover:bg-slate-50 has-checked:bg-primary-soft">
                                     <input type="checkbox" name="pedidos[]" value="{{ $pendiente->id }}" x-model="marcados"
-                                           class="size-5 rounded border-slate-300 text-primary focus:ring-primary">
+                                           class="size-5 rounded border-slate-300 text-primary-ink focus:ring-primary">
                                     <span class="flex-1 text-sm">
                                         <span class="font-bold text-slate-900">#{{ $pendiente->id }}</span>
                                         <span class="text-slate-700">{{ $pendiente->nomcli }}</span>
@@ -225,7 +225,7 @@
                     </ul>
                     <div class="flex justify-end border-t border-slate-200 p-4">
                         <button type="submit" x-bind:disabled="marcados.length === 0"
-                                class="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white hover:bg-primary-dark disabled:opacity-50">Agregar a la guía</button>
+                                class="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-on-primary hover:bg-primary-dark disabled:opacity-50">Agregar a la guía</button>
                     </div>
                 </form>
             @endif

@@ -13,7 +13,7 @@
                 <h2 class="text-xl font-extrabold text-slate-900">Guías de despacho</h2>
                 <p class="text-sm text-slate-500">Los bultos de los pedidos facturados que salen en cada viaje, por ruta y chofer.</p>
             </div>
-            <a href="{{ route('guias.create') }}" class="rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white hover:bg-primary-dark">Nueva guía</a>
+            <a href="{{ route('guias.create') }}" class="rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-on-primary hover:bg-primary-dark">Nueva guía</a>
         </div>
 
         <form method="GET" action="{{ route('guias.index') }}" role="search"
@@ -81,7 +81,7 @@
                         @foreach ($guias as $guia)
                             <tr class="hover:bg-slate-50">
                                 <td class="whitespace-nowrap px-4 py-3">
-                                    <a href="{{ route('guias.show', $guia->id) }}" class="text-base font-black text-primary hover:underline">#{{ $guia->id }}</a>
+                                    <a href="{{ route('guias.show', $guia->id) }}" class="text-base font-black text-primary-ink hover:underline">#{{ $guia->id }}</a>
                                 </td>
                                 <td class="whitespace-nowrap px-4 py-3 tabular-nums text-slate-600">{{ Carbon::parse($guia->fecha)->format('d-m-y H:i') }}</td>
                                 <td class="whitespace-nowrap px-4 py-3 font-semibold text-slate-800">{{ $guia->ruta }}</td>
@@ -95,8 +95,8 @@
                                 <td class="px-4 py-3 text-right font-semibold tabular-nums">{{ $guia->bultos }}</td>
                                 <td class="px-4 py-3"><x-estado-guia :estado="$guia->estado" /></td>
                                 <td class="whitespace-nowrap px-4 py-3 text-right">
-                                    <a href="{{ route('guias.imprimir', $guia->id) }}" class="font-semibold text-slate-500 hover:text-primary">Imprimir</a>
-                                    <a href="{{ route('guias.show', $guia->id) }}" class="ml-4 font-semibold text-slate-500 hover:text-primary">Ver</a>
+                                    <a href="{{ route('guias.imprimir', $guia->id) }}" class="font-semibold text-slate-500 hover:text-primary-ink">Imprimir</a>
+                                    <a href="{{ route('guias.show', $guia->id) }}" class="ml-4 font-semibold text-slate-500 hover:text-primary-ink">Ver</a>
                                 </td>
                             </tr>
                         @endforeach

@@ -7,7 +7,7 @@
                     {{ $cfg?->nombre ?? 'Sucursal sin configuración' }} · Sucursal {{ auth()->user()->codisb }}
                 </p>
             </div>
-            <span class="inline-flex items-center self-start sm:self-center rounded-full bg-primary-soft px-3 py-1 text-xs font-bold text-primary">
+            <span class="inline-flex items-center self-start sm:self-center rounded-full bg-primary-soft px-3 py-1 text-xs font-bold text-primary-ink">
                 {{ count($modulos) }} {{ count($modulos) === 1 ? 'módulo disponible' : 'módulos disponibles' }}
             </span>
         </section>
@@ -25,7 +25,7 @@
                     @foreach ($modulosSeccion as $modulo)
                         <a href="{{ route($modulo['ruta']) }}"
                            class="group flex items-start gap-3 rounded-xl bg-white border border-slate-200 p-4 shadow-sm transition hover:border-primary hover:shadow-md">
-                            <span class="flex items-center justify-center size-11 shrink-0 rounded-lg bg-primary-soft text-primary transition-colors group-hover:bg-primary group-hover:text-white">
+                            <span class="flex items-center justify-center size-11 shrink-0 rounded-lg bg-primary-soft text-primary-ink transition-colors group-hover:bg-primary group-hover:text-on-primary">
                                 <svg class="size-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                     {!! \App\Support\IconosSvg::path($modulo['icono']) !!}
                                 </svg>

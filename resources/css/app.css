@@ -6,23 +6,50 @@
 @source '../**/*.blade.php';
 @source '../**/*.js';
 
-/* Paleta "Blue" de SEPED v2 (seped_v2/resources/views/layouts/app.blade.php): SIDES usa la
-   misma identidad para que las dos apps hermanas se vean iguales. */
+/* Colores de la droguería: los configura el FT en SEPED, que publica la paleta ya calculada en
+   tema_paleta; el layout la escribe sobre estas variables (App\Support\TemaSides). Mismos nombres
+   que las --brand-* de SEPED. Estos valores son el respaldo cuando la sucursal no tiene fila: la
+   paleta "Blue" de SEPED, con los tonos que SIDES ya usaba. */
 :root {
     --brand-primary: #2563eb;
-    --brand-secondary: #1d4ed8;
+    --brand-secondary: #0f172a;
+    --brand-accent: #60a5fa;
+    --brand-primary-dark: #1d4ed8;
+    --brand-border: #cfddfb;
     --brand-bg-soft: #eff6ff;
+    --brand-text: #1145b8;
+    --brand-primary-ink: #2563eb;
+    --brand-accent-ink: #0769e3;
+    --brand-secondary-ink: #0f172a;
     --brand-sidebar-bg: #0f172a;
+    --brand-sidebar-text: #cbd5e1;
+    --brand-sidebar-icon: #94a3b8;
     --brand-sidebar-border: #1e293b;
     --brand-page-bg: #e7eaee;
+    --brand-text-primary: #ffffff;
+    --brand-text-secondary: #f8fafc;
+    --brand-text-accent: #0f172a;
+    --brand-card-bg: #ffffff;
+    --brand-card-border: #dee8fc;
+    --brand-text-dark: #1b2232;
+    --brand-table-header-bg: #e9effd;
+    --brand-table-header-text: #1c5cea;
+    --brand-table-bg: #ffffff;
 }
 
 @theme inline {
     --font-sans: 'Figtree', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
     --color-primary: var(--brand-primary);
-    --color-primary-dark: var(--brand-secondary);
+    --color-primary-dark: var(--brand-primary-dark);
     --color-primary-soft: var(--brand-bg-soft);
+    /* Letra sobre el color primario: blanca u oscura según qué tan claro sea el primario. */
+    --color-on-primary: var(--brand-text-primary);
+    /* Primario como letra sobre fondo blanco (enlaces, cifras): ya viene oscurecido si hace falta. */
+    --color-primary-ink: var(--brand-primary-ink);
+    --color-accent: var(--brand-accent);
     --color-sidebar: var(--brand-sidebar-bg);
+    --color-sidebar-text: var(--brand-sidebar-text);
+    --color-sidebar-icon: var(--brand-sidebar-icon);
     --color-sidebar-border: var(--brand-sidebar-border);
     --color-page: var(--brand-page-bg);
 }

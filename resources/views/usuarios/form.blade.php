@@ -12,7 +12,7 @@
 
 <x-layouts.app :titulo="$nuevo ? 'Nuevo usuario' : 'Modificar usuario'">
     <div class="mx-auto max-w-3xl space-y-4">
-        <a href="{{ route('usuarios.index') }}" class="text-sm font-semibold text-primary hover:underline">← Volver a usuarios</a>
+        <a href="{{ route('usuarios.index') }}" class="text-sm font-semibold text-primary-ink hover:underline">← Volver a usuarios</a>
 
         <form method="POST" action="{{ $nuevo ? route('usuarios.store') : route('usuarios.update', $usuario->id) }}" class="space-y-4">
             @csrf
@@ -59,7 +59,7 @@
                                 <label class="flex flex-1 cursor-pointer items-start gap-3 rounded-xl p-3 ring-1 ring-slate-200 has-checked:bg-primary-soft has-checked:ring-primary">
                                     <input type="radio" name="estado" value="{{ $estado }}" @checked(old('estado', $usuario->estado) === $estado)
                                            @disabled($esYo && $estado === 'INACTIVO')
-                                           class="mt-0.5 size-5 border-slate-300 text-primary focus:ring-primary">
+                                           class="mt-0.5 size-5 border-slate-300 text-primary-ink focus:ring-primary">
                                     <span>
                                         <span class="block font-bold text-slate-900">{{ $titulo }}</span>
                                         <span class="block text-sm text-slate-500">{{ $esYo && $estado === 'INACTIVO' ? 'No puedes desactivarte a ti mismo.' : $ayuda }}</span>
@@ -90,7 +90,7 @@
                                     @endif
                                     <input type="checkbox" name="permisos[{{ $permiso }}]" value="1"
                                            @checked($bloqueado || $marcado($permiso)) @disabled($bloqueado)
-                                           class="mt-0.5 size-5 rounded border-slate-300 text-primary focus:ring-primary">
+                                           class="mt-0.5 size-5 rounded border-slate-300 text-primary-ink focus:ring-primary">
                                     <span>
                                         <span class="block font-bold text-slate-900">{{ $titulo }}</span>
                                         <span class="block text-sm text-slate-500">{{ $bloqueado ? 'No puedes quitarte este permiso a ti mismo.' : $ayuda }}</span>
@@ -104,7 +104,7 @@
 
             <div class="flex justify-end gap-2">
                 <a href="{{ route('usuarios.index') }}" class="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-100">Cancelar</a>
-                <button type="submit" class="rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white hover:bg-primary-dark">{{ $nuevo ? 'Crear usuario' : 'Guardar cambios' }}</button>
+                <button type="submit" class="rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-on-primary hover:bg-primary-dark">{{ $nuevo ? 'Crear usuario' : 'Guardar cambios' }}</button>
             </div>
         </form>
 

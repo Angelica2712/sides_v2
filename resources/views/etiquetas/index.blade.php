@@ -51,7 +51,7 @@
                                value="{{ old('bultos', max(1, (int) $pedido->cantBultos)) }}"
                                class="mt-1.5 block w-28 rounded-xl border-slate-300 text-center text-2xl font-black tabular-nums shadow-sm focus:border-primary focus:ring-primary">
                     </div>
-                    <button type="submit" class="rounded-xl bg-primary px-5 py-3 font-bold text-white hover:bg-primary-dark">Imprimir etiquetas</button>
+                    <button type="submit" class="rounded-xl bg-primary px-5 py-3 font-bold text-on-primary hover:bg-primary-dark">Imprimir etiquetas</button>
                     @if ($cfg?->activarImpTicket)
                         <a href="{{ route('etiquetas.ticket', $pedido->id) }}" class="rounded-xl bg-white px-5 py-3 font-semibold text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50">Imprimir ticket</a>
                     @endif

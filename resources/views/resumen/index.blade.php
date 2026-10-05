@@ -23,7 +23,7 @@
         <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             @if ($cfg)
                 <div class="rounded-xl bg-white border border-slate-200 p-4 shadow-sm">
-                    <span class="flex items-center justify-center size-11 shrink-0 rounded-lg bg-primary-soft text-primary">
+                    <span class="flex items-center justify-center size-11 shrink-0 rounded-lg bg-primary-soft text-primary-ink">
                         <svg class="size-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                             {!! \App\Support\IconosSvg::path('alert') !!}
                         </svg>
@@ -37,7 +37,7 @@
                 @if ($tarjeta['ve'])
                     <a href="{{ route($tarjeta['ruta'], $tarjeta['query']) }}"
                        class="group flex flex-col rounded-xl bg-white border border-slate-200 p-4 shadow-sm transition hover:border-primary hover:shadow-md">
-                        <span class="flex items-center justify-center size-11 shrink-0 rounded-lg bg-primary-soft text-primary transition-colors group-hover:bg-primary group-hover:text-white">
+                        <span class="flex items-center justify-center size-11 shrink-0 rounded-lg bg-primary-soft text-primary-ink transition-colors group-hover:bg-primary group-hover:text-on-primary">
                             <svg class="size-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                 {!! \App\Support\IconosSvg::path($tarjeta['icono']) !!}
                             </svg>

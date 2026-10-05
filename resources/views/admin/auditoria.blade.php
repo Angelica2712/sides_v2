@@ -9,7 +9,7 @@
 
 <x-layouts.app titulo="Auditoría">
     <div class="mx-auto max-w-7xl space-y-4">
-        <a href="{{ route('admin.index') }}" class="text-sm font-semibold text-primary hover:underline">← Volver a droguerías</a>
+        <a href="{{ route('admin.index') }}" class="text-sm font-semibold text-primary-ink hover:underline">← Volver a droguerías</a>
 
         <div>
             <h2 class="text-xl font-extrabold text-slate-900">Auditoría</h2>
@@ -64,7 +64,7 @@
                 <input type="text" name="buscar" value="{{ $filtros['buscar'] ?? '' }}" placeholder="Texto o número de pedido" class="{{ $campo }}">
             </label>
             <div class="flex items-end gap-2">
-                <button type="submit" class="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white hover:bg-primary-dark">Filtrar</button>
+                <button type="submit" class="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-on-primary hover:bg-primary-dark">Filtrar</button>
                 <a href="{{ route('auditoria.index') }}" class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100">Limpiar</a>
             </div>
         </form>
@@ -115,7 +115,7 @@
                                         <div class="text-slate-800">{{ $registro->descripcion }}</div>
                                         @if ($registro->datos)
                                             <details class="mt-1">
-                                                <summary class="cursor-pointer text-xs font-semibold text-primary">Ver datos enviados</summary>
+                                                <summary class="cursor-pointer text-xs font-semibold text-primary-ink">Ver datos enviados</summary>
                                                 <pre class="mt-1 max-w-xl overflow-x-auto rounded-lg bg-slate-50 p-2 text-[11px] text-slate-700">{{ json_encode($registro->datos, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) }}</pre>
                                             </details>
                                         @endif

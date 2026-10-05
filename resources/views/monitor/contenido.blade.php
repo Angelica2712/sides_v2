@@ -42,7 +42,7 @@ $numero = fn ($valor) => number_format((int) $valor, 0, ',', '.');
         <ol class="grid grid-cols-2 gap-2 @2xl:grid-cols-3 @5xl:grid-cols-5">
             @foreach ($indicadores as $indicador)
                 <li class="relative flex items-center gap-3 rounded-xl px-4 py-3 {{ $loop->last ? 'bg-emerald-50' : 'bg-slate-50' }}">
-                    <span class="flex size-11 shrink-0 items-center justify-center rounded-xl text-white shadow-sm {{ $loop->last ? 'bg-emerald-500' : 'bg-primary' }}">
+                    <span class="flex size-11 shrink-0 items-center justify-center rounded-xl shadow-sm {{ $loop->last ? 'bg-emerald-500 text-white' : 'bg-primary text-on-primary' }}">
                         <svg class="size-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                             {!! \App\Support\IconosSvg::path($indicador['icono']) !!}
                         </svg>
@@ -70,9 +70,9 @@ $numero = fn ($valor) => number_format((int) $valor, 0, ',', '.');
             @php $activa = $pestana['id'] === $filtro?->id; @endphp
             <a href="{{ route('monitor.index', array_filter(['filtro' => $pestana['id']])) }}"
                @if ($activa) aria-current="page" @endif
-               class="flex shrink-0 items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-bold shadow-sm ring-1 transition-colors {{ $activa ? 'bg-primary text-white ring-primary' : 'bg-white text-slate-700 ring-slate-200 hover:bg-slate-50' }}">
+               class="flex shrink-0 items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-bold shadow-sm ring-1 transition-colors {{ $activa ? 'bg-primary text-on-primary ring-primary' : 'bg-white text-slate-700 ring-slate-200 hover:bg-slate-50' }}">
                 {{ $pestana['nombre'] }}
-                <span class="rounded-full px-2 py-0.5 text-xs font-black tabular-nums {{ $activa ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-700' }}">{{ $numero($pestana['total']) }}</span>
+                <span class="rounded-full px-2 py-0.5 text-xs font-black tabular-nums {{ $activa ? 'bg-on-primary/20 text-on-primary' : 'bg-slate-100 text-slate-700' }}">{{ $numero($pestana['total']) }}</span>
             </a>
         @endforeach
     </nav>
@@ -161,7 +161,7 @@ $numero = fn ($valor) => number_format((int) $valor, 0, ',', '.');
 
                             @if ($verDespachador && $pedido->despachador)
                                 <p class="mt-2 flex items-center gap-2 text-xs font-semibold text-slate-600">
-                                    <span class="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary-soft text-[11px] font-black text-primary" aria-hidden="true">
+                                    <span class="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary-soft text-[11px] font-black text-primary-ink" aria-hidden="true">
                                         {{ mb_strtoupper(mb_substr($pedido->despachador, 0, 1)) }}
                                     </span>
                                     <span class="truncate">{{ $pedido->despachador }}</span>

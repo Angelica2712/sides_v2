@@ -5,7 +5,7 @@
 
 <x-layouts.app :titulo="$nuevo ? 'Nuevo filtro' : 'Modificar filtro'">
     <div class="mx-auto max-w-2xl space-y-4">
-        <a href="{{ route('filtromonitor.index') }}" class="text-sm font-semibold text-primary hover:underline">← Volver a filtro monitor</a>
+        <a href="{{ route('filtromonitor.index') }}" class="text-sm font-semibold text-primary-ink hover:underline">← Volver a filtro monitor</a>
 
         <form method="POST" action="{{ $nuevo ? route('filtromonitor.store') : route('filtromonitor.update', $filtro->id) }}" class="space-y-4">
             @csrf
@@ -43,7 +43,7 @@
 
             <div class="flex justify-end gap-2">
                 <a href="{{ route('filtromonitor.index') }}" class="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-100">Cancelar</a>
-                <button type="submit" class="rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white hover:bg-primary-dark">{{ $nuevo ? 'Crear filtro' : 'Guardar cambios' }}</button>
+                <button type="submit" class="rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-on-primary hover:bg-primary-dark">{{ $nuevo ? 'Crear filtro' : 'Guardar cambios' }}</button>
             </div>
         </form>
 

@@ -12,6 +12,10 @@
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700,800&display=swap" rel="stylesheet" />
 
         @vite(['resources/css/app.css', 'resources/js/app.js'])
+        {{-- Con la droguería conocida (su enlace, la instalación o el equipo), sus colores de SEPED. --}}
+        @if ($temaDrogueria = \App\Support\TemaSides::estilo($cfg?->codisb))
+            <style>{!! $temaDrogueria !!}</style>
+        @endif
     </head>
     <body class="font-sans antialiased bg-page text-slate-800">
         @php
@@ -23,22 +27,22 @@
             <div class="w-full max-w-4xl overflow-hidden rounded-3xl bg-white shadow-xl ring-1 ring-slate-200 grid md:grid-cols-2">
 
                 {{-- Publicidad: qué es SIDES. Se oculta en teléfono para dejar solo el formulario. --}}
-                <section class="relative hidden md:flex flex-col justify-center overflow-hidden bg-gradient-to-br from-primary to-primary-dark p-10 text-white">
-                    <div aria-hidden="true" class="pointer-events-none absolute -right-20 -top-20 size-64 rounded-full bg-white/10"></div>
+                <section class="relative hidden md:flex flex-col justify-center overflow-hidden bg-gradient-to-br from-primary to-primary-dark p-10 text-on-primary">
+                    <div aria-hidden="true" class="pointer-events-none absolute -right-20 -top-20 size-64 rounded-full bg-on-primary/10"></div>
 
                     <div class="relative">
-                        <p class="text-xs font-bold uppercase tracking-widest text-white/70">Sistema de despacho</p>
+                        <p class="text-xs font-bold uppercase tracking-widest text-on-primary/70">Sistema de despacho</p>
                         <h1 class="mt-3 text-3xl font-extrabold leading-tight">
                             Del pedido al camión,<br>sin perder de vista nada.
                         </h1>
-                        <p class="mt-3 max-w-xs text-sm text-white/80">
+                        <p class="mt-3 max-w-xs text-sm text-on-primary/80">
                             SIDES lleva los pedidos de SEPED por picking, packing, facturación y entrega.
                         </p>
 
                         <ul class="mt-8 space-y-3">
                             @foreach ($funciones as $f)
                                 <li class="flex items-center gap-3 text-sm font-semibold">
-                                    <svg class="size-5 shrink-0 text-white/70" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true">
+                                    <svg class="size-5 shrink-0 text-on-primary/70" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                     </svg>
                                     {{ $f }}
@@ -57,7 +61,7 @@
                             <p class="mt-3 text-xl font-extrabold leading-tight text-slate-900">{{ $cfg->nomcorto ?: $cfg->nombre }}</p>
                         @else
                             <img src="{{ asset('img/logo-sides.png') }}" alt="" class="size-20 rounded-full shadow-lg ring-4 ring-primary/15">
-                            <p class="mt-2.5 text-3xl font-extrabold tracking-tight text-primary leading-none">SIDES</p>
+                            <p class="mt-2.5 text-3xl font-extrabold tracking-tight text-primary-ink leading-none">SIDES</p>
                             <p class="mt-1.5 text-xs font-bold uppercase tracking-[0.25em] text-slate-400">by FULLTECH360</p>
                         @endif
                         <p class="mt-4 text-sm text-slate-500">
@@ -91,12 +95,12 @@
                         </div>
 
                         <label class="flex items-center gap-2 text-sm text-slate-600">
-                            <input type="checkbox" name="remember" class="rounded border-slate-300 text-primary focus:ring-primary">
+                            <input type="checkbox" name="remember" class="rounded border-slate-300 text-primary-ink focus:ring-primary">
                             Mantener la sesión iniciada
                         </label>
 
                         <button type="submit"
-                                class="w-full rounded-xl bg-gradient-to-r from-primary to-primary-dark px-5 py-2.5 text-sm font-bold text-white shadow-md transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+                                class="w-full rounded-xl bg-gradient-to-r from-primary to-primary-dark px-5 py-2.5 text-sm font-bold text-on-primary shadow-md transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
                             Ingresar
                         </button>
                     </form>
@@ -104,7 +108,7 @@
                     @if ($logoDrogueria)
                         <p class="mt-6 flex items-center justify-center gap-2 text-xs font-semibold text-slate-400">
                             <img src="{{ asset('img/logo-sides.png') }}" alt="" class="size-6 rounded-full">
-                            <span><span class="font-extrabold text-primary">SIDES</span> by FULLTECH360</span>
+                            <span><span class="font-extrabold text-primary-ink">SIDES</span> by FULLTECH360</span>
                         </p>
                     @elseif ($cfg?->nombre)
                         <p class="mt-6 text-center text-xs font-semibold text-slate-400">{{ $cfg->nombre }}</p>

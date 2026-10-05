@@ -133,13 +133,13 @@
                                                 <span class="text-slate-400" title="Ya agrupado">✓</span>
                                             @else
                                                 <input type="checkbox" name="pedidos[]" value="{{ $pedido->id }}" x-model="marcados" :disabled="!puedeMarcar({{ $pedido->id }})"
-                                                       class="size-5 rounded border-slate-300 text-primary focus:ring-primary disabled:opacity-30">
+                                                       class="size-5 rounded border-slate-300 text-primary-ink focus:ring-primary disabled:opacity-30">
                                             @endif
                                         </td>
                                     @endif
                                     {{-- El número de pedido queda fijo a la izquierda al desplazar la tabla. --}}
                                     <td class="sticky left-0 z-10 whitespace-nowrap bg-white px-4 py-3 shadow-[1px_0_0_var(--color-slate-100)] group-hover:bg-slate-50">
-                                        <a href="{{ route('pedidos.show', $pedido->id) }}" class="text-base font-black text-primary hover:underline">#{{ $pedido->id }}</a>
+                                        <a href="{{ route('pedidos.show', $pedido->id) }}" class="text-base font-black text-primary-ink hover:underline">#{{ $pedido->id }}</a>
                                         <x-parte-pedido :parte="$partes[$pedido->id] ?? null" class="mt-0.5 flex w-fit" />
                                     </td>
                                     <td class="px-4 py-3">
@@ -172,7 +172,7 @@
                                         </td>
                                     @endif
                                     <td class="whitespace-nowrap px-4 py-3 text-right">
-                                        <a href="{{ route('pedidos.edit', $pedido->id) }}" class="font-semibold text-slate-500 hover:text-primary">Modificar</a>
+                                        <a href="{{ route('pedidos.edit', $pedido->id) }}" class="font-semibold text-slate-500 hover:text-primary-ink">Modificar</a>
                                     </td>
                                 </tr>
                             @endforeach

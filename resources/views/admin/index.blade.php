@@ -12,7 +12,7 @@
             </div>
             <div class="flex gap-2">
                 <a href="{{ route('auditoria.index') }}" class="rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50">Auditoría</a>
-                <a href="{{ route('admin.create') }}" class="rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white hover:bg-primary-dark">Nueva droguería</a>
+                <a href="{{ route('admin.create') }}" class="rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-on-primary hover:bg-primary-dark">Nueva droguería</a>
             </div>
         </div>
 

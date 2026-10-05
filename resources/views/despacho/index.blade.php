@@ -52,7 +52,7 @@
                         <div class="grid grid-cols-2 gap-2">
                             @if ($puedeCargar)
                                 <a href="{{ route('despacho.show', [$guia->id, 'carga']) }}"
-                                   class="rounded-xl px-4 py-3 text-center text-sm font-bold {{ $cargaCompleta ? 'bg-white text-slate-600 ring-1 ring-slate-300' : 'bg-primary text-white hover:bg-primary-dark' }}">Cargar</a>
+                                   class="rounded-xl px-4 py-3 text-center text-sm font-bold {{ $cargaCompleta ? 'bg-white text-slate-600 ring-1 ring-slate-300' : 'bg-primary text-on-primary hover:bg-primary-dark' }}">Cargar</a>
                             @endif
                             @if ($puedeDescargar)
                                 @if ($cargaCompleta)

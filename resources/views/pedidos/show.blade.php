@@ -39,7 +39,7 @@
 
 <x-layouts.app :titulo="'Pedido #'.$pedido->id">
     <div class="mx-auto max-w-6xl space-y-4" x-data>
-        <a href="{{ route('pedidos.index') }}" class="text-sm font-semibold text-primary hover:underline">← Volver a pedidos</a>
+        <a href="{{ route('pedidos.index') }}" class="text-sm font-semibold text-primary-ink hover:underline">← Volver a pedidos</a>
 
         <section class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
             <div class="flex flex-wrap items-start justify-between gap-4">

@@ -11,7 +11,7 @@
 
 <x-layouts.app :titulo="$nueva ? 'Nueva droguería' : 'Configurar droguería'">
     <div class="mx-auto max-w-3xl space-y-4">
-        <a href="{{ route('admin.index') }}" class="text-sm font-semibold text-primary hover:underline">← Volver a droguerías</a>
+        <a href="{{ route('admin.index') }}" class="text-sm font-semibold text-primary-ink hover:underline">← Volver a droguerías</a>
 
         @unless ($nueva)
             @php
@@ -64,7 +64,7 @@
                             <p class="truncate font-bold text-slate-900">
                                 {{ $usuarioDrogueria->name }}
                                 @if ($usuarioDrogueria->activarUsuario)
-                                    <span class="ms-1 rounded-full bg-primary-soft px-2 py-0.5 text-xs font-bold text-primary">Crea usuarios</span>
+                                    <span class="ms-1 rounded-full bg-primary-soft px-2 py-0.5 text-xs font-bold text-primary-ink">Crea usuarios</span>
                                 @endif
                                 @if ($usuarioDrogueria->estado !== 'ACTIVO')
                                     <span class="ms-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-500">Inactivo</span>
@@ -84,7 +84,7 @@
                                         <input x-ref="clave" name="password" type="text" minlength="6" maxlength="100" autocomplete="off" spellcheck="false"
                                                placeholder="Vacío = automática" aria-label="Contraseña nueva para {{ $usuarioDrogueria->name }}"
                                                class="w-48 rounded-xl border-slate-300 px-3 py-2 font-mono text-sm focus:border-primary focus:ring-primary">
-                                        <button type="submit" class="rounded-xl bg-primary px-3 py-2 text-sm font-bold text-white hover:bg-primary-dark">Guardar</button>
+                                        <button type="submit" class="rounded-xl bg-primary px-3 py-2 text-sm font-bold text-on-primary hover:bg-primary-dark">Guardar</button>
                                         <button type="button" @click="abierto = false" class="px-2 py-2 text-sm font-semibold text-slate-500 hover:text-slate-700">Cancelar</button>
                                     </div>
                                     @if ($erroresClave->has('password'))
@@ -113,7 +113,7 @@
                         <input id="encargado_clave" name="password" type="text" minlength="6" maxlength="100" autocomplete="off" spellcheck="false"
                                placeholder="Automática" class="{{ $campo }} font-mono">
                     </div>
-                    <button type="submit" class="rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white hover:bg-primary-dark">Crear encargado</button>
+                    <button type="submit" class="rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-on-primary hover:bg-primary-dark">Crear encargado</button>
                 </form>
             </section>
         @endunless
@@ -186,7 +186,7 @@
                         </div>
                         <div class="min-w-0 space-y-2 text-sm">
                             <input id="logo" name="logo" type="file" accept="image/png,image/jpeg,image/webp" @change="elegir($event)"
-                                   class="block w-full text-sm text-slate-600 file:mr-3 file:rounded-xl file:border-0 file:bg-primary-soft file:px-4 file:py-2 file:font-bold file:text-primary hover:file:bg-primary hover:file:text-white">
+                                   class="block w-full text-sm text-slate-600 file:mr-3 file:rounded-xl file:border-0 file:bg-primary-soft file:px-4 file:py-2 file:font-bold file:text-primary-ink hover:file:bg-primary hover:file:text-white">
                             <p class="text-xs text-slate-500">PNG, JPG o WEBP de hasta 2 MB. Mejor horizontal y con fondo blanco o transparente: las etiquetas se imprimen en blanco y negro.</p>
                             @if ($drogueria->logo)
                                 <label class="flex cursor-pointer items-center gap-2">
@@ -208,7 +208,7 @@
                 <label class="flex cursor-pointer items-start gap-3 rounded-xl p-3 ring-1 ring-slate-200 has-checked:bg-primary-soft has-checked:ring-primary">
                     <input type="hidden" name="activarPacking" value="0">
                     <input type="checkbox" name="activarPacking" value="1" @checked(old('activarPacking', $drogueria->activarPacking))
-                           class="mt-0.5 size-5 rounded border-slate-300 text-primary focus:ring-primary">
+                           class="mt-0.5 size-5 rounded border-slate-300 text-primary-ink focus:ring-primary">
                     <span>
                         <span class="block font-bold text-slate-900">Packing</span>
                         <span class="block text-sm text-slate-500">Verificación y embalaje antes de facturar. Sin packing, el pedido pasa a facturar al terminar el picking.</span>
@@ -225,7 +225,7 @@
                         <label class="flex cursor-pointer items-start gap-3 p-3">
                             <input type="checkbox" name="modulos[]" value="{{ $modulo['clave'] }}" @checked(in_array($modulo['clave'], $activos, true))
                                    @if ($modulo['clave'] === 'batch') x-model="batch" @elseif ($modulo['clave'] === 'etiquetas') x-model="etiquetas" @endif
-                                   class="mt-0.5 size-5 rounded border-slate-300 text-primary focus:ring-primary">
+                                   class="mt-0.5 size-5 rounded border-slate-300 text-primary-ink focus:ring-primary">
                             <span>
                                 <span class="block font-bold text-slate-900">{{ $modulo['nombre'] }}</span>
                                 <span class="block text-sm text-slate-500">{{ $modulo['descripcion'] }}</span>
@@ -236,7 +236,7 @@
                             <label x-show="batch" x-cloak class="flex cursor-pointer items-start gap-3 border-t border-slate-200 px-3 py-2.5 pl-11">
                                 <input type="hidden" name="procAlcabalaPicking" value="0">
                                 <input type="checkbox" name="procAlcabalaPicking" value="1" @checked(old('procAlcabalaPicking', $drogueria->procAlcabalaPicking))
-                                       class="mt-0.5 size-4 rounded border-slate-300 text-primary focus:ring-primary">
+                                       class="mt-0.5 size-4 rounded border-slate-300 text-primary-ink focus:ring-primary">
                                 <span class="text-sm">
                                     <span class="font-semibold text-slate-800">Los pedidos nuevos llegan en espera</span>
                                     <span class="block text-slate-500">Un encargado los agrupa en lotes o los libera al picking normal. Si está apagado, se agrupan los pedidos recibidos que nadie tomó.</span>
@@ -261,7 +261,7 @@
                                     <label class="flex cursor-pointer items-start gap-3">
                                         <input type="hidden" name="{{ $campo }}" value="0">
                                         <input type="checkbox" name="{{ $campo }}" value="1" @checked(old($campo, $drogueria->{$campo}))
-                                               class="mt-0.5 size-4 rounded border-slate-300 text-primary focus:ring-primary">
+                                               class="mt-0.5 size-4 rounded border-slate-300 text-primary-ink focus:ring-primary">
                                         <span>
                                             <span class="font-semibold text-slate-800">{{ $titulo }}</span>
                                             <span class="block text-slate-500">{{ $ayuda }}</span>
@@ -277,7 +277,7 @@
 
             <div class="flex justify-end gap-2">
                 <a href="{{ route('admin.index') }}" class="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-100">Cancelar</a>
-                <button type="submit" class="rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white hover:bg-primary-dark">{{ $nueva ? 'Crear droguería' : 'Guardar cambios' }}</button>
+                <button type="submit" class="rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-on-primary hover:bg-primary-dark">{{ $nueva ? 'Crear droguería' : 'Guardar cambios' }}</button>
             </div>
         </form>
     </div>

@@ -115,7 +115,7 @@
                                     <td class="px-4 py-3 text-right">{{ Duracion::texto($fila->total) }}</td>
                                     <td class="whitespace-nowrap px-4 py-3 text-right">
                                         @if ($fila->usuario_id)
-                                            <a href="{{ route('informes.operario', [$tipo, $vista, $fila->usuario_id, ...$fechas]) }}" class="font-semibold text-primary hover:underline">Ver detalle</a>
+                                            <a href="{{ route('informes.operario', [$tipo, $vista, $fila->usuario_id, ...$fechas]) }}" class="font-semibold text-primary-ink hover:underline">Ver detalle</a>
                                         @endif
                                     </td>
                                 </tr>

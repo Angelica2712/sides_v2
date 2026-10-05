@@ -24,13 +24,13 @@
             <div class="flex flex-wrap items-center gap-2">
                 <div role="group" aria-label="Tipo de vista" class="inline-flex rounded-xl bg-white p-1 shadow-sm ring-1 ring-slate-200">
                     <button type="button" @click="vista = 'tablero'" :aria-pressed="vista === 'tablero'"
-                            :class="vista === 'tablero' ? 'bg-primary text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'"
+                            :class="vista === 'tablero' ? 'bg-primary text-on-primary shadow-sm' : 'text-slate-600 hover:text-slate-900'"
                             class="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors">
                         <svg class="size-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="6" height="16" x="3" y="4" rx="1.5" /><rect width="6" height="10" x="10" y="4" rx="1.5" /><rect width="5" height="13" x="17" y="4" rx="1.5" /></svg>
                         Tablero
                     </button>
                     <button type="button" @click="vista = 'tabla'" :aria-pressed="vista === 'tabla'"
-                            :class="vista === 'tabla' ? 'bg-primary text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'"
+                            :class="vista === 'tabla' ? 'bg-primary text-on-primary shadow-sm' : 'text-slate-600 hover:text-slate-900'"
                             class="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors">
                         <svg class="size-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18M3 12h18M3 19h18" /></svg>
                         Tabla

@@ -19,11 +19,11 @@
         <section class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 sm:p-5">
             <div class="flex flex-wrap items-start justify-between gap-3">
                 <div class="min-w-0">
-                    <a href="{{ route('picking.index') }}" class="text-sm font-semibold text-primary hover:underline">← Volver a la lista</a>
+                    <a href="{{ route('picking.index') }}" class="text-sm font-semibold text-primary-ink hover:underline">← Volver a la lista</a>
                     <div class="mt-1 flex flex-wrap items-center gap-2">
                         <h2 class="text-2xl font-black text-slate-900 tabular-nums">Pedido #{{ $pedido->id }}</h2>
                         <x-parte-pedido :parte="$parte" class="text-xs" />
-                        <span class="rounded-lg bg-primary px-2.5 py-1 text-sm font-bold text-white">Recipiente {{ $pedido->recipiente }}</span>
+                        <span class="rounded-lg bg-primary px-2.5 py-1 text-sm font-bold text-on-primary">Recipiente {{ $pedido->recipiente }}</span>
                     </div>
                     <p class="mt-1 truncate text-sm text-slate-600">{{ $pedido->ruta ?: 'Sin ruta' }} · {{ $pedido->codcli }} · {{ $pedido->nomcli }}</p>
                     @if ($pedido->observacion || $pedido->codtransp)
@@ -84,9 +84,9 @@
         {{-- Producto actual --}}
         <template x-if="actual">
             <section class="overflow-hidden rounded-2xl bg-white shadow-md ring-2 ring-primary" aria-labelledby="producto-actual">
-                <div class="flex flex-wrap items-center justify-between gap-2 bg-primary px-5 py-3 text-white">
-                    <span id="producto-actual" class="text-xs font-bold uppercase tracking-widest text-white/80" x-text="elegido ? 'Producto elegido' : 'Siguiente producto'">Siguiente producto</span>
-                    <span class="text-xs font-semibold text-white/80">Ubicación</span>
+                <div class="flex flex-wrap items-center justify-between gap-2 bg-primary px-5 py-3 text-on-primary">
+                    <span id="producto-actual" class="text-xs font-bold uppercase tracking-widest text-on-primary/80" x-text="elegido ? 'Producto elegido' : 'Siguiente producto'">Siguiente producto</span>
+                    <span class="text-xs font-semibold text-on-primary/80">Ubicación</span>
                 </div>
                 <div class="grid gap-4 p-5 sm:grid-cols-[1fr_auto]">
                     <div class="min-w-0 space-y-1.5">
@@ -215,7 +215,7 @@
                        class="block w-full rounded-xl border-slate-300 px-3.5 py-2.5 shadow-sm focus:border-primary focus:ring-primary">
                 <div class="flex justify-end gap-2">
                     <button type="button" @click="$refs.clave.close(); clave = ''" class="rounded-xl px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100">Cancelar</button>
-                    <button type="submit" class="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white hover:bg-primary-dark">Continuar</button>
+                    <button type="submit" class="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-on-primary hover:bg-primary-dark">Continuar</button>
                 </div>
             </form>
         </dialog>
@@ -244,7 +244,7 @@
                 <p class="text-sm text-slate-600">Queda disponible para otro operario. Lo que ya revisaste se conserva y se registra el tiempo parcial.</p>
                 <div class="flex justify-end gap-2">
                     <button type="button" @click="$refs.liberar.close()" class="rounded-xl px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100">Cancelar</button>
-                    <button type="submit" class="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white hover:bg-primary-dark">Liberar pedido</button>
+                    <button type="submit" class="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-on-primary hover:bg-primary-dark">Liberar pedido</button>
                 </div>
             </form>
         </dialog>

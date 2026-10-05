@@ -3,7 +3,7 @@
     use Illuminate\Support\Carbon;
 
     $campo = 'mt-1 block w-full rounded-xl border-slate-300 px-3.5 py-2 text-sm shadow-sm focus:border-primary focus:ring-primary';
-    $boton = 'rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white hover:bg-primary-dark';
+    $boton = 'rounded-xl bg-primary px-4 py-2 text-sm font-bold text-on-primary hover:bg-primary-dark';
     // Tras un error, se reabre el panel desde el que se envió el formulario.
     $panel = old('panel', '');
 @endphp
@@ -149,13 +149,13 @@
                         @foreach ($rutas as $ruta)
                             <tr class="hover:bg-slate-50">
                                 <td class="px-4 py-3">
-                                    <a href="{{ route('rutas.show', $ruta->id) }}" class="font-bold text-primary hover:underline">{{ $ruta->nombre }}</a>
+                                    <a href="{{ route('rutas.show', $ruta->id) }}" class="font-bold text-primary-ink hover:underline">{{ $ruta->nombre }}</a>
                                 </td>
                                 <td class="px-4 py-3 text-right font-semibold tabular-nums">{{ number_format($ruta->clientes_count, 0, ',', '.') }}</td>
                                 <td class="whitespace-nowrap px-4 py-3 tabular-nums text-slate-600">{{ $ruta->fecha ? Carbon::parse($ruta->fecha)->format('d-m-y H:i') : '—' }}</td>
                                 <td class="whitespace-nowrap px-4 py-3 text-right">
-                                    <a href="{{ route('rutas.descargar', $ruta->id) }}" class="font-semibold text-slate-500 hover:text-primary">Excel</a>
-                                    <a href="{{ route('rutas.show', $ruta->id) }}" class="ml-4 font-semibold text-slate-500 hover:text-primary">Modificar</a>
+                                    <a href="{{ route('rutas.descargar', $ruta->id) }}" class="font-semibold text-slate-500 hover:text-primary-ink">Excel</a>
+                                    <a href="{{ route('rutas.show', $ruta->id) }}" class="ml-4 font-semibold text-slate-500 hover:text-primary-ink">Modificar</a>
                                 </td>
                             </tr>
                         @endforeach

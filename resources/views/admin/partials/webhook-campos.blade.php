@@ -27,7 +27,7 @@
         @foreach (\App\Services\Webhooks\EventosWebhook::CATALOGO as $evento => $descripcion)
             <label class="flex cursor-pointer items-start gap-2 rounded-lg p-2 text-sm ring-1 ring-slate-200 has-checked:bg-primary-soft has-checked:ring-primary">
                 <input type="checkbox" name="eventos[]" value="{{ $evento }}" @checked(in_array($evento, $eventosElegidos, true))
-                       class="mt-0.5 size-4 rounded border-slate-300 text-primary focus:ring-primary">
+                       class="mt-0.5 size-4 rounded border-slate-300 text-primary-ink focus:ring-primary">
                 <span>
                     <span class="block font-mono text-xs font-bold text-slate-800">{{ $evento }}</span>
                     <span class="block text-xs text-slate-500">{{ $descripcion }}</span>

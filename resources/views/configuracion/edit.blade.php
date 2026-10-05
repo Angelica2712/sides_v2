@@ -113,7 +113,7 @@
                         <label class="flex cursor-pointer items-start gap-3 rounded-xl p-3 ring-1 ring-slate-200 has-checked:bg-primary-soft has-checked:ring-primary">
                             <input type="checkbox" name="{{ $nombre }}" value="1" @checked($marcado($nombre))
                                    @if ($nombre === 'activarValPicking') x-model="clavePicking" @elseif ($nombre === 'activarValPacking') x-model="clavePacking" @endif
-                                   class="mt-0.5 size-5 rounded border-slate-300 text-primary focus:ring-primary">
+                                   class="mt-0.5 size-5 rounded border-slate-300 text-primary-ink focus:ring-primary">
                             <span>
                                 <span class="block font-bold text-slate-900">{{ $etiqueta }}</span>
                                 <span class="block text-sm text-slate-500">{{ $ayuda }}</span>
@@ -151,7 +151,7 @@
 
             <div class="flex justify-end gap-2">
                 <a href="{{ route('home') }}" class="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-100">Cancelar</a>
-                <button type="submit" class="rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white hover:bg-primary-dark">Guardar configuración</button>
+                <button type="submit" class="rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-on-primary hover:bg-primary-dark">Guardar configuración</button>
             </div>
         </form>
     </div>

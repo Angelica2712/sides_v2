@@ -20,7 +20,7 @@
                         @php $textos = InformesService::textos($tipo, $vista); @endphp
                         <a href="{{ route('informes.reporte', [$tipo, $vista]) }}"
                            class="group flex gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-primary hover:shadow-md">
-                            <span class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary transition-colors group-hover:bg-primary group-hover:text-white">
+                            <span class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary-ink transition-colors group-hover:bg-primary group-hover:text-on-primary">
                                 <svg class="size-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                     {!! \App\Support\IconosSvg::path($textos['icono']) !!}
                                 </svg>

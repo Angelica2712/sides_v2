@@ -26,6 +26,9 @@
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700,800&display=swap" rel="stylesheet" />
 
         @vite(['resources/css/app.css', 'resources/js/app.js'])
+        @if ($temaDrogueria = \App\Support\TemaSides::estilo($usuario->codisb))
+            <style>{!! $temaDrogueria !!}</style>
+        @endif
     </head>
     <body class="font-sans antialiased bg-page text-slate-800">
         <div x-data="{ sidebarOpen: false, sidebarCollapsed: localStorage.getItem('sidesSidebarCollapsed') === 'true' }"
@@ -40,7 +43,7 @@
                    :class="{ 'translate-x-0!': sidebarOpen }"
                    class="fixed lg:sticky inset-y-0 lg:top-0 left-0 z-50 flex flex-col h-screen bg-sidebar border-r border-sidebar-border shadow-lg -translate-x-full lg:translate-x-0 transition-[width,transform] duration-300">
 
-                <div class="shrink-0 min-h-20 px-3 py-3 flex flex-col items-center justify-center bg-primary border-b border-primary-dark text-white">
+                <div class="shrink-0 min-h-20 px-3 py-3 flex flex-col items-center justify-center bg-primary border-b border-primary-dark text-on-primary">
                     <a href="{{ route('home') }}" class="flex flex-col items-center text-center group">
                         @if ($logoDrogueria)
                             {{-- Logo de la droguería (cualquier forma y color): sobre una placa blanca para que se lea en el azul. --}}
@@ -55,7 +58,7 @@
                                  class="rounded-full shadow-[0_0_12px_2px_rgba(255,255,255,0.45)] transition-all duration-300 group-hover:scale-105">
                         @endif
                         <span x-show="!sidebarCollapsed" class="mt-1.5 max-w-[210px] truncate text-sm font-bold leading-tight">{{ $nombreCorto }}</span>
-                        <span x-show="!sidebarCollapsed" class="text-xs font-semibold tracking-widest uppercase text-white/75">SIDES V2</span>
+                        <span x-show="!sidebarCollapsed" class="text-xs font-semibold tracking-widest uppercase text-on-primary/75">SIDES V2</span>
                     </a>
                 </div>
 
@@ -63,15 +66,15 @@
                     @foreach ($seccionesMenu as $seccion => $itemsMenu)
                         <div class="space-y-1 {{ $loop->first ? '' : 'mt-4' }}">
                             @if ($seccion !== '')
-                                <p x-show="!sidebarCollapsed" class="px-2.5 pb-1 text-[11px] font-bold uppercase tracking-widest text-slate-500">{{ $seccion }}</p>
+                                <p x-show="!sidebarCollapsed" class="px-2.5 pb-1 text-[11px] font-bold uppercase tracking-widest text-sidebar-icon">{{ $seccion }}</p>
                                 <div x-show="sidebarCollapsed" x-cloak class="mx-2.5 mb-2 border-t border-sidebar-border" aria-hidden="true"></div>
                             @endif
                             @foreach ($itemsMenu as $item)
                                 @php $activo = request()->routeIs($item['ruta']); @endphp
                                 <a href="{{ route($item['ruta']) }}" title="{{ $item['etiqueta'] }}"
                                    @if ($activo) aria-current="page" @endif
-                                   class="group flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm font-semibold transition-colors {{ $activo ? 'bg-primary text-white shadow-sm' : 'text-slate-300 hover:bg-primary hover:text-white' }}">
-                                    <span class="flex items-center justify-center size-9 rounded-md shrink-0 transition-colors {{ $activo ? 'bg-primary-soft text-primary' : 'text-slate-400 group-hover:bg-white group-hover:text-primary' }}">
+                                   class="group flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm font-semibold transition-colors {{ $activo ? 'bg-primary text-on-primary shadow-sm' : 'text-sidebar-text hover:bg-primary hover:text-on-primary' }}">
+                                    <span class="flex items-center justify-center size-9 rounded-md shrink-0 transition-colors {{ $activo ? 'bg-primary-soft text-primary-ink' : 'text-sidebar-icon group-hover:bg-primary-soft group-hover:text-primary-ink' }}">
                                         <svg class="size-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                             {!! \App\Support\IconosSvg::path($item['icono']) !!}
                                         </svg>
@@ -86,8 +89,8 @@
                 {{-- Solo el FT (viene de SEPED) y si SEPED_URL está configurado: pasa a SEPED sin contraseña. --}}
                 @if (auth()->user()?->esFt() && \App\Http\Controllers\SsoController::urlSeped())
                     <a href="{{ route('sso.seped') }}" title="Ir a SEPED"
-                       class="group shrink-0 mx-2.5 mt-2.5 flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm font-semibold text-slate-300 transition-colors hover:bg-primary hover:text-white">
-                        <span class="flex items-center justify-center size-9 rounded-md shrink-0 text-slate-400 group-hover:text-white">
+                       class="group shrink-0 mx-2.5 mt-2.5 flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm font-semibold text-sidebar-text transition-colors hover:bg-primary hover:text-on-primary">
+                        <span class="flex items-center justify-center size-9 rounded-md shrink-0 text-sidebar-icon group-hover:text-on-primary">
                             <svg class="size-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                 <path d="M15 3h6v6" /><path d="M10 14 21 3" /><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
                             </svg>
@@ -99,8 +102,8 @@
                 <form method="POST" action="{{ route('logout') }}" class="shrink-0 p-2.5 border-t border-sidebar-border">
                     @csrf
                     <button type="submit" title="Cerrar sesión"
-                            class="group w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm font-semibold text-slate-300 transition-colors hover:bg-rose-600 hover:text-white">
-                        <span class="flex items-center justify-center size-9 rounded-md shrink-0 text-slate-400 group-hover:text-white">
+                            class="group w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm font-semibold text-sidebar-text transition-colors hover:bg-rose-600 hover:text-white">
+                        <span class="flex items-center justify-center size-9 rounded-md shrink-0 text-sidebar-icon group-hover:text-white">
                             <svg class="size-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                 <path d="m16 17 5-5-5-5" /><path d="M21 12H9" /><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
                             </svg>
@@ -111,16 +114,16 @@
             </aside>
 
             <div class="flex-1 flex flex-col min-w-0">
-                <header class="sticky top-0 z-30 bg-primary border-b border-primary-dark text-white shadow-md">
+                <header class="sticky top-0 z-30 bg-primary border-b border-primary-dark text-on-primary shadow-md">
                     <div class="flex items-center justify-between gap-3 px-4 sm:px-6 min-h-16 py-3">
                         <div class="flex items-center gap-2 min-w-0">
                             <button type="button" @click="sidebarOpen = true" aria-label="Abrir menú"
-                                    class="lg:hidden p-2 -ms-2 rounded-xl text-white/80 hover:bg-white/10 hover:text-white">
+                                    class="lg:hidden p-2 -ms-2 rounded-xl text-on-primary/80 hover:bg-on-primary/10 hover:text-on-primary">
                                 <svg class="size-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
                             </button>
                             <button type="button" @click="sidebarCollapsed = !sidebarCollapsed"
                                     :aria-label="sidebarCollapsed ? 'Expandir menú lateral' : 'Encoger menú lateral'"
-                                    class="hidden lg:flex p-2 rounded-xl text-white/80 hover:bg-white/15 hover:text-white">
+                                    class="hidden lg:flex p-2 rounded-xl text-on-primary/80 hover:bg-on-primary/15 hover:text-on-primary">
                                 <svg class="size-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2" /><line x1="9" y1="3" x2="9" y2="21" /></svg>
                             </button>
                             @if ($titulo)
@@ -128,13 +131,13 @@
                             @endif
                         </div>
 
-                        <div class="flex items-center gap-x-2.5 py-1.5 ps-2 pe-3.5 rounded-2xl bg-white/10 border border-white/25">
-                            <span class="flex items-center justify-center size-8 rounded-xl bg-white text-primary font-extrabold text-xs">
+                        <div class="flex items-center gap-x-2.5 py-1.5 ps-2 pe-3.5 rounded-2xl bg-on-primary/10 border border-on-primary/25">
+                            <span class="flex items-center justify-center size-8 rounded-xl bg-white text-primary-ink font-extrabold text-xs">
                                 {{ strtoupper(mb_substr($usuario->name ?: 'U', 0, 1)) }}
                             </span>
                             <span class="hidden sm:flex flex-col leading-tight">
                                 <span class="text-xs font-bold">{{ $usuario->name }}</span>
-                                <span class="text-[11px] text-white/80">{{ $usuario->email }}</span>
+                                <span class="text-[11px] text-on-primary/80">{{ $usuario->email }}</span>
                             </span>
                         </div>
                     </div>

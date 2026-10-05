@@ -60,7 +60,7 @@
 
                         <div class="flex shrink-0 flex-wrap gap-2">
                             @if ($esMio)
-                                <a href="{{ route('packing.show', $pedido->id) }}" class="rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white hover:bg-primary-dark">Continuar</a>
+                                <a href="{{ route('packing.show', $pedido->id) }}" class="rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-on-primary hover:bg-primary-dark">Continuar</a>
                                 <button type="button" @click="$refs.liberar.showModal()" class="rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50">Liberar</button>
 
                                 <dialog x-ref="liberar" class="m-auto w-[min(26rem,calc(100%-2rem))] rounded-2xl p-0 shadow-xl backdrop:bg-slate-900/60">
@@ -70,14 +70,14 @@
                                         <p class="text-sm text-slate-600">Queda disponible para otro empacador. Lo que ya verificaste se conserva.</p>
                                         <div class="flex justify-end gap-2">
                                             <button type="button" @click="$refs.liberar.close()" class="rounded-xl px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100">Cancelar</button>
-                                            <button type="submit" class="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white hover:bg-primary-dark">Liberar pedido</button>
+                                            <button type="submit" class="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-on-primary hover:bg-primary-dark">Liberar pedido</button>
                                         </div>
                                     </form>
                                 </dialog>
                             @elseif ($ocupado)
                                 <span class="rounded-xl bg-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-500">En uso</span>
                             @else
-                                <a href="{{ route('packing.show', $pedido->id) }}" class="rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white hover:bg-primary-dark">Empacar</a>
+                                <a href="{{ route('packing.show', $pedido->id) }}" class="rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-on-primary hover:bg-primary-dark">Empacar</a>
                             @endif
                         </div>
                     </li>

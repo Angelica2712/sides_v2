@@ -14,7 +14,7 @@
 <x-layouts.app :titulo="'Lote #'.$lote->id">
     <div class="mx-auto max-w-5xl space-y-4" x-data>
         <section class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
-            <a href="{{ route('batch.index') }}" class="text-sm font-semibold text-primary hover:underline">← Volver a Batch Picking</a>
+            <a href="{{ route('batch.index') }}" class="text-sm font-semibold text-primary-ink hover:underline">← Volver a Batch Picking</a>
             <div class="mt-1 flex flex-wrap items-center gap-2">
                 <h2 class="text-2xl font-black text-slate-900">Lote #{{ $lote->id }}</h2>
                 <span class="rounded-full px-2.5 py-0.5 text-xs font-bold ring-1 {{ $estadoClase }}">{{ $estadoTexto }}</span>
@@ -68,7 +68,7 @@
                         <input id="recipiente" name="recipiente" type="text" required maxlength="50" placeholder="Escanea o escribe el código de la cesta"
                                class="mt-1.5 block w-full rounded-xl border-slate-300 px-3.5 py-2.5 text-lg font-bold shadow-sm focus:border-primary focus:ring-primary">
                     </div>
-                    <button type="submit" class="rounded-xl bg-primary px-5 py-3 text-sm font-bold text-white hover:bg-primary-dark">Iniciar picking del lote</button>
+                    <button type="submit" class="rounded-xl bg-primary px-5 py-3 text-sm font-bold text-on-primary hover:bg-primary-dark">Iniciar picking del lote</button>
                 </form>
                 <div class="flex items-end">
                     <button type="button" @click="$refs.anular.showModal()" class="w-full rounded-xl bg-white px-4 py-3 text-sm font-semibold text-rose-700 ring-1 ring-rose-200 hover:bg-rose-50">Anular lote</button>
@@ -88,7 +88,7 @@
             </dialog>
         @elseif ($lote->estado === 'CONFIRMADO')
             @if ($responsable === $miNombre)
-                <a href="{{ route('batch.picking', $lote->id) }}" class="block rounded-2xl bg-primary px-5 py-3 text-center font-bold text-white hover:bg-primary-dark">Continuar picking del lote</a>
+                <a href="{{ route('batch.picking', $lote->id) }}" class="block rounded-2xl bg-primary px-5 py-3 text-center font-bold text-on-primary hover:bg-primary-dark">Continuar picking del lote</a>
             @else
                 <p class="rounded-2xl bg-slate-100 px-5 py-3 text-center text-sm font-semibold text-slate-600">Lo está trabajando {{ $responsable ?: 'otro operario' }}.</p>
             @endif

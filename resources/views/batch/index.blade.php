@@ -40,7 +40,7 @@
                             @endif
                             <div class="mt-auto flex gap-2">
                                 @if ($lote->estado === 'CONFIRMADO' && $lote->responsable === $miNombre)
-                                    <a href="{{ route('batch.picking', $lote->id) }}" class="flex-1 rounded-xl bg-primary px-3 py-2 text-center text-sm font-bold text-white hover:bg-primary-dark">Continuar picking</a>
+                                    <a href="{{ route('batch.picking', $lote->id) }}" class="flex-1 rounded-xl bg-primary px-3 py-2 text-center text-sm font-bold text-on-primary hover:bg-primary-dark">Continuar picking</a>
                                 @endif
                                 <a href="{{ route('batch.show', $lote->id) }}" class="flex-1 rounded-xl bg-white px-3 py-2 text-center text-sm font-semibold text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50">Ver lote</a>
                             </div>
@@ -60,7 +60,7 @@
                 </h3>
                 @if ($pedidos->isNotEmpty())
                     <button type="button" @click="seleccion = seleccion.length === todos.length ? [] : [...todos]"
-                            class="text-sm font-semibold text-primary hover:underline"
+                            class="text-sm font-semibold text-primary-ink hover:underline"
                             x-text="seleccion.length === todos.length ? 'Quitar selección' : 'Seleccionar todos'">Seleccionar todos</button>
                 @endif
             </div>
@@ -77,7 +77,7 @@
                             :class="seleccion.includes({{ (int) $pedido->id }}) ? 'ring-2 ring-primary' : 'ring-slate-200'">
                             <label class="flex cursor-pointer items-start gap-3 p-4">
                                 <input type="checkbox" name="pedidos[]" value="{{ $pedido->id }}" x-model.number="seleccion"
-                                       class="mt-1 size-5 rounded border-slate-300 text-primary focus:ring-primary">
+                                       class="mt-1 size-5 rounded border-slate-300 text-primary-ink focus:ring-primary">
                                 <span class="min-w-0 flex-1">
                                     <span class="flex flex-wrap items-center gap-2">
                                         <span class="text-lg font-black text-slate-900 tabular-nums">#{{ $pedido->id }}</span>
@@ -94,7 +94,7 @@
                                 </span>
                             </label>
                             <details class="border-t border-slate-100 px-4">
-                                <summary class="cursor-pointer py-2 text-xs font-semibold text-primary">Ver productos</summary>
+                                <summary class="cursor-pointer py-2 text-xs font-semibold text-primary-ink">Ver productos</summary>
                                 <div class="overflow-x-auto pb-3">
                                     <table class="min-w-full text-left text-xs">
                                         <thead class="text-slate-500">
@@ -127,7 +127,7 @@
                             </button>
                         @endif
                         <button type="submit" :disabled="seleccion.length === 0"
-                                class="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white hover:bg-primary-dark disabled:opacity-40">
+                                class="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-on-primary hover:bg-primary-dark disabled:opacity-40">
                             Agrupar en un lote
                         </button>
                     </div>
@@ -140,7 +140,7 @@
                             <p class="text-sm text-slate-600">Los pedidos en espera pasan al picking normal como cualquier pedido recibido. Los que ya están recibidos no cambian.</p>
                             <div class="flex justify-end gap-2">
                                 <button type="button" @click="$refs.liberar.close()" class="rounded-xl px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100">Cancelar</button>
-                                <button type="submit" formaction="{{ route('batch.liberar') }}" class="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white hover:bg-primary-dark">Sí, liberar</button>
+                                <button type="submit" formaction="{{ route('batch.liberar') }}" class="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-on-primary hover:bg-primary-dark">Sí, liberar</button>
                             </div>
                         </div>
                     </dialog>

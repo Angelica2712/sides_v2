@@ -4,7 +4,7 @@
 
 <x-layouts.app :titulo="'Agregar clientes a '.$ruta->nombre">
     <div class="mx-auto max-w-5xl space-y-4">
-        <a href="{{ route('rutas.show', $ruta->id) }}" class="text-sm font-semibold text-primary hover:underline">← Volver a {{ $ruta->nombre }}</a>
+        <a href="{{ route('rutas.show', $ruta->id) }}" class="text-sm font-semibold text-primary-ink hover:underline">← Volver a {{ $ruta->nombre }}</a>
 
         <div>
             <h2 class="text-xl font-extrabold text-slate-900">Agregar clientes a {{ $ruta->nombre }}</h2>
@@ -54,7 +54,7 @@
                                 class="rounded-xl bg-white px-4 py-2 text-sm font-bold text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50"
                                 x-text="marcados.length === todos.length ? 'Desmarcar todos' : 'Marcar todos'">Marcar todos</button>
                         <button type="submit" x-bind:disabled="marcados.length === 0"
-                                class="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white hover:bg-primary-dark disabled:opacity-50">Agregar a la ruta</button>
+                                class="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-on-primary hover:bg-primary-dark disabled:opacity-50">Agregar a la ruta</button>
                     </div>
                 </div>
 
@@ -73,7 +73,7 @@
                                 <tr class="hover:bg-slate-50 has-checked:bg-primary-soft">
                                     <td class="px-4 py-3">
                                         <input id="cli-{{ $loop->index }}" type="checkbox" name="clientes[]" value="{{ $cliente->codcli }}" x-model="marcados"
-                                               class="size-5 rounded border-slate-300 text-primary focus:ring-primary">
+                                               class="size-5 rounded border-slate-300 text-primary-ink focus:ring-primary">
                                     </td>
                                     <td class="px-4 py-3">
                                         <label for="cli-{{ $loop->index }}" class="block cursor-pointer">

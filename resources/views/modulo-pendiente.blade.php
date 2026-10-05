@@ -1,7 +1,7 @@
 <x-layouts.app :titulo="$modulo['etiqueta']">
     <div class="max-w-3xl mx-auto">
         <section class="rounded-2xl bg-white border border-slate-200 shadow-sm p-8 text-center">
-            <span class="mx-auto flex items-center justify-center size-14 rounded-2xl bg-primary-soft text-primary">
+            <span class="mx-auto flex items-center justify-center size-14 rounded-2xl bg-primary-soft text-primary-ink">
                 <svg class="size-7" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     {!! \App\Support\IconosSvg::path($modulo['icono']) !!}
                 </svg>
@@ -13,7 +13,7 @@
             </p>
             <div class="mt-6">
                 <a href="{{ route('home') }}"
-                   class="inline-flex items-center rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-primary-dark">
+                   class="inline-flex items-center rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-on-primary transition-colors hover:bg-primary-dark">
                     Volver al inicio
                 </a>
             </div>

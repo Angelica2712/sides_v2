@@ -19,11 +19,11 @@
         <section class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 sm:p-5">
             <div class="flex flex-wrap items-start justify-between gap-3">
                 <div class="min-w-0">
-                    <a href="{{ route('packing.index') }}" class="text-sm font-semibold text-primary hover:underline">← Volver a la lista</a>
+                    <a href="{{ route('packing.index') }}" class="text-sm font-semibold text-primary-ink hover:underline">← Volver a la lista</a>
                     <div class="mt-1 flex flex-wrap items-center gap-2">
                         <h2 class="text-2xl font-black text-slate-900 tabular-nums">Pedido #{{ $pedido->id }}</h2>
                         <x-parte-pedido :parte="$parte" class="text-xs" />
-                        <span class="rounded-lg bg-primary px-2.5 py-1 text-sm font-bold text-white">Recipiente {{ $pedido->recipiente }}</span>
+                        <span class="rounded-lg bg-primary px-2.5 py-1 text-sm font-bold text-on-primary">Recipiente {{ $pedido->recipiente }}</span>
                     </div>
                     <p class="mt-1 truncate text-sm text-slate-600">{{ $pedido->ruta ?: 'Sin ruta' }} · {{ $pedido->codcli }} · {{ $pedido->nomcli }}</p>
                     <p class="text-xs text-slate-500">Picking de {{ $pedido->despachador ?: '—' }}</p>
@@ -162,7 +162,7 @@
                        class="block w-full rounded-xl border-slate-300 px-3.5 py-2.5 shadow-sm focus:border-primary focus:ring-primary">
                 <p x-show="errorClave" x-text="errorClave" class="text-sm font-semibold text-rose-700"></p>
                 <div class="flex justify-end">
-                    <button type="submit" :disabled="enviando" class="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white hover:bg-primary-dark disabled:opacity-60">Continuar</button>
+                    <button type="submit" :disabled="enviando" class="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-on-primary hover:bg-primary-dark disabled:opacity-60">Continuar</button>
                 </div>
             </form>
         </dialog>
@@ -188,7 +188,7 @@
                 <p x-show="errorClave" x-text="errorClave" class="text-sm font-semibold text-rose-700"></p>
                 <div class="flex justify-end gap-2">
                     <button type="button" @click="$refs.ajuste.close()" class="rounded-xl px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100">Cancelar</button>
-                    <button type="submit" :disabled="enviando" class="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white hover:bg-primary-dark disabled:opacity-60">Guardar</button>
+                    <button type="submit" :disabled="enviando" class="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-on-primary hover:bg-primary-dark disabled:opacity-60">Guardar</button>
                 </div>
             </form>
         </dialog>
@@ -237,7 +237,7 @@
                 <p class="text-sm text-slate-600">Queda disponible para otro empacador. Lo que ya verificaste se conserva.</p>
                 <div class="flex justify-end gap-2">
                     <button type="button" @click="$refs.liberar.close()" class="rounded-xl px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100">Cancelar</button>
-                    <button type="submit" class="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white hover:bg-primary-dark">Liberar pedido</button>
+                    <button type="submit" class="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-on-primary hover:bg-primary-dark">Liberar pedido</button>
                 </div>
             </form>
         </dialog>

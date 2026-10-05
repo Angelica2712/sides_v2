@@ -28,9 +28,9 @@
         </div>
 
         @if ($miPedido)
-            <div class="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-primary px-5 py-4 text-white shadow-sm">
+            <div class="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-primary px-5 py-4 text-on-primary shadow-sm">
                 <p class="font-semibold">Tienes el pedido <span class="font-black">#{{ $miPedido }}</span> en picking.</p>
-                <a href="{{ route('picking.show', $miPedido) }}" class="rounded-xl bg-white px-4 py-2 text-sm font-bold text-primary hover:bg-primary-soft">Continuar picking</a>
+                <a href="{{ route('picking.show', $miPedido) }}" class="rounded-xl bg-white px-4 py-2 text-sm font-bold text-primary-ink hover:bg-primary-soft">Continuar picking</a>
             </div>
         @endif
 
@@ -38,7 +38,7 @@
             <section aria-labelledby="titulo-lotes-batch" class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
                 <div class="flex flex-wrap items-center justify-between gap-2">
                     <h3 id="titulo-lotes-batch" class="font-extrabold text-slate-900">Lotes de Batch Picking</h3>
-                    <a href="{{ route('batch.index') }}" class="text-sm font-semibold text-primary hover:underline">Ir a Batch Picking</a>
+                    <a href="{{ route('batch.index') }}" class="text-sm font-semibold text-primary-ink hover:underline">Ir a Batch Picking</a>
                 </div>
                 <ul class="mt-3 grid gap-2 sm:grid-cols-2">
                     @foreach ($lotes as $lote)
@@ -50,9 +50,9 @@
                                 </p>
                             </div>
                             @if ($lote->estado === 'CONFIRMADO' && $lote->responsable === $miNombre)
-                                <a href="{{ route('batch.picking', $lote->id) }}" class="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-white hover:bg-primary-dark">Continuar</a>
+                                <a href="{{ route('batch.picking', $lote->id) }}" class="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-on-primary hover:bg-primary-dark">Continuar</a>
                             @elseif ($lote->estado === 'ABIERTO')
-                                <a href="{{ route('batch.show', $lote->id) }}" class="shrink-0 rounded-lg bg-white px-3 py-1.5 text-xs font-bold text-primary ring-1 ring-slate-300 hover:bg-slate-100">Ver lote</a>
+                                <a href="{{ route('batch.show', $lote->id) }}" class="shrink-0 rounded-lg bg-white px-3 py-1.5 text-xs font-bold text-primary-ink ring-1 ring-slate-300 hover:bg-slate-100">Ver lote</a>
                             @else
                                 <span class="shrink-0 rounded-lg bg-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-500">En uso</span>
                             @endif
@@ -100,7 +100,7 @@
 
                         <div class="flex shrink-0 flex-wrap gap-2">
                             @if ($esMio)
-                                <a href="{{ route('picking.show', $pedido->id) }}" class="rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white hover:bg-primary-dark">Continuar</a>
+                                <a href="{{ route('picking.show', $pedido->id) }}" class="rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-on-primary hover:bg-primary-dark">Continuar</a>
                                 <button type="button" @click="$refs.liberar.showModal()" class="rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50">Liberar</button>
 
                                 <dialog x-ref="liberar" class="m-auto w-[min(26rem,calc(100%-2rem))] rounded-2xl p-0 shadow-xl backdrop:bg-slate-900/60">
@@ -110,7 +110,7 @@
                                         <p class="text-sm text-slate-600">Queda disponible para otro operario. Lo que ya revisaste se conserva y se registra el tiempo parcial.</p>
                                         <div class="flex justify-end gap-2">
                                             <button type="button" @click="$refs.liberar.close()" class="rounded-xl px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100">Cancelar</button>
-                                            <button type="submit" class="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white hover:bg-primary-dark">Liberar pedido</button>
+                                            <button type="submit" class="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-on-primary hover:bg-primary-dark">Liberar pedido</button>
                                         </div>
                                     </form>
                                 </dialog>
@@ -120,7 +120,7 @@
                                 <span class="rounded-xl bg-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-500" title="Termina o libera tu pedido actual para tomar otro">Termina tu pedido actual</span>
                             @else
                                 <button type="button" @click="$refs.tomar.showModal(); $nextTick(() => $refs.recipiente.focus())"
-                                        class="rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white hover:bg-primary-dark">Tomar pedido</button>
+                                        class="rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-on-primary hover:bg-primary-dark">Tomar pedido</button>
 
                                 <dialog x-ref="tomar" class="m-auto w-[min(26rem,calc(100%-2rem))] rounded-2xl p-0 shadow-xl backdrop:bg-slate-900/60">
                                     <form method="POST" action="{{ route('picking.tomar', $pedido->id) }}" class="space-y-4 p-6">
@@ -138,7 +138,7 @@
                                         </div>
                                         <div class="flex justify-end gap-2">
                                             <button type="button" @click="$refs.tomar.close()" class="rounded-xl px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100">Cancelar</button>
-                                            <button type="submit" class="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white hover:bg-primary-dark">Tomar y empezar</button>
+                                            <button type="submit" class="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-on-primary hover:bg-primary-dark">Tomar y empezar</button>
                                         </div>
                                     </form>
                                 </dialog>

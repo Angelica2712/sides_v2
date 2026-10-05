@@ -11,7 +11,7 @@
     $campo = 'mt-1 block rounded-xl border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-primary focus:ring-primary';
 @endphp
 
-<a href="{{ route('informes.index') }}" class="text-sm font-semibold text-primary hover:underline">← Informes</a>
+<a href="{{ route('informes.index') }}" class="text-sm font-semibold text-primary-ink hover:underline">← Informes</a>
 
 <nav aria-label="Informes" class="flex gap-2 overflow-x-auto pb-1">
     @foreach (InformesService::TIPOS as $t)
@@ -19,7 +19,7 @@
             @php $activa = $t === $tipo && $v === $vista; @endphp
             <a href="{{ route('informes.reporte', [$t, $v, ...$fechas]) }}"
                @if ($activa) aria-current="page" @endif
-               class="shrink-0 rounded-xl px-3.5 py-2 text-sm font-bold shadow-sm ring-1 transition-colors {{ $activa ? 'bg-primary text-white ring-primary' : 'bg-white text-slate-700 ring-slate-200 hover:bg-slate-50' }}">
+               class="shrink-0 rounded-xl px-3.5 py-2 text-sm font-bold shadow-sm ring-1 transition-colors {{ $activa ? 'bg-primary text-on-primary ring-primary' : 'bg-white text-slate-700 ring-slate-200 hover:bg-slate-50' }}">
                 {{ InformesService::textos($t, $v)['titulo'] }}
             </a>
         @endforeach
@@ -41,7 +41,7 @@
             Hasta
             <input type="date" name="hasta" value="{{ $fechas['hasta'] }}" required class="{{ $campo }}">
         </label>
-        <button type="submit" class="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white hover:bg-primary-dark">Consultar</button>
+        <button type="submit" class="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-on-primary hover:bg-primary-dark">Consultar</button>
     </form>
 </div>
 

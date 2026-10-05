@@ -9,7 +9,7 @@
 
 <x-layouts.app titulo="Webhooks">
     <div class="mx-auto max-w-4xl space-y-4">
-        <a href="{{ route('admin.index') }}" class="text-sm font-semibold text-primary hover:underline">← Volver a droguerías</a>
+        <a href="{{ route('admin.index') }}" class="text-sm font-semibold text-primary-ink hover:underline">← Volver a droguerías</a>
 
         <div>
             <h2 class="text-xl font-extrabold text-slate-900">Webhooks de {{ $drogueria->nombre ?: $drogueria->codisb }}</h2>
@@ -55,7 +55,7 @@
                     <div class="flex flex-wrap gap-2">
                         <form method="POST" action="{{ route('admin.webhooks.probar', $webhook) }}">
                             @csrf
-                            <button type="submit" class="rounded-xl bg-primary px-3 py-2 text-sm font-bold text-white hover:bg-primary-dark">Probar</button>
+                            <button type="submit" class="rounded-xl bg-primary px-3 py-2 text-sm font-bold text-on-primary hover:bg-primary-dark">Probar</button>
                         </form>
                         <button type="button" @click="editar = ! editar" class="rounded-xl bg-white px-3 py-2 text-sm font-semibold text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50">Editar</button>
                     </div>
@@ -66,17 +66,17 @@
                         @csrf @method('PUT')
                         @include('admin.partials.webhook-campos', ['webhook' => $webhook, 'prefijo' => "w{$webhook->id}"])
                         <label class="flex items-center gap-2 text-sm font-semibold text-slate-700">
-                            <input type="checkbox" name="activo" value="1" @checked($webhook->activo) class="size-4 rounded border-slate-300 text-primary focus:ring-primary">
+                            <input type="checkbox" name="activo" value="1" @checked($webhook->activo) class="size-4 rounded border-slate-300 text-primary-ink focus:ring-primary">
                             Enviar avisos (desmarcado queda en pausa)
                         </label>
                         @if ($webhook->token)
                             <label class="flex items-center gap-2 text-sm text-slate-600">
-                                <input type="checkbox" name="quitar_token" value="1" class="size-4 rounded border-slate-300 text-primary focus:ring-primary">
+                                <input type="checkbox" name="quitar_token" value="1" class="size-4 rounded border-slate-300 text-primary-ink focus:ring-primary">
                                 Quitar el token actual
                             </label>
                         @endif
                         <div class="flex justify-end">
-                            <button type="submit" class="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white hover:bg-primary-dark">Guardar</button>
+                            <button type="submit" class="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-on-primary hover:bg-primary-dark">Guardar</button>
                         </div>
                     </form>
 
@@ -102,7 +102,7 @@
                 @csrf
                 @include('admin.partials.webhook-campos', ['webhook' => null, 'prefijo' => 'nuevo'])
                 <div class="flex justify-end">
-                    <button type="submit" class="rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white hover:bg-primary-dark">Crear webhook</button>
+                    <button type="submit" class="rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-on-primary hover:bg-primary-dark">Crear webhook</button>
                 </div>
             </form>
         </details>
@@ -146,7 +146,7 @@
                                         @if ($entrega->estado === 'FALLIDO')
                                             <form method="POST" action="{{ route('admin.webhooks.reintentar', $entrega) }}">
                                                 @csrf
-                                                <button type="submit" class="text-xs font-bold text-primary hover:underline">Reintentar</button>
+                                                <button type="submit" class="text-xs font-bold text-primary-ink hover:underline">Reintentar</button>
                                             </form>
                                         @endif
                                     </td>

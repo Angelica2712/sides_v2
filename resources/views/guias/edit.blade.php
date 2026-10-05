@@ -9,7 +9,7 @@
 
 <x-layouts.app :titulo="'Modificar guía #'.$guia->id">
     <div class="mx-auto max-w-2xl space-y-4">
-        <a href="{{ route('guias.show', $guia->id) }}" class="text-sm font-semibold text-primary hover:underline">← Volver a la guía #{{ $guia->id }}</a>
+        <a href="{{ route('guias.show', $guia->id) }}" class="text-sm font-semibold text-primary-ink hover:underline">← Volver a la guía #{{ $guia->id }}</a>
 
         <form method="POST" action="{{ route('guias.update', $guia->id) }}" class="space-y-4 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200"
               x-data="{ chofer: @js($chofer) }">
@@ -63,7 +63,7 @@
 
             <div class="flex justify-end gap-2">
                 <a href="{{ route('guias.show', $guia->id) }}" class="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-100">Cancelar</a>
-                <button type="submit" class="rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white hover:bg-primary-dark">Guardar cambios</button>
+                <button type="submit" class="rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-on-primary hover:bg-primary-dark">Guardar cambios</button>
             </div>
         </form>
     </div>

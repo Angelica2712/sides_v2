@@ -9,7 +9,7 @@
 
 <x-layouts.app :titulo="($carga ? 'Carga' : 'Entrega').' guía #'.$guia->id">
     <div class="mx-auto max-w-4xl space-y-4" x-data="despachoGuia(@js(session('resultado')))">
-        <a href="{{ route('despacho.index') }}" class="text-sm font-semibold text-primary hover:underline">← Volver a mis guías</a>
+        <a href="{{ route('despacho.index') }}" class="text-sm font-semibold text-primary-ink hover:underline">← Volver a mis guías</a>
 
         <section class="space-y-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
             <div class="flex flex-wrap items-start justify-between gap-2">

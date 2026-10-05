@@ -7,13 +7,13 @@
                     {{ $filtros->count() }} {{ $filtros->count() === 1 ? 'filtro' : 'filtros' }} para la pantalla de Monitor
                 </p>
             </div>
-            <a href="{{ route('filtromonitor.create') }}" class="rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white hover:bg-primary-dark">Nuevo filtro</a>
+            <a href="{{ route('filtromonitor.create') }}" class="rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-on-primary hover:bg-primary-dark">Nuevo filtro</a>
         </div>
 
         {{-- Guía corta: el módulo no se entiende sin ver qué hace en el Monitor. --}}
         <section aria-labelledby="como-funciona" class="rounded-2xl bg-primary-soft p-5 ring-1 ring-primary/20">
             <h3 id="como-funciona" class="flex items-center gap-2 font-extrabold text-slate-900">
-                <svg class="size-5 text-primary" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{!! \App\Support\IconosSvg::path('filter') !!}</svg>
+                <svg class="size-5 text-primary-ink" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{!! \App\Support\IconosSvg::path('filter') !!}</svg>
                 ¿Para qué sirve?
             </h3>
             <p class="mt-2 text-sm text-slate-700">
@@ -67,9 +67,9 @@
                                 <td class="px-4 py-3 text-slate-600">{{ $filtro->caracterLogo ?: '—' }}</td>
                                 <td class="whitespace-nowrap px-4 py-3 text-right">
                                     @if ($verMonitor)
-                                        <a href="{{ route('monitor.index', ['filtro' => $filtro->id]) }}" class="mr-3 font-semibold text-primary hover:underline">Ver en Monitor</a>
+                                        <a href="{{ route('monitor.index', ['filtro' => $filtro->id]) }}" class="mr-3 font-semibold text-primary-ink hover:underline">Ver en Monitor</a>
                                     @endif
-                                    <a href="{{ route('filtromonitor.edit', $filtro->id) }}" class="font-semibold text-slate-500 hover:text-primary">Modificar</a>
+                                    <a href="{{ route('filtromonitor.edit', $filtro->id) }}" class="font-semibold text-slate-500 hover:text-primary-ink">Modificar</a>
                                 </td>
                             </tr>
                         @endforeach
