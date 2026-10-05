@@ -124,61 +124,57 @@ $numero = fn ($valor) => number_format((int) $valor, 0, ',', '.');
                             $enEtapa = TiemposPedido::enEstadoActual($pedido->estado, $tiempo);
                             $nivel = $semaforo[TiemposPedido::nivel($enEtapa)];
                         @endphp
+                        {{-- Todas las tarjetas miden lo mismo, sea cual sea la etapa: lo que solo tienen las de
+                             picking y packing (recipiente, operario, esperas) va en las mismas líneas, sin sumar filas. --}}
+                        @php
+                            $esperas = $pedido->estado === 'RECIBIDO' ? '' : ' · esperó '.TiemposPedido::formatear($tiempo['espera'])
+                                .($pedido->estado === 'PACKING' ? ' · picking '.TiemposPedido::formatear($tiempo['picking']) : '');
+                        @endphp
                         <article class="rounded-xl border-l-4 bg-white px-3.5 py-3 shadow-sm ring-1 ring-slate-200/80 transition-shadow hover:shadow-md {{ $nivel['borde'] }}">
-                            <div class="flex items-start justify-between gap-3">
-                                <div class="min-w-0">
-                                    <p class="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-slate-500">
-                                        <span class="truncate">{{ $pedido->ruta ?: 'Sin ruta' }}</span>
-                                        @foreach ($marcas[$pedido->id] as $marca)
-                                            <span class="shrink-0 rounded bg-violet-100 px-1.5 py-0.5 text-[10px] font-black normal-case tracking-normal text-violet-800" title="Filtro {{ $marca['filtro'] }}">{{ $marca['texto'] }}</span>
-                                        @endforeach
-                                    </p>
-                                    <p class="font-black leading-tight text-slate-900 tabular-nums" style="font-size: {{ $tamNumeroPedido }}px">#{{ $pedido->id }}</p>
-                                    <x-parte-pedido :parte="$partes[$pedido->id] ?? null" class="mt-1" />
-                                </div>
-                                <span class="inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold ring-1 tabular-nums {{ $nivel['chip'] }}"
-                                      title="{{ $nivel['texto'] }}: {{ TiemposPedido::formatear($enEtapa) }} {{ mb_strtolower($meta['titulo']) }}">
+                            {{-- Ruta y tiempo en una fila, número y marca de pedido partido en la siguiente: así
+                                 la marca no le quita ancho al tiempo ni suma una fila. --}}
+                            <div class="flex items-center justify-between gap-3">
+                                <p class="flex min-w-0 items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-slate-500">
+                                    <span class="truncate">{{ $pedido->ruta ?: 'Sin ruta' }}</span>
+                                    @foreach ($marcas[$pedido->id] as $marca)
+                                        <span class="shrink-0 rounded bg-violet-100 px-1.5 py-0.5 text-[10px] font-black normal-case tracking-normal text-violet-800" title="Filtro {{ $marca['filtro'] }}">{{ $marca['texto'] }}</span>
+                                    @endforeach
+                                </p>
+                                <span class="inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold ring-1 tabular-nums {{ $nivel['chip'] }}"
+                                      title="{{ $nivel['texto'] }}: {{ TiemposPedido::formatear($enEtapa) }} {{ mb_strtolower($meta['titulo']) }}{{ $esperas }}">
                                     <svg class="size-3.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{!! \App\Support\IconosSvg::path('clock') !!}</svg>
                                     {{ TiemposPedido::formatear($enEtapa) }}
-                                    <span class="sr-only">({{ $nivel['texto'] }})</span>
+                                    <span class="sr-only">({{ $nivel['texto'] }}{{ $esperas }})</span>
                                 </span>
+                            </div>
+                            <div class="flex items-center gap-2 overflow-hidden">
+                                <p class="shrink-0 font-black leading-tight text-slate-900 tabular-nums" style="font-size: {{ $tamNumeroPedido }}px">#{{ $pedido->id }}</p>
+                                <x-parte-pedido :parte="$partes[$pedido->id] ?? null" />
                             </div>
 
                             <p class="mt-1 truncate text-sm font-semibold text-slate-700" title="{{ $pedido->nomcli }}">{{ $pedido->nomcli }}</p>
-                            <p class="text-xs text-slate-400">{{ $pedido->codcli }} · enviado {{ $fecha($pedido->fecenviado) }}</p>
+                            <p class="truncate text-xs text-slate-400">{{ $pedido->codcli }} · enviado {{ $fecha($pedido->fecenviado) }}</p>
 
-                            <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-slate-100 pt-2 text-xs font-semibold text-slate-600">
-                                <span class="tabular-nums">{{ $numero($pedido->numren) }} renglones</span>
-                                <span class="text-slate-300" aria-hidden="true">•</span>
-                                <span class="tabular-nums">{{ $numero($pedido->numund) }} unidades</span>
+                            <div class="mt-2 flex h-7 items-center gap-2 overflow-hidden whitespace-nowrap border-t border-slate-100 pt-1.5 text-xs font-semibold text-slate-600">
+                                <span class="shrink-0 tabular-nums" title="{{ $numero($pedido->numren) }} renglones · {{ $numero($pedido->numund) }} unidades">{{ $numero($pedido->numren) }} rengl. · {{ $numero($pedido->numund) }} und.</span>
                                 @if ($pedido->recipiente)
-                                    <span class="rounded-md bg-slate-100 px-1.5 py-0.5 text-slate-700">Recipiente {{ $pedido->recipiente }}</span>
+                                    <span class="shrink-0 rounded-md bg-slate-100 px-1.5 py-0.5 text-slate-700" title="Recipiente {{ $pedido->recipiente }}">Rec. {{ $pedido->recipiente }}</span>
                                 @endif
                                 @if ($verTransporte && $pedido->codtransp)
-                                    <span class="rounded-md bg-slate-100 px-1.5 py-0.5 text-slate-700">Transporte {{ $pedido->codtransp }}</span>
+                                    <span class="shrink-0 rounded-md bg-slate-100 px-1.5 py-0.5 text-slate-700" title="Transporte {{ $pedido->codtransp }}">Transp. {{ $pedido->codtransp }}</span>
+                                @endif
+                                @if ($verDespachador && $pedido->despachador)
+                                    <span class="ms-auto flex min-w-0 items-center gap-1.5" title="{{ $pedido->despachador }}">
+                                        <span class="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary-soft text-[10px] font-black text-primary-ink" aria-hidden="true">
+                                            {{ mb_strtoupper(mb_substr($pedido->despachador, 0, 1)) }}
+                                        </span>
+                                        <span class="truncate">{{ $pedido->despachador }}</span>
+                                    </span>
                                 @endif
                             </div>
 
-                            @if ($verDespachador && $pedido->despachador)
-                                <p class="mt-2 flex items-center gap-2 text-xs font-semibold text-slate-600">
-                                    <span class="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary-soft text-[11px] font-black text-primary-ink" aria-hidden="true">
-                                        {{ mb_strtoupper(mb_substr($pedido->despachador, 0, 1)) }}
-                                    </span>
-                                    <span class="truncate">{{ $pedido->despachador }}</span>
-                                </p>
-                            @endif
-
                             @if ($verObservacion && $pedido->observacion)
                                 <p class="mt-2 rounded-lg bg-amber-50 px-2.5 py-1.5 text-xs text-amber-800">{{ $pedido->observacion }}</p>
-                            @endif
-
-                            @if ($pedido->estado !== 'RECIBIDO')
-                                <p class="mt-2 text-[11px] text-slate-400">
-                                    Esperó {{ TiemposPedido::formatear($tiempo['espera']) }}
-                                    @if ($pedido->estado === 'PACKING')
-                                        · picking {{ TiemposPedido::formatear($tiempo['picking']) }}
-                                    @endif
-                                </p>
                             @endif
                         </article>
                     @empty
