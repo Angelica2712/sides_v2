@@ -27,29 +27,68 @@
             <div class="w-full max-w-4xl overflow-hidden rounded-3xl bg-white shadow-xl ring-1 ring-slate-200 grid md:grid-cols-2">
 
                 {{-- Publicidad: qué es SIDES. Se oculta en teléfono para dejar solo el formulario. --}}
-                <section class="relative hidden md:flex flex-col justify-center overflow-hidden bg-gradient-to-br from-primary to-primary-dark p-10 text-on-primary">
+                {{-- Tres bloques repartidos a lo alto: el mensaje arriba, la ilustración al centro y lo que trae abajo. --}}
+                <section class="relative hidden md:flex flex-col justify-between gap-8 overflow-hidden bg-gradient-to-br from-primary to-primary-dark p-10 text-on-primary">
                     <div aria-hidden="true" class="pointer-events-none absolute -right-20 -top-20 size-64 rounded-full bg-on-primary/10"></div>
 
                     <div class="relative">
-                        <p class="text-xs font-bold uppercase tracking-widest text-on-primary/70">Sistema de despacho</p>
-                        <h1 class="mt-3 text-3xl font-extrabold leading-tight">
-                            Del pedido al camión,<br>sin perder de vista nada.
+                        <p class="inline-block rounded-full bg-on-primary/15 px-3 py-1 text-[11px] font-bold uppercase tracking-widest">Sistema de despacho</p>
+                        <h1 class="mt-4 text-balance text-[1.7rem] font-extrabold leading-[1.15] lg:text-3xl">
+                            Del pedido al camión, sin perder de vista nada.
                         </h1>
-                        <p class="mt-3 max-w-xs text-sm text-on-primary/80">
+                        <p class="mt-3 text-pretty text-[15px] leading-relaxed text-on-primary/85">
                             SIDES lleva los pedidos de SEPED por picking, packing, facturación y entrega.
                         </p>
-
-                        <ul class="mt-8 space-y-3">
-                            @foreach ($funciones as $f)
-                                <li class="flex items-center gap-3 text-sm font-semibold">
-                                    <svg class="size-5 shrink-0 text-on-primary/70" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                    {{ $f }}
-                                </li>
-                            @endforeach
-                        </ul>
                     </div>
+
+                    <div class="relative">
+                        {{-- Ilustración del recorrido: pedido revisado, caja escaneada y camión. Dibujada con
+                             currentColor para que tome el color de letra de la paleta de la droguería. --}}
+                        <svg class="mx-auto w-full max-w-sm" viewBox="0 0 360 150" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            {{-- Piso y recorrido --}}
+                            <path d="M8 132h344" stroke-opacity=".35" />
+                            <path d="M84 84h34M222 84h20" stroke-opacity=".55" stroke-dasharray="2 8" />
+                            <path d="m112 78 7 6-7 6M236 78l7 6-7 6" stroke-opacity=".55" />
+
+                            {{-- Pedido con sus renglones revisados --}}
+                            <rect x="14" y="36" width="62" height="84" rx="8" fill="currentColor" fill-opacity=".14" />
+                            <path d="M34 36v-5a4 4 0 0 1 4-4h14a4 4 0 0 1 4 4v5" fill="currentColor" fill-opacity=".3" />
+                            <path d="m24 60 4 4 7-8M24 80l4 4 7-8M24 100l4 4 7-8" />
+                            <path d="M44 60h22M44 80h22M44 100h14" stroke-opacity=".6" />
+
+                            {{-- Caja con su código de barras y la línea del lector --}}
+                            {{-- Caja de cartón vista de frente: tapa plana con su cinta y, abajo, el código de barras. --}}
+                            <rect x="128" y="50" width="84" height="70" rx="6" fill="currentColor" fill-opacity=".14" />
+                            <path d="M128 68h84" />
+                            <path d="M162 50v18h16V50" fill="currentColor" fill-opacity=".3" />
+                            <path d="M145 80v28M150 80v28M157 80v28M161 80v28M168 80v28M175 80v28M179 80v28M186 80v28M190 80v28M195 80v28" stroke-width="2.4" stroke-linecap="butt" stroke-opacity=".7" />
+                            {{-- Línea del lector: del mismo color que el resto, sobresale de la caja para que se distinga de las barras. --}}
+                            <path d="M120 94h100" stroke-width="3.5" />
+                            <circle cx="212" cy="50" r="13" fill="currentColor" stroke="none" />
+                            <path d="m206 50 4 4 8-9" class="stroke-primary" stroke-width="3" />
+
+                            {{-- Camión --}}
+                            <path d="M252 58h56a4 4 0 0 1 4 4v54h-64V62a4 4 0 0 1 4-4Z" fill="currentColor" fill-opacity=".14" />
+                            <path d="M312 78h18a6 6 0 0 1 5 3l9 16a6 6 0 0 1 1 3v16h-33V78Z" fill="currentColor" fill-opacity=".28" />
+                            <path d="M322 86h9l6 11h-15z" stroke-width="2" stroke-opacity=".8" />
+                            <path d="M262 72h36M262 84h24" stroke-opacity=".6" />
+                            <circle cx="270" cy="120" r="10" class="fill-primary-dark" />
+                            <circle cx="326" cy="120" r="10" class="fill-primary-dark" />
+                            <circle cx="270" cy="120" r="3" fill="currentColor" stroke="none" />
+                            <circle cx="326" cy="120" r="3" fill="currentColor" stroke="none" />
+                        </svg>
+                    </div>
+
+                    <ul class="relative grid grid-cols-2 gap-x-5 gap-y-3 border-t border-on-primary/20 pt-6">
+                        @foreach ($funciones as $f)
+                            <li class="flex items-start gap-2 text-[13px] font-semibold leading-snug">
+                                <svg class="mt-px size-4 shrink-0 text-on-primary/75" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span class="text-balance">{{ $f }}</span>
+                            </li>
+                        @endforeach
+                    </ul>
                 </section>
 
                 {{-- Formulario --}}
