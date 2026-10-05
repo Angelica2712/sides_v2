@@ -121,12 +121,15 @@ class SsoFtTest extends TestCase
 
     public function test_el_boton_solo_lo_ve_el_ft_con_seped_configurado(): void
     {
-        $this->actingAs($this->ft)->get('/home')->assertSee('Ir a SEPED');
-        $this->actingAs($this->encargado)->get('/home')->assertDontSee('Ir a SEPED');
+        // "Volver a SEPED" (menú del usuario) le sale a todos: al FT con el pase, al resto con el enlace a SEPED.
+        $this->actingAs($this->ft)->get('/home')->assertSee('Ir a SEPED')
+            ->assertSee('Volver a SEPED')->assertSee('href="'.route('sso.seped').'" role="menuitem"', false);
+        $this->actingAs($this->encargado)->get('/home')->assertDontSee('Ir a SEPED')
+            ->assertSee('Volver a SEPED')->assertSee('href="https://seped.andicar.test" role="menuitem"', false);
         $this->get('/ir-a-seped')->assertNotFound();
 
         config(['services.seped.url' => '']);
-        $this->actingAs($this->ft)->get('/home')->assertDontSee('Ir a SEPED');
+        $this->actingAs($this->ft)->get('/home')->assertDontSee('Ir a SEPED')->assertDontSee('Volver a SEPED');
         $this->get('/ir-a-seped')->assertNotFound();
     }
 
