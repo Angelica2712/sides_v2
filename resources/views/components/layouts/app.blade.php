@@ -131,7 +131,7 @@
                             @endif
                         </div>
 
-                        {{-- Recuadro del usuario: al tocarlo abre el menú con Volver a SEPED y Cerrar sesión. --}}
+                        {{-- Recuadro del usuario: al tocarlo abre el menú con Cerrar sesión. --}}
                         <div x-data="{ abierto: false }" class="relative shrink-0" @click.outside="abierto = false" @keydown.escape="abierto = false">
                             <button type="button" @click="abierto = !abierto" aria-haspopup="menu" :aria-expanded="abierto" aria-label="Menú de usuario"
                                     class="flex items-center gap-x-2.5 py-1.5 ps-2 pe-2.5 rounded-2xl bg-on-primary/10 border border-on-primary/25 text-start transition-colors hover:bg-on-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-on-primary/60">
@@ -152,15 +152,6 @@
                                     <p class="truncate text-xs font-bold text-slate-800">{{ $usuario->name }}</p>
                                     <p class="truncate text-[11px] text-slate-500">{{ $usuario->email }}</p>
                                 </div>
-                                {{-- Con SEPED_URL configurado le sale a todos: el FT pasa sin contraseña (sso_pases);
-                                     los demás llegan a SEPED y entran con su usuario de allá. --}}
-                                @if ($urlSeped = \App\Http\Controllers\SsoController::urlSeped())
-                                    <a href="{{ $usuario->esFt() ? route('sso.seped') : $urlSeped }}" role="menuitem"
-                                       class="flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-semibold transition-colors hover:bg-slate-100">
-                                        <svg class="size-4 shrink-0 text-slate-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 19-7-7 7-7" /><path d="M19 12H5" /></svg>
-                                        Volver a SEPED
-                                    </a>
-                                @endif
                                 <form method="POST" action="{{ route('logout') }}">
                                     @csrf
                                     <button type="submit" role="menuitem"

@@ -66,5 +66,15 @@
         <div id="monitor-contenido" class="space-y-4" :class="actualizando && 'opacity-60 transition-opacity'">
             @include('monitor.contenido')
         </div>
+        <div x-ref="fin" aria-hidden="true"></div>
+
+        {{-- Brinco al final (donde está la paginación) y de vuelta arriba: con muchos pedidos el
+             tablero es largo. Va dentro del x-data para que también se vea en pantalla completa. --}}
+        <button type="button" x-show="largo" x-cloak x-transition.opacity @click="brincar()" :style="{ bottom: suelo + 'px' }"
+                :title="alFinal ? 'Volver arriba' : 'Ir al final'" :aria-label="alFinal ? 'Volver arriba' : 'Ir al final'"
+                class="fixed end-5 z-20 flex items-center gap-1.5 rounded-full bg-primary py-2.5 ps-3 pe-4 text-sm font-bold text-on-primary shadow-lg ring-1 ring-primary-dark transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary">
+            <svg class="size-4 transition-transform" :class="alFinal && 'rotate-180'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14" /><path d="m19 12-7 7-7-7" /></svg>
+            <span x-text="alFinal ? 'Arriba' : 'Ir al final'">Ir al final</span>
+        </button>
     </div>
 </x-layouts.app>

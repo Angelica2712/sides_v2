@@ -26,6 +26,9 @@ export default function monitorEnVivo({ canal, url, hora }) {
         // Distingue el primer enlace ("Conectando…") de haberse caído ("Reconectando…").
         hubo: false,
         actualizando: false,
+        largo: false,
+        alFinal: false,
+        suelo: 20,
         hora,
         agrupador: null,
 
@@ -34,7 +37,14 @@ export default function monitorEnVivo({ canal, url, hora }) {
 
             document.addEventListener('fullscreenchange', () => {
                 this.pantallaCompleta = !! document.fullscreenElement;
+                this.medir();
             });
+
+            // Botón de brinco: con captura, porque en pantalla completa quien se desplaza es $root.
+            window.addEventListener('scroll', () => this.medir(), { capture: true, passive: true });
+            window.addEventListener('resize', () => this.medir(), { passive: true });
+            this.$watch('vista', () => this.$nextTick(() => this.medir()));
+            this.$nextTick(() => this.medir());
 
             this.escuchar();
 
@@ -99,11 +109,37 @@ export default function monitorEnVivo({ canal, url, hora }) {
 
                 document.getElementById('monitor-contenido').innerHTML = await respuesta.text();
                 this.hora = new Date().toLocaleTimeString('es-VE', { hour12: false });
+                this.medir();
             } catch (error) {
                 // Sin red: el monitor se queda con lo último que mostró y reintenta al reconectar.
             } finally {
                 this.actualizando = false;
             }
+        },
+
+        /** Quien se desplaza: la página, o $root cuando el monitor está en pantalla completa. */
+        contenedor() {
+            return document.fullscreenElement ? this.$root : document.documentElement;
+        },
+
+        /** `largo`: hay bastante que bajar. `alFinal`: ya se ve el final. */
+        medir() {
+            const alto = window.innerHeight;
+            const contenedor = this.contenedor();
+
+            this.largo = contenedor.scrollHeight - contenedor.clientHeight > alto / 2;
+            this.alFinal = this.$refs.fin.getBoundingClientRect().top <= alto + 80;
+
+            // Con la paginación a la vista el botón se sube para no taparle las flechas.
+            const paginas = document.querySelector('#monitor-contenido nav[role="navigation"]');
+            const techo = paginas ? paginas.parentElement.getBoundingClientRect().top : alto;
+            this.suelo = Math.max(20, alto - techo + 12);
+        },
+
+        brincar() {
+            const contenedor = this.contenedor();
+
+            contenedor.scrollTo({ top: this.alFinal ? 0 : contenedor.scrollHeight, behavior: 'smooth' });
         },
 
         alternarPantalla() {

@@ -94,14 +94,14 @@ $numero = fn ($valor) => number_format((int) $valor, 0, ',', '.');
 @else
     {{-- Vista tablero --}}
     {{-- Columnas con ancho mínimo: llenan pantallas grandes y se desplazan de lado en las angostas. --}}
-    <div x-show="vista === 'tablero'" class="relative grid auto-cols-[minmax(19rem,1fr)] grid-flow-col items-start gap-4 overflow-x-auto pb-2">
+    <div x-show="vista === 'tablero'" class="relative grid auto-cols-[minmax(17.5rem,1fr)] grid-flow-col items-start gap-4 overflow-x-auto pb-2">
         @foreach ($columnas as $estado => $lista)
             @php
                 $meta = $columnasMeta[$estado];
                 $masAntiguo = $lista->map(fn ($p) => TiemposPedido::enEstadoActual($estado, $tiempos[$p->id]))->max();
             @endphp
             <section aria-labelledby="columna-{{ $estado }}" class="flex min-w-0 flex-col rounded-2xl bg-slate-200/60 ring-1 ring-slate-300/50">
-                <header class="px-4 pb-3 pt-4">
+                <header class="px-3.5 pb-2.5 pt-3">
                     <div class="flex items-center justify-between gap-2">
                         <div class="flex min-w-0 items-center gap-2">
                             <span class="size-2.5 shrink-0 rounded-full {{ $meta['punto'] }}" aria-hidden="true"></span>
@@ -117,14 +117,14 @@ $numero = fn ($valor) => number_format((int) $valor, 0, ',', '.');
                     </p>
                 </header>
 
-                <div class="space-y-2.5 px-3 pb-3">
+                <div class="space-y-2 px-2.5 pb-2.5">
                     @forelse ($lista as $pedido)
                         @php
                             $tiempo = $tiempos[$pedido->id];
                             $enEtapa = TiemposPedido::enEstadoActual($pedido->estado, $tiempo);
                             $nivel = $semaforo[TiemposPedido::nivel($enEtapa)];
                         @endphp
-                        <article class="rounded-xl border-l-4 bg-white p-4 shadow-sm ring-1 ring-slate-200/80 transition-shadow hover:shadow-md {{ $nivel['borde'] }}">
+                        <article class="rounded-xl border-l-4 bg-white px-3.5 py-3 shadow-sm ring-1 ring-slate-200/80 transition-shadow hover:shadow-md {{ $nivel['borde'] }}">
                             <div class="flex items-start justify-between gap-3">
                                 <div class="min-w-0">
                                     <p class="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-slate-500">
@@ -144,10 +144,10 @@ $numero = fn ($valor) => number_format((int) $valor, 0, ',', '.');
                                 </span>
                             </div>
 
-                            <p class="mt-1.5 truncate text-sm font-semibold text-slate-700" title="{{ $pedido->nomcli }}">{{ $pedido->nomcli }}</p>
+                            <p class="mt-1 truncate text-sm font-semibold text-slate-700" title="{{ $pedido->nomcli }}">{{ $pedido->nomcli }}</p>
                             <p class="text-xs text-slate-400">{{ $pedido->codcli }} · enviado {{ $fecha($pedido->fecenviado) }}</p>
 
-                            <div class="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-slate-100 pt-3 text-xs font-semibold text-slate-600">
+                            <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-slate-100 pt-2 text-xs font-semibold text-slate-600">
                                 <span class="tabular-nums">{{ $numero($pedido->numren) }} renglones</span>
                                 <span class="text-slate-300" aria-hidden="true">•</span>
                                 <span class="tabular-nums">{{ $numero($pedido->numund) }} unidades</span>
