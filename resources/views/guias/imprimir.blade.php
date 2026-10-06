@@ -14,7 +14,8 @@
         .encabezado { display: flex; justify-content: space-between; align-items: flex-start; gap: 6mm; padding-bottom: 3mm; border-bottom: .5mm solid #000; }
         .encabezado h1 { margin: 0; font-size: 5.5mm; }
         .marca { display: flex; align-items: flex-start; gap: 4mm; }
-        .marca .logo { flex: none; max-width: 45mm; max-height: 22mm; object-fit: contain; }
+        /* Logo en gris, igual que en las etiquetas y el ticket: las guías también se imprimen en blanco y negro. */
+        .marca .logo { flex: none; max-width: 45mm; max-height: 22mm; object-fit: contain; filter: grayscale(1) contrast(1.2); }
         .encabezado h2 { margin: 0; font-size: 4mm; }
         .datos { display: grid; grid-template-columns: auto auto; gap: .5mm 3mm; margin-top: 2mm; }
         .datos dt { font-weight: 700; }
