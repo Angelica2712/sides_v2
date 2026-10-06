@@ -35,9 +35,8 @@
 <body>
     {{--
         Filtro "logo-tinta" para impresoras de un solo color (etiquetas, ticket): deja el logo en
-        negro y gris. Lo oscuro queda negro; lo claro (un círculo gris, un fondo de color), que
-        esas impresoras no marcan, se rellena de un gris medio liso y lleva su contorno negro para
-        que no desaparezca.
+        negro puro. Lo oscuro queda negro y a lo claro (un círculo gris, un fondo de color), que
+        esas impresoras no marcan, se le dibuja solo el contorno para que no desaparezca.
     --}}
     <svg width="0" height="0" style="position: absolute" aria-hidden="true">
         <filter id="logo-tinta" color-interpolation-filters="sRGB" x="0" y="0" width="100%" height="100%">
@@ -47,10 +46,7 @@
             <feComponentTransfer in="tinta" result="oscuro"><feFuncA type="linear" slope="20" intercept="-9.5"/></feComponentTransfer>
             <feMorphology in="algo" operator="erode" radius="1.2" result="dentro"/>
             <feComposite in="algo" in2="dentro" operator="out" result="contorno"/>
-            {{-- Relleno: gris medio liso, solo donde el logo tiene algo. --}}
-            <feFlood flood-color="#808080" result="gris"/>
-            <feComposite in="gris" in2="algo" operator="in" result="relleno"/>
-            <feMerge><feMergeNode in="relleno"/><feMergeNode in="contorno"/><feMergeNode in="oscuro"/></feMerge>
+            <feMerge><feMergeNode in="contorno"/><feMergeNode in="oscuro"/></feMerge>
         </filter>
     </svg>
     <div class="acciones">
