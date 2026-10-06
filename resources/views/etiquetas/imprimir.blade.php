@@ -16,7 +16,8 @@
         .etiqueta { --k: {{ round($alto / 80, 3) }}; width: {{ $ancho }}mm; height: {{ $alto }}mm; padding: calc(3mm * var(--k)) calc(3.5mm * var(--k)); display: flex; flex-direction: column; gap: calc(1.3mm * var(--k)); font-size: calc(3mm * var(--k)); line-height: 1.15; }
         .cabecera { display: flex; justify-content: space-between; align-items: flex-start; gap: 3mm; padding-bottom: calc(1.2mm * var(--k)); border-bottom: .4mm solid #000; }
         .marca { display: flex; align-items: center; gap: calc(2mm * var(--k)); min-width: 0; }
-        .logo { flex: none; max-width: calc(28mm * var(--k)); max-height: calc(12mm * var(--k)); object-fit: contain; }
+        /* Logo en gris: las impresoras de etiquetas son de un solo color y los tonos claros (un círculo, un fondo) se perdían. */
+        .logo { flex: none; max-width: calc(28mm * var(--k)); max-height: calc(12mm * var(--k)); object-fit: contain; filter: grayscale(1) contrast(1.2); }
         .drogueria { font-size: calc(4.2mm * var(--k)); font-weight: 900; text-transform: uppercase; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
         .rotulo { display: block; font-size: calc(2.4mm * var(--k)); font-weight: 700; letter-spacing: .02em; }
         .qr { flex: none; width: calc(13mm * var(--k)); height: calc(13mm * var(--k)); }
