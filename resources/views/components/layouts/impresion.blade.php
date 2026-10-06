@@ -33,6 +33,22 @@
     </style>
 </head>
 <body>
+    {{--
+        Filtro "logo-tinta" para impresoras de un solo color (etiquetas, ticket): deja el logo en
+        negro puro. Lo oscuro queda negro y a lo claro (un círculo gris, un fondo de color), que
+        esas impresoras no marcan, se le dibuja el contorno para que no desaparezca.
+    --}}
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+        <filter id="logo-tinta" color-interpolation-filters="sRGB" x="0" y="0" width="100%" height="100%">
+            {{-- Cuánta tinta lleva cada punto: 0 = blanco o transparente, 1 = negro. --}}
+            <feColorMatrix in="SourceGraphic" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -0.2126 -0.7152 -0.0722 1 0" result="tinta"/>
+            <feComponentTransfer in="tinta" result="algo"><feFuncA type="linear" slope="20" intercept="-1.2"/></feComponentTransfer>
+            <feComponentTransfer in="tinta" result="oscuro"><feFuncA type="linear" slope="20" intercept="-9.5"/></feComponentTransfer>
+            <feMorphology in="algo" operator="erode" radius="1.2" result="dentro"/>
+            <feComposite in="algo" in2="dentro" operator="out" result="contorno"/>
+            <feMerge><feMergeNode in="contorno"/><feMergeNode in="oscuro"/></feMerge>
+        </filter>
+    </svg>
     <div class="acciones">
         <div>
             @if (session('mensaje'))

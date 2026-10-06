@@ -9,8 +9,8 @@
                      :resumen="'Ticket del pedido #'.$pedido->id.' · '.$renglones->count().' renglones. Elige la impresora de tickets.'">
     <x-slot:estilos>
         .ticket { width: 77mm; min-height: {{ $alto }}mm; padding: 3mm 3.5mm; font-size: 2.9mm; line-height: 1.35; }
-        /* Logo en gris, igual que en las etiquetas: el ticket también sale en un solo color. */
-        .ticket .logo { display: block; max-width: 50mm; max-height: 16mm; margin: 0 auto 1.5mm; object-fit: contain; filter: grayscale(1) contrast(1.2); }
+        /* Logo en negro puro con contorno, igual que en las etiquetas: el ticket también sale en un solo color. */
+        .ticket .logo { display: block; max-width: 50mm; max-height: 16mm; margin: 0 auto 1.5mm; object-fit: contain; filter: url(#logo-tinta); }
         .ticket h1 { margin: 0; font-size: 3.4mm; text-align: center; text-transform: uppercase; }
         .centro { text-align: center; }
         .fila { display: flex; justify-content: space-between; gap: 2mm; }
