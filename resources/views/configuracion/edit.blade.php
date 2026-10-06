@@ -134,10 +134,22 @@
                 </section>
             @endforeach
 
+            <section class="space-y-3 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+                <h3 class="text-lg font-extrabold text-slate-900">Etiquetas</h3>
+                <label class="flex cursor-pointer items-start gap-3 rounded-xl p-3 ring-1 ring-slate-200 has-checked:bg-primary-soft has-checked:ring-primary">
+                    <input type="checkbox" name="moduloEtiquetas" value="1" @checked(session()->hasOldInput() ? (bool) old('moduloEtiquetas') : $activos['etiquetas'])
+                           class="mt-0.5 size-5 rounded border-slate-300 text-primary-ink focus:ring-primary">
+                    <span>
+                        <span class="block font-bold text-slate-900">Usar el módulo Etiquetas</span>
+                        <span class="block text-sm text-slate-500">Agrega Etiquetas al menú para imprimir las etiquetas de los bultos. El tamaño de la etiqueta y sus opciones los ajusta FULLTECH360.</span>
+                    </span>
+                </label>
+            </section>
+
             <section class="space-y-3 rounded-2xl bg-slate-50 p-5 ring-1 ring-slate-200">
                 <div>
                     <h3 class="text-lg font-extrabold text-slate-900">Módulos</h3>
-                    <p class="text-sm text-slate-500">Los activa el administrador de SIDES, junto con las opciones de etiquetas.</p>
+                    <p class="text-sm text-slate-500">Los activa el administrador de SIDES, salvo Etiquetas, que puedes encender o apagar arriba.</p>
                 </div>
                 <ul class="flex flex-wrap gap-2">
                     @foreach ($activos as $clave => $activo)

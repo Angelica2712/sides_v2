@@ -96,6 +96,29 @@ class ConfiguracionTest extends TestCase
         $this->assertTrue($cfg->tieneModulo('batch'));
     }
 
+    public function test_la_drogueria_enciende_y_apaga_el_modulo_etiquetas(): void
+    {
+        $this->actingAs($this->usuario)->get('/configuracion')->assertSee('name="moduloEtiquetas"', false);
+        $this->get('/etiquetas')->assertForbidden();
+
+        $this->put('/configuracion', $this->formulario(['moduloEtiquetas' => '1']))->assertRedirect(route('configuracion.index'));
+        $cfg = SidesCfg::query()->find('505094939');
+        $this->assertTrue($cfg->tieneModulo('etiquetas'));
+        $this->assertSame(1, (int) $cfg->activarEtiPacking);
+        $this->assertTrue($cfg->tieneModulo('batch'), 'los demás módulos no cambian');
+        $this->assertFalse(SidesCfg::query()->find('OTRA')->tieneModulo('etiquetas'));
+        $this->actingAs($this->usuario->fresh())->get('/etiquetas')->assertOk();
+        $this->get('/configuracion')->assertSeeInOrder(['Etiquetas', 'activo']);
+
+        // Casilla sin marcar = módulo apagado, y con él la etiqueta automática del packing.
+        SidesCfg::query()->whereKey('505094939')->update(['activar_etiqueta_packing' => 1]);
+        $this->put('/configuracion', $this->formulario());
+        $cfg = SidesCfg::query()->find('505094939');
+        $this->assertFalse($cfg->tieneModulo('etiquetas'));
+        $this->assertSame([0, 0], [(int) $cfg->activarEtiPacking, (int) $cfg->activar_etiqueta_packing]);
+        $this->actingAs($this->usuario->fresh())->get('/etiquetas')->assertForbidden();
+    }
+
     public function test_valida_clave_de_supervisor_y_listas(): void
     {
         $this->actingAs($this->usuario)->from('/configuracion')

@@ -3,8 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Sides\SidesCfg;
+use App\Models\Sides\SidesModuloSucursal;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -15,6 +18,8 @@ use Illuminate\View\View;
  * (nombre, RIF, dirección, logo…) los define el administrador de FULLTECH360 (AdminController). No se portan los campos que en v2 ya no tienen efecto: dominio de la API
  * de SEPED (base compartida), ModoCesta, pitarPacking (el sonido del lector es por usuario),
  * EstiloPicking, título de la página y los datos de pie de etiqueta.
+ *
+ * El módulo Etiquetas es el único opcional que la droguería enciende o apaga aquí por su cuenta.
  */
 class ConfiguracionController extends Controller
 {
@@ -72,7 +77,20 @@ class ConfiguracionController extends Controller
         // Si nadie la pide, se conserva la clave anterior en vez de dejarla vacía.
         $datos['claveValPicking'] = filled($datos['claveValPicking'] ?? null) ? $datos['claveValPicking'] : $cfg->claveValPicking;
 
-        $cfg->forceFill($datos)->save();
+        // Etiquetas: la droguería lo enciende o apaga sola (igual que lo guarda Administración).
+        $etiquetas = $request->boolean('moduloEtiquetas');
+        $datos['activarEtiPacking'] = $etiquetas ? 1 : 0;
+        if (! $etiquetas) {
+            $datos['activar_etiqueta_packing'] = 0;
+        }
+
+        DB::transaction(function () use ($cfg, $datos, $etiquetas, $request) {
+            $cfg->forceFill($datos)->save();
+            SidesModuloSucursal::query()->updateOrCreate(
+                ['codisb' => $cfg->codisb, 'modulo' => 'etiquetas'],
+                ['activo' => $etiquetas ? 1 : 0, 'actualizado_por' => $request->user()->name, 'updated_at' => Carbon::now()]
+            );
+        });
 
         return redirect()->route('configuracion.index')->with('mensaje', 'Configuración guardada.');
     }
