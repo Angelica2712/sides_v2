@@ -16,7 +16,7 @@
         .etiqueta { --k: {{ round($alto / 80, 3) }}; width: {{ $ancho }}mm; height: {{ $alto }}mm; padding: calc(3mm * var(--k)) calc(3.5mm * var(--k)); display: flex; flex-direction: column; gap: calc(1.3mm * var(--k)); font-size: calc(3mm * var(--k)); line-height: 1.15; }
         .cabecera { display: flex; justify-content: space-between; align-items: flex-start; gap: 3mm; padding-bottom: calc(1.2mm * var(--k)); border-bottom: .4mm solid #000; }
         .marca { display: flex; align-items: center; gap: calc(2mm * var(--k)); min-width: 0; }
-        /* Logo en negro puro con contorno (filtro del layout): las impresoras de etiquetas no marcan los tonos claros. */
+        /* Logo en negro y gris medio con contorno (filtro del layout): las impresoras de etiquetas no marcan los tonos claros. */
         .logo { flex: none; max-width: calc(28mm * var(--k)); max-height: calc(12mm * var(--k)); object-fit: contain; filter: url(#logo-tinta); }
         .drogueria { font-size: calc(4.2mm * var(--k)); font-weight: 900; text-transform: uppercase; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
         .rotulo { display: block; font-size: calc(2.4mm * var(--k)); font-weight: 700; letter-spacing: .02em; }
