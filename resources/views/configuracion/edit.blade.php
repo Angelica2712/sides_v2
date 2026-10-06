@@ -62,7 +62,7 @@
                         <p class="text-sm text-slate-500">Salen en las etiquetas, el ticket y las guías. Para cambiarlos o cambiar el logo, pídelo a FULLTECH360.</p>
                     </div>
                     @if ($cfg->logo)
-                        <img src="{{ $cfg->urlLogo() }}" alt="Logo de {{ $cfg->nombre }}" class="h-16 max-w-40 rounded-lg bg-white object-contain p-1 ring-1 ring-slate-200">
+                        <img src="{{ $cfg->urlLogo() }}" alt="Logo de {{ $cfg->nombre }}" class="{{ $cfg->logoCircular() ? 'size-16 rounded-full object-cover' : 'h-16 max-w-40 rounded-lg object-contain p-1' }} bg-white ring-1 ring-slate-200">
                     @endif
                 </div>
                 <dl class="grid gap-x-4 gap-y-3 text-sm sm:grid-cols-2">

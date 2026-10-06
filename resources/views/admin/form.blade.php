@@ -175,12 +175,14 @@
 
                 {{-- Logo: vista previa del archivo elegido antes de guardar. --}}
                 <div class="rounded-xl p-4 ring-1 ring-slate-200"
-                     x-data="{ vista: @js($drogueria->urlLogo()), quitar: false, elegir(e) { const f = e.target.files[0]; this.quitar = false; this.vista = f ? URL.createObjectURL(f) : @js($drogueria->urlLogo()); } }">
+                     x-data="{ vista: @js($drogueria->urlLogo()), quitar: false, forma: @js(old('logoForma', $drogueria->logoForma ?: 'cuadro')), elegir(e) { const f = e.target.files[0]; this.quitar = false; this.vista = f ? URL.createObjectURL(f) : @js($drogueria->urlLogo()); } }">
                     <p class="text-sm font-semibold text-slate-700">Logo</p>
                     <div class="mt-2 flex flex-wrap items-center gap-4">
-                        <div class="flex h-24 w-40 shrink-0 items-center justify-center rounded-xl bg-slate-50 p-2 ring-1 ring-slate-200">
+                        {{-- La vista previa toma la forma elegida: así se ve en el encabezado y en el inicio de sesión. --}}
+                        <div :class="forma === 'circulo' && vista && !quitar ? 'size-24 rounded-full' : 'h-24 w-40 rounded-xl p-2'"
+                             class="flex shrink-0 items-center justify-center overflow-hidden bg-slate-50 ring-1 ring-slate-200">
                             <template x-if="vista && !quitar">
-                                <img :src="vista" alt="Logo de la droguería" class="max-h-full max-w-full object-contain">
+                                <img :src="vista" alt="Logo de la droguería" :class="forma === 'circulo' ? 'size-full object-cover' : 'max-h-full max-w-full object-contain'">
                             </template>
                             <span x-show="!vista || quitar" class="text-center text-xs text-slate-400">Sin logo: se usa el de SIDES</span>
                         </div>
@@ -188,6 +190,19 @@
                             <input id="logo" name="logo" type="file" accept="image/png,image/jpeg,image/webp" @change="elegir($event)"
                                    class="block w-full text-sm text-slate-600 file:mr-3 file:rounded-xl file:border-0 file:bg-primary-soft file:px-4 file:py-2 file:font-bold file:text-primary-ink hover:file:bg-primary hover:file:text-white">
                             <p class="text-xs text-slate-500">PNG, JPG o WEBP de hasta 2 MB. Mejor horizontal y con fondo blanco o transparente: las etiquetas se imprimen en blanco y negro.</p>
+                            <fieldset>
+                                <legend class="font-semibold text-slate-700">Forma del logo</legend>
+                                <div class="mt-1 flex flex-wrap gap-x-5 gap-y-1">
+                                    @foreach (\App\Models\Sides\SidesCfg::FORMAS_LOGO as $valor => $etiqueta)
+                                        <label class="flex cursor-pointer items-center gap-2">
+                                            <input type="radio" name="logoForma" value="{{ $valor }}" x-model="forma" class="size-4 border-slate-300 text-primary focus:ring-primary">
+                                            <span class="text-slate-700">{{ $etiqueta }}</span>
+                                        </label>
+                                    @endforeach
+                                </div>
+                                <p class="mt-1 text-xs text-slate-500">Círculo para logos redondos; cuadro para los horizontales o con texto. Cambia cómo se ve en el encabezado, el inicio de sesión y la pestaña del navegador, no en las etiquetas ni las guías.</p>
+                                @error('logoForma') <p class="mt-1 text-xs font-semibold text-rose-600">{{ $message }}</p> @enderror
+                            </fieldset>
                             @if ($drogueria->logo)
                                 <label class="flex cursor-pointer items-center gap-2">
                                     <input type="checkbox" name="quitarLogo" value="1" x-model="quitar" class="size-4 rounded border-slate-300 text-rose-600 focus:ring-rose-500">

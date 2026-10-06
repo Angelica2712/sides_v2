@@ -60,6 +60,7 @@ trait TablasSides
             $table->integer('mostrarEntrega')->default(0);
             $table->integer('activarSincronizacionRutas')->default(0);
             $table->string('logo', 255)->nullable();
+            $table->string('logoForma', 10)->default('cuadro');
         });
 
         Schema::create('sides_users', function (Blueprint $table) {

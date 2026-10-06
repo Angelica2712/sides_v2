@@ -6,6 +6,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" href="{{ auth()->user()?->cfg?->urlIcono() ?: asset('img/favicon-sides.png') }}">
     <title>{{ $titulo }} · SIDES</title>
     <style>
         @page { size: {{ $pagina }}; margin: 0; }

@@ -89,6 +89,36 @@ class LogoDrogueriaTest extends TestCase
         $this->actingAs($this->operario)->get('/home')->assertSee('img/logo-sides.png');
     }
 
+    public function test_el_administrador_elige_si_el_logo_va_en_cuadro_o_en_circulo(): void
+    {
+        $this->actingAs($this->admin)->put('/admin/droguerias/505094939', $this->formulario(['logo' => UploadedFile::fake()->image('logo.png', 200, 200)]));
+        $cfg = SidesCfg::query()->find('505094939');
+        $this->assertFalse($cfg->logoCircular());
+        Storage::disk('public')->assertExists(SidesCfg::rutaIcono($cfg->logo, 'cuadro'));
+        $this->actingAs($this->operario)->get('/home')->assertSee($cfg->urlLogo())->assertDontSee('size-full object-cover', false);
+
+        $this->actingAs($this->admin)->put('/admin/droguerias/505094939', $this->formulario(['logoForma' => 'circulo']))->assertSessionHasNoErrors();
+        $this->assertTrue(SidesCfg::query()->find('505094939')->logoCircular());
+        $this->actingAs($this->operario->fresh())->get('/home')->assertSee($cfg->urlLogo())->assertSee('size-full object-cover', false);
+        $this->get('/configuracion')->assertSee('size-16 rounded-full object-cover', false);
+
+        // La pestaña del navegador usa una copia del logo con la forma elegida; la de la otra forma se borra.
+        $circulo = SidesCfg::rutaIcono($cfg->logo, 'circulo');
+        Storage::disk('public')->assertExists($circulo);
+        Storage::disk('public')->assertMissing(SidesCfg::rutaIcono($cfg->logo, 'cuadro'));
+        $this->get('/home')->assertSee('<link rel="icon" href="'.asset('storage/'.$circulo).'">', false);
+        $icono = imagecreatefromstring(Storage::disk('public')->get($circulo));
+        $this->assertSame([64, 64], [imagesx($icono), imagesy($icono)]);
+        $this->assertSame(127, (imagecolorat($icono, 0, 0) >> 24) & 0x7F, 'la esquina queda transparente');
+        $this->assertSame(0, (imagecolorat($icono, 32, 32) >> 24) & 0x7F, 'el centro queda opaco');
+
+        // Guardar sin enviar la forma la conserva; un valor desconocido se rechaza.
+        $this->actingAs($this->admin)->put('/admin/droguerias/505094939', $this->formulario());
+        $this->assertSame('circulo', SidesCfg::query()->find('505094939')->logoForma);
+        $this->put('/admin/droguerias/505094939', $this->formulario(['logoForma' => 'estrella']))
+            ->assertSessionHasErrors(['logoForma' => 'Elige si el logo va en cuadro o en círculo.']);
+    }
+
     public function test_rechaza_archivos_que_no_son_imagen(): void
     {
         $this->actingAs($this->admin)->from('/admin/droguerias/505094939')

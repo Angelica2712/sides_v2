@@ -55,7 +55,7 @@ class AdminController extends Controller
             ...$this->reglas(),
         ], $this->mensajes(), $this->atributos());
 
-        $drogueria = new SidesCfg(['codisb' => $datos['codisb'], 'titulopagina' => 'SIDES', ...$this->datos($datos)]);
+        $drogueria = new SidesCfg(['codisb' => $datos['codisb'], 'titulopagina' => 'SIDES', 'logoForma' => $datos['logoForma'] ?? 'cuadro', ...$this->datos($datos)]);
         $this->modulos->guardar($drogueria, $datos['modulos'] ?? [], $this->opciones($request), $request->user());
         $this->logo->aplicar($drogueria, $request->file('logo'), false);
 
@@ -79,7 +79,7 @@ class AdminController extends Controller
         $drogueria = SidesCfg::query()->findOrFail($codisb);
         $datos = $request->validate($this->reglas(), $this->mensajes(), $this->atributos());
 
-        $drogueria->fill($this->datos($datos));
+        $drogueria->fill([...$this->datos($datos), 'logoForma' => $datos['logoForma'] ?? ($drogueria->logoForma ?: 'cuadro')]);
         $this->modulos->guardar($drogueria, $datos['modulos'] ?? [], $this->opciones($request), $request->user());
         $this->logo->aplicar($drogueria, $request->file('logo'), $request->boolean('quitarLogo'));
 
@@ -175,6 +175,7 @@ class AdminController extends Controller
             'contacto' => ['nullable', 'string', 'max:50'],
             'telefono' => ['nullable', 'string', 'max:50'],
             'logo' => LogoDrogueria::REGLAS,
+            'logoForma' => ['nullable', Rule::in(array_keys(SidesCfg::FORMAS_LOGO))],
             'modulos' => ['array'],
             'modulos.*' => ['string'],
             'formatoPersEtiq' => ['nullable', Rule::in(array_keys(FormatosEtiqueta::FORMATOS))],
@@ -189,6 +190,7 @@ class AdminController extends Controller
             'codisb.regex' => 'El código solo puede tener letras, números, guion y guion bajo.',
             'nombre.required' => 'Escribe el nombre de la droguería.',
             'formatoPersEtiq.in' => 'Elige un tamaño de etiqueta de la lista.',
+            'logoForma.in' => 'Elige si el logo va en cuadro o en círculo.',
             // Los del logo van antes que *.max, que si no se queda con logo.max.
             ...LogoDrogueria::MENSAJES,
             '*.max' => 'El campo :attribute es demasiado largo.',

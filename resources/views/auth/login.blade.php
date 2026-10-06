@@ -4,7 +4,12 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
-        <link rel="icon" type="image/png" href="{{ asset('img/favicon-sides.png') }}">
+        {{-- La pestaña del navegador sigue al logo del login: el de la droguería conocida o, si no, el de SIDES. --}}
+        @if ($iconoDrogueria = $cfg?->urlIcono())
+            <link rel="icon" href="{{ $iconoDrogueria }}">
+        @else
+            <link rel="icon" type="image/png" href="{{ asset('img/favicon-sides.png') }}">
+        @endif
 
         <title>Iniciar sesión · SIDES</title>
 
@@ -96,7 +101,8 @@
                     <div class="flex flex-col items-center text-center">
                         @if ($logoDrogueria)
                             {{-- Droguería conocida (su enlace o este equipo): su logo manda; el de SIDES queda abajo, pequeño. --}}
-                            <img src="{{ $logoDrogueria }}" alt="{{ $cfg->nombre }}" class="h-28 w-auto max-w-72 object-contain">
+                            <img src="{{ $logoDrogueria }}" alt="{{ $cfg->nombre }}"
+                                 class="{{ $cfg->logoCircular() ? 'size-28 rounded-full object-cover shadow-lg ring-4 ring-primary/15' : 'h-28 w-auto max-w-72 object-contain' }}">
                             <p class="mt-3 text-xl font-extrabold leading-tight text-slate-900">{{ $cfg->nomcorto ?: $cfg->nombre }}</p>
                         @else
                             <img src="{{ asset('img/logo-sides.png') }}" alt="" class="size-20 rounded-full shadow-lg ring-4 ring-primary/15">

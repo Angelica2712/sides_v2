@@ -18,7 +18,12 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
-        <link rel="icon" type="image/png" href="{{ asset('img/favicon-sides.png') }}">
+        {{-- La pestaña del navegador sigue al encabezado: el logo de la droguería o, si no tiene, el de SIDES. --}}
+        @if ($logoDrogueria)
+            <link rel="icon" href="{{ $cfg->urlIcono() }}">
+        @else
+            <link rel="icon" type="image/png" href="{{ asset('img/favicon-sides.png') }}">
+        @endif
 
         <title>{{ $titulo ? $titulo.' · ' : '' }}SIDES {{ $nombreCorto }}</title>
 
@@ -47,10 +52,18 @@
                     <a href="{{ route('home') }}" class="flex flex-col items-center text-center group">
                         @if ($logoDrogueria)
                             {{-- Logo de la droguería (cualquier forma y color): sobre una placa blanca para que se lea en el azul. --}}
-                            <span :class="sidebarCollapsed ? 'h-11 w-14 p-1' : 'h-16 w-[200px] p-1.5'"
-                                  class="flex items-center justify-center rounded-xl bg-white shadow-md transition-all duration-300 group-hover:scale-105">
-                                <img src="{{ $logoDrogueria }}" alt="{{ $cfg->nombre }}" class="max-h-full max-w-full object-contain">
-                            </span>
+                            @if ($cfg->logoCircular())
+                                {{-- Logo redondo: llena un círculo, como el de SIDES. --}}
+                                <span :class="sidebarCollapsed ? 'size-11' : 'size-16'"
+                                      class="flex items-center justify-center overflow-hidden rounded-full bg-white shadow-md transition-all duration-300 group-hover:scale-105">
+                                    <img src="{{ $logoDrogueria }}" alt="{{ $cfg->nombre }}" class="size-full object-cover">
+                                </span>
+                            @else
+                                <span :class="sidebarCollapsed ? 'h-11 w-14 p-1' : 'h-16 w-[200px] p-1.5'"
+                                      class="flex items-center justify-center rounded-xl bg-white shadow-md transition-all duration-300 group-hover:scale-105">
+                                    <img src="{{ $logoDrogueria }}" alt="{{ $cfg->nombre }}" class="max-h-full max-w-full object-contain">
+                                </span>
+                            @endif
                         @else
                             {{-- El logo es un círculo azul: el halo blanco lo despega del fondo azul del encabezado. --}}
                             <img src="{{ asset('img/logo-sides.png') }}" alt="SIDES"

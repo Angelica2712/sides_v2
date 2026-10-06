@@ -23,7 +23,7 @@
                     <div class="flex items-start justify-between gap-3">
                         <div class="flex min-w-0 items-center gap-3">
                             @if ($drogueria->logo)
-                                <img src="{{ $drogueria->urlLogo() }}" alt="" class="h-12 w-16 shrink-0 rounded-lg bg-white object-contain p-1 ring-1 ring-slate-200">
+                                <img src="{{ $drogueria->urlLogo() }}" alt="" class="{{ $drogueria->logoCircular() ? 'size-12 rounded-full object-cover' : 'h-12 w-16 rounded-lg object-contain p-1' }} shrink-0 bg-white ring-1 ring-slate-200">
                             @endif
                         <div class="min-w-0">
                             <p class="truncate text-lg font-black text-slate-900">{{ $drogueria->nombre ?: $drogueria->codisb }}</p>
