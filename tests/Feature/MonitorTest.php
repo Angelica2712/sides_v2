@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Events\MonitorActualizado;
+use App\Models\Sides\SidesCfg;
 use App\Models\Sides\SidesMonitor;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Event;
@@ -180,6 +181,34 @@ class MonitorTest extends TestCase
         $this->crearCfg();
 
         $this->actingAs($this->operador(['activarPicking' => 1]))->get('/monitor/contenido')->assertForbidden();
+    }
+
+    public function test_solo_quien_administra_la_drogueria_cambia_la_letra_de_la_tabla_desde_el_monitor(): void
+    {
+        $this->crearCfg(['TamLetraMonitor' => 18]);
+        $this->crearPedido(['id' => 91001, 'estado' => 'RECIBIDO']);
+        Event::fake([MonitorActualizado::class]);
+        $letra = fn () => (int) SidesCfg::query()->find('505094939')->TamLetraMonitor;
+
+        // El operario ve la tabla con la letra de la droguería, sin los botones, y no puede cambiarla.
+        $this->actingAs($this->operador())->get('/monitor')
+            ->assertSee('font-size: 18px', false)
+            ->assertDontSee('Tamaño de la letra de la tabla');
+        $this->putJson('/monitor/letra', ['letra' => 24])->assertForbidden();
+        $this->assertSame(18, $letra());
+
+        // El encargado (permiso de Configuración) la cambia para todas las pantallas.
+        $encargado = $this->operador(['activarMonitor' => 1, 'activarConfig' => 1, 'email' => 'encargado@example.com']);
+        $this->actingAs($encargado)->get('/monitor')->assertSee('Tamaño de la letra de la tabla');
+        $this->putJson('/monitor/letra', ['letra' => 24])->assertOk()->assertExactJson(['letra' => 24]);
+        $this->assertSame(24, $letra());
+        Event::assertDispatched(MonitorActualizado::class, fn (MonitorActualizado $evento) => $evento->motivo === 'monitor.letra');
+        $this->actingAs($this->operador(['activarMonitor' => 1, 'email' => 'otro@example.com']))->get('/monitor/contenido')->assertSee('font-size: 24px', false);
+
+        // Fuera del rango o de los pasos de 2 no se guarda.
+        $this->actingAs($encargado)->putJson('/monitor/letra', ['letra' => 60])->assertUnprocessable();
+        $this->putJson('/monitor/letra', ['letra' => 25])->assertUnprocessable();
+        $this->assertSame(24, $letra());
     }
 
     public function test_avisa_al_monitor_de_la_sucursal_cuando_un_operario_toma_un_pedido(): void

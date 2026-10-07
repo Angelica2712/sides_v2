@@ -21,16 +21,15 @@ const MS_AGRUPAR_AVISOS = 250;
 const LETRA_MINIMA = 12;
 const LETRA_MAXIMA = 40;
 
-export default function monitorEnVivo({ canal, url, hora, letraBase }) {
-    // La letra de la tabla que se eligió en este equipo (cada televisor es distinto); sin
-    // elección, la de Configuración.
-    const letraGuardada = Number(localStorage.getItem('sidesMonitorLetra'));
-
+export default function monitorEnVivo({ canal, url, hora, letra, urlLetra }) {
     return {
         vista: localStorage.getItem('sidesMonitorVista') || 'tablero',
-        letra: letraGuardada >= LETRA_MINIMA && letraGuardada <= LETRA_MAXIMA ? letraGuardada : letraBase,
+        // Letra de la vista Tabla: es de la droguería (Configuración) y la cambia desde acá
+        // quien la administra; las demás pantallas la toman con el aviso del canal.
+        letra,
         letraMinima: LETRA_MINIMA,
         letraMaxima: LETRA_MAXIMA,
+        guardandoLetra: false,
         pantallaCompleta: false,
         conectado: false,
         // Distingue el primer enlace ("Conectando…") de haberse caído ("Reconectando…").
@@ -118,6 +117,8 @@ export default function monitorEnVivo({ canal, url, hora, letraBase }) {
                 }
 
                 document.getElementById('monitor-contenido').innerHTML = await respuesta.text();
+                // La letra pudo cambiarla otra pantalla: el número de los botones sigue a la tabla.
+                this.letra = Number(document.querySelector('#monitor-contenido table[data-letra]')?.dataset.letra) || this.letra;
                 this.hora = new Date().toLocaleTimeString('es-VE', { hour12: false });
                 this.medir();
             } catch (error) {
@@ -152,16 +153,36 @@ export default function monitorEnVivo({ canal, url, hora, letraBase }) {
             contenedor.scrollTo({ top: this.alFinal ? 0 : contenedor.scrollHeight, behavior: 'smooth' });
         },
 
-        cambiarLetra(pasos) {
-            this.letra = Math.max(LETRA_MINIMA, Math.min(LETRA_MAXIMA, this.letra + pasos));
-            localStorage.setItem('sidesMonitorLetra', this.letra);
-            this.$nextTick(() => this.medir());
-        },
+        async cambiarLetra(pasos) {
+            const nueva = Math.max(LETRA_MINIMA, Math.min(LETRA_MAXIMA, this.letra + pasos));
+            if (nueva === this.letra || this.guardandoLetra) {
+                return;
+            }
 
-        restablecerLetra() {
-            this.letra = letraBase;
-            localStorage.removeItem('sidesMonitorLetra');
-            this.$nextTick(() => this.medir());
+            this.guardandoLetra = true;
+
+            try {
+                const respuesta = await fetch(urlLetra, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Accept: 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ letra: nueva }),
+                });
+
+                if (respuesta.ok) {
+                    this.letra = nueva;
+                    await this.refrescar();
+                }
+            } catch (error) {
+                // Sin red: la letra queda como estaba.
+            } finally {
+                this.guardandoLetra = false;
+            }
         },
 
         alternarPantalla() {

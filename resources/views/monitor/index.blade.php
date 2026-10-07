@@ -10,7 +10,8 @@
              canal: @js('sides-monitor.'.$codisb),
              url: @js(route('monitor.contenido')),
              hora: @js($actualizado->format('H:i:s')),
-             letraBase: @js(max(12, min(40, (int) ($cfg?->TamLetraMonitor ?: 14)))),
+             letra: @js(\App\Http\Controllers\MonitorController::letraDe($cfg)),
+             urlLetra: @js(route('monitor.letra')),
          })">
 
         {{-- Barra de herramientas --}}
@@ -38,16 +39,18 @@
                     </button>
                 </div>
 
-                {{-- Letra de la vista Tabla en esta pantalla: parte del tamaño de Configuración y se recuerda en el equipo. --}}
-                <div x-show="vista === 'tabla'" x-cloak role="group" aria-label="Tamaño de la letra de la tabla"
-                     class="inline-flex items-center rounded-xl bg-white p-1 shadow-sm ring-1 ring-slate-200">
-                    <button type="button" @click="cambiarLetra(-2)" :disabled="letra <= letraMinima" title="Letra más pequeña" aria-label="Letra más pequeña"
-                            class="rounded-lg px-2.5 py-1.5 text-xs font-black text-slate-700 hover:bg-slate-100 disabled:opacity-40">A−</button>
-                    <button type="button" @click="restablecerLetra()" title="Volver al tamaño de Configuración" aria-label="Volver al tamaño de letra de Configuración"
-                            class="min-w-12 rounded-lg px-1.5 py-1.5 text-center text-sm font-semibold tabular-nums text-slate-600 hover:bg-slate-100" x-text="letra + ' px'"></button>
-                    <button type="button" @click="cambiarLetra(2)" :disabled="letra >= letraMaxima" title="Letra más grande" aria-label="Letra más grande"
-                            class="rounded-lg px-2.5 py-1.5 text-base font-black leading-none text-slate-700 hover:bg-slate-100 disabled:opacity-40">A+</button>
-                </div>
+                {{-- Letra de la vista Tabla, para todas las pantallas de la droguería: solo quien la administra (permiso de Configuración). --}}
+                @if (\App\Support\MenuSides::puede(auth()->user(), $cfg, 'configuracion'))
+                    <div x-show="vista === 'tabla'" x-cloak role="group" aria-label="Tamaño de la letra de la tabla"
+                         title="Cambia la letra de la tabla en todas las pantallas de la droguería"
+                         class="inline-flex items-center rounded-xl bg-white p-1 shadow-sm ring-1 ring-slate-200">
+                        <button type="button" @click="cambiarLetra(-2)" :disabled="guardandoLetra || letra <= letraMinima" aria-label="Letra más pequeña"
+                                class="rounded-lg px-2.5 py-1.5 text-xs font-black text-slate-700 hover:bg-slate-100 disabled:opacity-40">A−</button>
+                        <span class="min-w-12 px-1.5 text-center text-sm font-semibold tabular-nums text-slate-600" x-text="letra + ' px'"></span>
+                        <button type="button" @click="cambiarLetra(2)" :disabled="guardandoLetra || letra >= letraMaxima" aria-label="Letra más grande"
+                                class="rounded-lg px-2.5 py-1.5 text-base font-black leading-none text-slate-700 hover:bg-slate-100 disabled:opacity-40">A+</button>
+                    </div>
+                @endif
 
                 {{-- Estado de la conexión en vivo. Mismo chip que usa la cola de alcabala en seped_v2. --}}
                 <div class="flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm font-semibold shadow-sm ring-1"
@@ -75,7 +78,7 @@
             </div>
         </div>
 
-        <div id="monitor-contenido" class="space-y-4" :class="actualizando && 'opacity-60 transition-opacity'" :style="{ '--letra-tabla': letra + 'px' }">
+        <div id="monitor-contenido" class="space-y-4" :class="actualizando && 'opacity-60 transition-opacity'">
             @include('monitor.contenido')
         </div>
         <div x-ref="fin" aria-hidden="true"></div>

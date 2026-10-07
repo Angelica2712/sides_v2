@@ -10,7 +10,7 @@ use App\Support\Monitor\TiemposPedido;
 // Opciones de sides_cfg que ya usaba el monitor legacy.
 // $tamLetra es la letra de la vista Tabla; sus textos secundarios (cliente, estado, encabezados) van
 // en proporción a ella, con 12 px de piso.
-$tamLetra = max(12, min(40, (int) ($cfg?->TamLetraMonitor ?: 14)));
+$tamLetra = \App\Http\Controllers\MonitorController::letraDe($cfg);
 $tamNumeroPedido = max(18, min(36, $tamLetra));
 $conPacking = (bool) ($cfg?->activarPacking ?? true);
 $verIndicadores = (bool) ($cfg?->MostrarTituloMonitor ?? true);
@@ -190,8 +190,7 @@ $numero = fn ($valor) => number_format((int) $valor, 0, ',', '.');
     {{-- Vista tabla --}}
     <section x-show="vista === 'tabla'" x-cloak class="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
         <div class="overflow-x-auto">
-            {{-- --letra-tabla la pone monitor/index cuando en esa pantalla se agrandó o achicó la letra. --}}
-            <table class="min-w-full divide-y divide-slate-200" style="font-size: var(--letra-tabla, {{ $tamLetra }}px)">
+            <table class="min-w-full divide-y divide-slate-200" data-letra="{{ $tamLetra }}" style="font-size: {{ $tamLetra }}px">
                 <thead class="bg-slate-50 text-left text-[max(0.75em,12px)] font-bold uppercase tracking-wide text-slate-500">
                     <tr>
                         <th scope="col" class="px-3 py-2.5">Ruta</th>

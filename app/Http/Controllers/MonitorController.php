@@ -2,13 +2,19 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\MonitorActualizado;
 use App\Models\Seped\Pedido;
+use App\Models\Sides\SidesCfg;
 use App\Support\Monitor\FiltrosMonitor;
 use App\Support\Monitor\TiemposPedido;
 use App\Support\PartesPedido;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Throwable;
 
 /**
  * Monitor de pedidos en proceso. Porta sides_droactiva AdminmonitorController@index: lee
@@ -30,6 +36,11 @@ class MonitorController extends Controller
 {
     public const ESTADOS = ['RECIBIDO', 'PICKING', 'PACKING'];
 
+    /** Tamaños de la letra de la vista Tabla, en px, que se pueden elegir desde el monitor (de 2 en 2). */
+    public const LETRA_MINIMA = 12;
+
+    public const LETRA_MAXIMA = 40;
+
     /** Pantalla completa del monitor. */
     public function __invoke(Request $request): View
     {
@@ -44,6 +55,32 @@ class MonitorController extends Controller
     public function contenido(Request $request): View
     {
         return view('monitor.contenido', $this->datos($request));
+    }
+
+    /**
+     * Cambia la letra de la vista Tabla para toda la droguería (sides_cfg.TamLetraMonitor, la
+     * misma de Configuración) y avisa a los monitores abiertos para que la tomen al momento.
+     */
+    public function letra(Request $request): JsonResponse
+    {
+        $datos = $request->validate(['letra' => ['required', 'integer', Rule::in(range(self::LETRA_MINIMA, self::LETRA_MAXIMA, 2))]]);
+        $codisb = $request->user()->codisb;
+
+        SidesCfg::query()->whereKey($codisb)->update(['TamLetraMonitor' => $datos['letra']]);
+
+        try {
+            event(new MonitorActualizado($codisb, 'monitor.letra'));
+        } catch (Throwable $e) {
+            Log::warning('MONITOR -> NO SE PUDO AVISAR EL CAMBIO DE LETRA: '.$e->getMessage());
+        }
+
+        return response()->json(['letra' => (int) $datos['letra']]);
+    }
+
+    /** Letra de la vista Tabla que se usa en pantalla: la de Configuración, entre el mínimo y el máximo. */
+    public static function letraDe(?SidesCfg $cfg): int
+    {
+        return max(self::LETRA_MINIMA, min(self::LETRA_MAXIMA, (int) ($cfg?->TamLetraMonitor ?: 14)));
     }
 
     /** @return array<string, mixed> */

@@ -48,6 +48,8 @@ Route::middleware('auth')->group(function () {
         Route::get('monitor', MonitorController::class)->name('monitor.index');
         // Fragmento que pide el monitor por AJAX cuando llega un aviso por el WebSocket.
         Route::get('monitor/contenido', [MonitorController::class, 'contenido'])->name('monitor.contenido');
+        // Letra de la vista Tabla: la cambia desde el propio monitor quien administra la droguería (permiso de Configuración).
+        Route::put('monitor/letra', [MonitorController::class, 'letra'])->middleware('permiso:configuracion')->name('monitor.letra');
     });
 
     Route::prefix('picking')->name('picking.')->middleware('permiso:picking')

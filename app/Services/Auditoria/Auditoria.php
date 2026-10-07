@@ -56,6 +56,7 @@ class Auditoria
         'pedidos.anular' => 'Anuló el pedido #:pedido',
         'pedidos.agrupar' => 'Agrupó pedidos para facturar',
         'pedidos.desagrupar' => 'Deshizo el grupo de facturación #:grupo',
+        'monitor.letra' => 'Cambió el tamaño de la letra del monitor',
         'filtromonitor.store' => 'Creó un filtro del monitor',
         'filtromonitor.update' => 'Modificó el filtro del monitor #:filtro',
         'filtromonitor.destroy' => 'Eliminó el filtro del monitor #:filtro',
