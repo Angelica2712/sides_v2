@@ -10,3 +10,4 @@ Artisan::command('inspire', function () {
 
 Schedule::command('sides:sincronizar-rutas')->hourly()->withoutOverlapping();
 Schedule::command('sides:enviar-webhooks')->everyMinute()->withoutOverlapping();
+Schedule::command('sides:depurar-auditoria')->dailyAt('03:10')->withoutOverlapping();

@@ -17,6 +17,14 @@
                 Lo que hace cada usuario en SIDES, en todas las droguerías: quién, qué, cuándo, desde dónde y con qué resultado.
                 Las contraseñas y claves nunca se guardan.
             </p>
+            <p class="mt-1 text-xs text-slate-500">
+                Hay {{ number_format($total, 0, ',', '.') }} registros guardados.
+                @if ($maximo > 0)
+                    Se conservan los {{ number_format($maximo, 0, ',', '.') }} más recientes: al pasar de ese número, cada noche se borran solos los más antiguos.
+                @else
+                    No hay máximo configurado: no se borra ninguno.
+                @endif
+            </p>
         </div>
 
         <form method="GET" action="{{ route('auditoria.index') }}" class="grid gap-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 sm:grid-cols-2 lg:grid-cols-4">

@@ -148,4 +148,27 @@ class AuditoriaTest extends TestCase
         $this->get('/admin/auditoria?buscar=111')->assertSee('#111')->assertDontSee('#222');
         $this->get('/admin/auditoria?desde=2026-08-01&hasta=2026-08-01')->assertSee('fuera de rango');
     }
+
+    public function test_al_pasar_del_maximo_se_borran_los_registros_mas_antiguos(): void
+    {
+        foreach (range(1, 12) as $n) {
+            SidesAuditoria::query()->create([
+                'fecha' => Carbon::now()->subDays(13 - $n), 'modulo' => 'Picking', 'accion' => 'picking.tomar', 'descripcion' => "Registro {$n}",
+            ]);
+        }
+
+        // Sin máximo, o por debajo de él, no se toca nada.
+        $this->artisan('sides:depurar-auditoria', ['--maximo' => 0])->assertSuccessful();
+        $this->artisan('sides:depurar-auditoria', ['--maximo' => 12])->assertSuccessful();
+        $this->assertSame(12, SidesAuditoria::query()->count());
+
+        config(['sides.auditoria_maximo' => 5]);
+        $this->artisan('sides:depurar-auditoria')->expectsOutputToContain('Se borraron 7 registros antiguos')->assertSuccessful();
+
+        $this->assertSame(['Registro 8', 'Registro 9', 'Registro 10', 'Registro 11', 'Registro 12'], SidesAuditoria::query()->orderBy('id')->pluck('descripcion')->all());
+
+        $this->actingAs($this->admin)->get('/admin/auditoria')
+            ->assertSee('Hay 5 registros guardados')
+            ->assertSee('Se conservan los 5 más recientes');
+    }
 }

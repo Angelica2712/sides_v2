@@ -60,6 +60,8 @@ class AuditoriaController extends Controller
             'hasta' => $hasta,
             'droguerias' => SidesCfg::query()->orderBy('nombre')->pluck('nombre', 'codisb'),
             'modulos' => SidesAuditoria::query()->distinct()->orderBy('modulo')->pluck('modulo'),
+            'total' => SidesAuditoria::query()->count(),
+            'maximo' => (int) config('sides.auditoria_maximo'),
         ]);
     }
 }
