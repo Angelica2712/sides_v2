@@ -10,6 +10,7 @@
              canal: @js('sides-monitor.'.$codisb),
              url: @js(route('monitor.contenido')),
              hora: @js($actualizado->format('H:i:s')),
+             letraBase: @js(max(12, min(40, (int) ($cfg?->TamLetraMonitor ?: 14)))),
          })">
 
         {{-- Barra de herramientas --}}
@@ -35,6 +36,17 @@
                         <svg class="size-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18M3 12h18M3 19h18" /></svg>
                         Tabla
                     </button>
+                </div>
+
+                {{-- Letra de la vista Tabla en esta pantalla: parte del tamaño de Configuración y se recuerda en el equipo. --}}
+                <div x-show="vista === 'tabla'" x-cloak role="group" aria-label="Tamaño de la letra de la tabla"
+                     class="inline-flex items-center rounded-xl bg-white p-1 shadow-sm ring-1 ring-slate-200">
+                    <button type="button" @click="cambiarLetra(-2)" :disabled="letra <= letraMinima" title="Letra más pequeña" aria-label="Letra más pequeña"
+                            class="rounded-lg px-2.5 py-1.5 text-xs font-black text-slate-700 hover:bg-slate-100 disabled:opacity-40">A−</button>
+                    <button type="button" @click="restablecerLetra()" title="Volver al tamaño de Configuración" aria-label="Volver al tamaño de letra de Configuración"
+                            class="min-w-12 rounded-lg px-1.5 py-1.5 text-center text-sm font-semibold tabular-nums text-slate-600 hover:bg-slate-100" x-text="letra + ' px'"></button>
+                    <button type="button" @click="cambiarLetra(2)" :disabled="letra >= letraMaxima" title="Letra más grande" aria-label="Letra más grande"
+                            class="rounded-lg px-2.5 py-1.5 text-base font-black leading-none text-slate-700 hover:bg-slate-100 disabled:opacity-40">A+</button>
                 </div>
 
                 {{-- Estado de la conexión en vivo. Mismo chip que usa la cola de alcabala en seped_v2. --}}
@@ -63,7 +75,7 @@
             </div>
         </div>
 
-        <div id="monitor-contenido" class="space-y-4" :class="actualizando && 'opacity-60 transition-opacity'">
+        <div id="monitor-contenido" class="space-y-4" :class="actualizando && 'opacity-60 transition-opacity'" :style="{ '--letra-tabla': letra + 'px' }">
             @include('monitor.contenido')
         </div>
         <div x-ref="fin" aria-hidden="true"></div>

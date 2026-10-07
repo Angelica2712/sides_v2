@@ -190,7 +190,8 @@ $numero = fn ($valor) => number_format((int) $valor, 0, ',', '.');
     {{-- Vista tabla --}}
     <section x-show="vista === 'tabla'" x-cloak class="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
         <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-slate-200" style="font-size: {{ $tamLetra }}px">
+            {{-- --letra-tabla la pone monitor/index cuando en esa pantalla se agrandó o achicó la letra. --}}
+            <table class="min-w-full divide-y divide-slate-200" style="font-size: var(--letra-tabla, {{ $tamLetra }}px)">
                 <thead class="bg-slate-50 text-left text-[max(0.75em,12px)] font-bold uppercase tracking-wide text-slate-500">
                     <tr>
                         <th scope="col" class="px-3 py-2.5">Ruta</th>

@@ -18,9 +18,19 @@
 const MS_SIN_CONEXION = 60000;
 const MS_AGRUPAR_AVISOS = 250;
 
-export default function monitorEnVivo({ canal, url, hora }) {
+const LETRA_MINIMA = 12;
+const LETRA_MAXIMA = 40;
+
+export default function monitorEnVivo({ canal, url, hora, letraBase }) {
+    // La letra de la tabla que se eligió en este equipo (cada televisor es distinto); sin
+    // elección, la de Configuración.
+    const letraGuardada = Number(localStorage.getItem('sidesMonitorLetra'));
+
     return {
         vista: localStorage.getItem('sidesMonitorVista') || 'tablero',
+        letra: letraGuardada >= LETRA_MINIMA && letraGuardada <= LETRA_MAXIMA ? letraGuardada : letraBase,
+        letraMinima: LETRA_MINIMA,
+        letraMaxima: LETRA_MAXIMA,
         pantallaCompleta: false,
         conectado: false,
         // Distingue el primer enlace ("Conectando…") de haberse caído ("Reconectando…").
@@ -140,6 +150,18 @@ export default function monitorEnVivo({ canal, url, hora }) {
             const contenedor = this.contenedor();
 
             contenedor.scrollTo({ top: this.alFinal ? 0 : contenedor.scrollHeight, behavior: 'smooth' });
+        },
+
+        cambiarLetra(pasos) {
+            this.letra = Math.max(LETRA_MINIMA, Math.min(LETRA_MAXIMA, this.letra + pasos));
+            localStorage.setItem('sidesMonitorLetra', this.letra);
+            this.$nextTick(() => this.medir());
+        },
+
+        restablecerLetra() {
+            this.letra = letraBase;
+            localStorage.removeItem('sidesMonitorLetra');
+            this.$nextTick(() => this.medir());
         },
 
         alternarPantalla() {
