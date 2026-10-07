@@ -55,6 +55,9 @@ trait TablasSides
             $table->integer('activar_separador_automatico')->default(0);
             $table->string('titulopagina', 100)->nullable();
             $table->string('formatoPersEtiq', 50)->nullable();
+            $table->unsignedSmallInteger('etiquetaAncho')->nullable();
+            $table->unsignedSmallInteger('etiquetaAlto')->nullable();
+            $table->unsignedSmallInteger('ticketAncho')->nullable();
             $table->integer('activarImpTicket')->default(0);
             $table->integer('activar_etiqueta_packing')->default(0);
             $table->integer('mostrarEntrega')->default(0);

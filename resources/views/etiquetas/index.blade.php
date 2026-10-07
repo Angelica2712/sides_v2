@@ -1,6 +1,6 @@
 @php
     $fecha = fn ($valor) => $valor ? \Illuminate\Support\Carbon::parse($valor)->format('d-m-y H:i') : '—';
-    $formato = \App\Support\FormatosEtiqueta::de($cfg?->formatoPersEtiq);
+    $formato = \App\Support\FormatosEtiqueta::de($cfg);
 @endphp
 
 <x-layouts.app titulo="Etiquetas">

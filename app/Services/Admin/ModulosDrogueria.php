@@ -17,7 +17,7 @@ class ModulosDrogueria
 {
     /**
      * @param  list<string>  $activos  claves de MenuSides::CONTROLABLES que quedan encendidas
-     * @param  array{activarPacking: bool, procAlcabalaPicking: bool, formatoPersEtiq?: ?string, activarImpTicket?: bool, activar_etiqueta_packing?: bool, mostrarEntrega?: bool}  $opciones
+     * @param  array{activarPacking: bool, procAlcabalaPicking: bool, formatoPersEtiq?: ?string, etiquetaAncho?: ?int, etiquetaAlto?: ?int, ticketAncho?: ?int, activarImpTicket?: bool, activar_etiqueta_packing?: bool, mostrarEntrega?: bool}  $opciones
      */
     public function guardar(SidesCfg $cfg, array $activos, array $opciones, SidesUsers $admin): void
     {
@@ -29,14 +29,21 @@ class ModulosDrogueria
             $this->exigirSinTrabajoDeBatch($cfg->codisb);
         }
 
-        DB::transaction(function () use ($cfg, $activos, $opciones, $batchActivo, $etiquetasActivo, $admin) {
+        $formato = FormatosEtiqueta::clave($opciones['formatoPersEtiq'] ?? $cfg->formatoPersEtiq);
+        $aMedida = $formato === FormatosEtiqueta::PERSONALIZADO;
+
+        DB::transaction(function () use ($cfg, $activos, $opciones, $batchActivo, $etiquetasActivo, $formato, $aMedida, $admin) {
             // Sin Batch Picking no puede haber pedidos llegando en espera: nadie podría agruparlos ni liberarlos.
             $cfg->forceFill([
                 'activarPacking' => $opciones['activarPacking'] ? 1 : 0,
                 'procAlcabalaPicking' => $batchActivo && $opciones['procAlcabalaPicking'] ? 1 : 0,
                 // activarEtiPacking era el interruptor legacy de Etiquetas: sigue al módulo.
                 'activarEtiPacking' => $etiquetasActivo ? 1 : 0,
-                'formatoPersEtiq' => FormatosEtiqueta::clave($opciones['formatoPersEtiq'] ?? $cfg->formatoPersEtiq),
+                'formatoPersEtiq' => $formato,
+                // Las medidas en mm solo valen con el formato a medida; el ticket sin ancho usa el de siempre.
+                'etiquetaAncho' => $aMedida ? ($opciones['etiquetaAncho'] ?? $cfg->etiquetaAncho) : null,
+                'etiquetaAlto' => $aMedida ? ($opciones['etiquetaAlto'] ?? $cfg->etiquetaAlto) : null,
+                'ticketAncho' => array_key_exists('ticketAncho', $opciones) ? $opciones['ticketAncho'] : $cfg->ticketAncho,
                 'activar_etiqueta_packing' => $etiquetasActivo && ($opciones['activar_etiqueta_packing'] ?? false) ? 1 : 0,
                 'activarImpTicket' => ($opciones['activarImpTicket'] ?? false) ? 1 : 0,
                 'mostrarEntrega' => ($opciones['mostrarEntrega'] ?? false) ? 1 : 0,

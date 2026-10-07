@@ -67,8 +67,37 @@ class AdminTest extends TestCase
         $this->post('/admin/droguerias', ['codisb' => 'DROGA2', 'nombre' => 'Dos', 'formatoPersEtiq' => 'gigante'])
             ->assertSessionHasErrors(['formatoPersEtiq' => 'Elige un tamaño de etiqueta de la lista.']);
 
+        $this->post('/admin/droguerias', ['codisb' => 'DROGA2', 'nombre' => 'Dos', 'formatoPersEtiq' => 'personalizado', 'etiquetaAncho' => '10', 'ticketAncho' => '500'])
+            ->assertSessionHasErrors([
+                'etiquetaAncho' => 'El ancho de la etiqueta debe ser un número entero entre 25 y 300 mm.',
+                'etiquetaAlto' => 'Escribe el alto de la etiqueta en milímetros.',
+                'ticketAncho' => 'El ancho del ticket debe ser un número entero entre 40 y 120 mm.',
+            ]);
+
         $this->post('/admin/droguerias', ['codisb' => 'DROGA1', 'nombre' => 'Repetida'])
             ->assertSessionHasErrors(['codisb' => 'Ya existe una droguería con ese código.']);
+    }
+
+    public function test_etiqueta_a_medida_y_ancho_del_ticket(): void
+    {
+        $this->actingAs($this->admin)->put('/admin/droguerias/SIDES', [
+            'nombre' => 'SIDES',
+            'modulos' => ['etiquetas'],
+            'formatoPersEtiq' => 'personalizado',
+            'etiquetaAncho' => '120',
+            'etiquetaAlto' => '75',
+            'ticketAncho' => '58',
+        ])->assertRedirect(route('admin.index'));
+
+        $drogueria = SidesCfg::query()->find('SIDES');
+        $this->assertSame(['personalizado', 120, 75, 58], [$drogueria->formatoPersEtiq, (int) $drogueria->etiquetaAncho, (int) $drogueria->etiquetaAlto, (int) $drogueria->ticketAncho]);
+
+        // Al volver a un tamaño de la lista se borran las medidas; el ticket vacío vuelve al ancho de siempre.
+        $this->put('/admin/droguerias/SIDES', ['nombre' => 'SIDES', 'modulos' => ['etiquetas'], 'formatoPersEtiq' => 'rptetiqueta15x10', 'ticketAncho' => ''])
+            ->assertRedirect(route('admin.index'));
+
+        $drogueria->refresh();
+        $this->assertSame(['rptetiqueta15x10', null, null, null], [$drogueria->formatoPersEtiq, $drogueria->etiquetaAncho, $drogueria->etiquetaAlto, $drogueria->ticketAncho]);
     }
 
     public function test_apagar_batch_picking_lo_quita_del_menu_de_la_drogueria(): void

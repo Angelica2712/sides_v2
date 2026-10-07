@@ -178,7 +178,10 @@ class AdminController extends Controller
             'logoForma' => ['nullable', Rule::in(array_keys(SidesCfg::FORMAS_LOGO))],
             'modulos' => ['array'],
             'modulos.*' => ['string'],
-            'formatoPersEtiq' => ['nullable', Rule::in(array_keys(FormatosEtiqueta::FORMATOS))],
+            'formatoPersEtiq' => ['nullable', Rule::in([...array_keys(FormatosEtiqueta::FORMATOS), FormatosEtiqueta::PERSONALIZADO])],
+            'etiquetaAncho' => ['required_if:formatoPersEtiq,'.FormatosEtiqueta::PERSONALIZADO, 'nullable', 'integer', 'between:'.FormatosEtiqueta::MIN_MM.','.FormatosEtiqueta::MAX_MM],
+            'etiquetaAlto' => ['required_if:formatoPersEtiq,'.FormatosEtiqueta::PERSONALIZADO, 'nullable', 'integer', 'between:'.FormatosEtiqueta::MIN_MM.','.FormatosEtiqueta::MAX_MM],
+            'ticketAncho' => ['nullable', 'integer', 'between:'.FormatosEtiqueta::TICKET_MIN.','.FormatosEtiqueta::TICKET_MAX],
         ];
     }
 
@@ -190,6 +193,11 @@ class AdminController extends Controller
             'codisb.regex' => 'El código solo puede tener letras, números, guion y guion bajo.',
             'nombre.required' => 'Escribe el nombre de la droguería.',
             'formatoPersEtiq.in' => 'Elige un tamaño de etiqueta de la lista.',
+            'etiquetaAncho.required_if' => 'Escribe el ancho de la etiqueta en milímetros.',
+            'etiquetaAlto.required_if' => 'Escribe el alto de la etiqueta en milímetros.',
+            'etiquetaAncho.*' => 'El ancho de la etiqueta debe ser un número entero entre '.FormatosEtiqueta::MIN_MM.' y '.FormatosEtiqueta::MAX_MM.' mm.',
+            'etiquetaAlto.*' => 'El alto de la etiqueta debe ser un número entero entre '.FormatosEtiqueta::MIN_MM.' y '.FormatosEtiqueta::MAX_MM.' mm.',
+            'ticketAncho.*' => 'El ancho del ticket debe ser un número entero entre '.FormatosEtiqueta::TICKET_MIN.' y '.FormatosEtiqueta::TICKET_MAX.' mm.',
             'logoForma.in' => 'Elige si el logo va en cuadro o en círculo.',
             // Los del logo van antes que *.max, que si no se queda con logo.max.
             ...LogoDrogueria::MENSAJES,
@@ -208,13 +216,16 @@ class AdminController extends Controller
         return collect(self::DATOS)->mapWithKeys(fn (string $campo) => [$campo => $validados[$campo] ?? null])->all();
     }
 
-    /** @return array{activarPacking: bool, procAlcabalaPicking: bool, formatoPersEtiq: ?string, activarImpTicket: bool, activar_etiqueta_packing: bool, mostrarEntrega: bool} */
+    /** @return array{activarPacking: bool, procAlcabalaPicking: bool, formatoPersEtiq: ?string, etiquetaAncho: ?int, etiquetaAlto: ?int, ticketAncho: ?int, activarImpTicket: bool, activar_etiqueta_packing: bool, mostrarEntrega: bool} */
     private function opciones(Request $request): array
     {
         return [
             'activarPacking' => $request->boolean('activarPacking'),
             'procAlcabalaPicking' => $request->boolean('procAlcabalaPicking'),
             'formatoPersEtiq' => $request->input('formatoPersEtiq'),
+            'etiquetaAncho' => $request->filled('etiquetaAncho') ? $request->integer('etiquetaAncho') : null,
+            'etiquetaAlto' => $request->filled('etiquetaAlto') ? $request->integer('etiquetaAlto') : null,
+            'ticketAncho' => $request->filled('ticketAncho') ? $request->integer('ticketAncho') : null,
             'activarImpTicket' => $request->boolean('activarImpTicket'),
             'activar_etiqueta_packing' => $request->boolean('activar_etiqueta_packing'),
             'mostrarEntrega' => $request->boolean('mostrarEntrega'),

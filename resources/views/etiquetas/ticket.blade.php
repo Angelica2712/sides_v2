@@ -1,21 +1,26 @@
 @php
+    use App\Support\FormatosEtiqueta;
+
     $unidades = $renglones->sum(fn ($renglon) => max((int) $renglon->cantdesp, 0));
-    // Mismo cálculo del legacy (rptticket): el largo del papel crece con los renglones.
-    $alto = (int) ceil(55 + 4.5 * $renglones->count());
+    // El diseño es el del legacy (rptticket, 77 mm de ancho) y se escala al ancho del papel de la droguería.
+    $ancho = FormatosEtiqueta::anchoTicket($cfg);
+    $k = round($ancho / FormatosEtiqueta::TICKET_ANCHO, 3);
+    // Mismo cálculo del legacy: el largo del papel crece con los renglones.
+    $alto = (int) ceil((55 + 4.5 * $renglones->count()) * $k);
     $fecha = $pedido->fecha ? \Illuminate\Support\Carbon::parse($pedido->fecha)->format('d-m-Y H:i') : '—';
 @endphp
 
-<x-layouts.impresion :titulo="'Ticket pedido #'.$pedido->id" :pagina="'77mm '.$alto.'mm'" :volver="$volver"
-                     :resumen="'Ticket del pedido #'.$pedido->id.' · '.$renglones->count().' renglones. Elige la impresora de tickets.'">
+<x-layouts.impresion :titulo="'Ticket pedido #'.$pedido->id" :pagina="$ancho.'mm '.$alto.'mm'" :volver="$volver"
+                     :resumen="'Ticket del pedido #'.$pedido->id.' · '.$renglones->count().' renglones · papel de '.$ancho.' mm. Elige la impresora de tickets.'">
     <x-slot:estilos>
-        .ticket { width: 77mm; min-height: {{ $alto }}mm; padding: 3mm 3.5mm; font-size: 2.9mm; line-height: 1.35; }
+        .ticket { --k: {{ $k }}; width: {{ $ancho }}mm; min-height: {{ $alto }}mm; padding: calc(3mm * var(--k)) calc(3.5mm * var(--k)); font-size: calc(2.9mm * var(--k)); line-height: 1.35; }
         /* Logo en negro puro con contorno, igual que en las etiquetas: el ticket también sale en un solo color. */
-        .ticket .logo { display: block; max-width: 50mm; max-height: 16mm; margin: 0 auto 1.5mm; object-fit: contain; filter: url(#logo-tinta); }
-        .ticket h1 { margin: 0; font-size: 3.4mm; text-align: center; text-transform: uppercase; }
+        .ticket .logo { display: block; max-width: calc(50mm * var(--k)); max-height: calc(16mm * var(--k)); margin: 0 auto calc(1.5mm * var(--k)); object-fit: contain; filter: url(#logo-tinta); }
+        .ticket h1 { margin: 0; font-size: calc(3.4mm * var(--k)); text-align: center; text-transform: uppercase; }
         .centro { text-align: center; }
         .fila { display: flex; justify-content: space-between; gap: 2mm; }
         .fila span:first-child { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-        hr { margin: 1.8mm 0; border: 0; border-top: .3mm dashed #000; }
+        hr { margin: calc(1.8mm * var(--k)) 0; border: 0; border-top: .3mm dashed #000; }
     </x-slot:estilos>
 
     <article class="hoja ticket">

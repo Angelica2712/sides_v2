@@ -70,7 +70,7 @@ class EtiquetasController extends Controller
         return view('etiquetas.imprimir', [
             'pedido' => $datos,
             'cfg' => $this->cfg($request),
-            'formato' => FormatosEtiqueta::de($this->cfg($request)?->formatoPersEtiq),
+            'formato' => FormatosEtiqueta::de($this->cfg($request)),
             'bultos' => max(1, (int) $datos->cantBultos),
             'volver' => $this->volver($request, $pedido),
             'autoImprimir' => $request->boolean('imprimir'),

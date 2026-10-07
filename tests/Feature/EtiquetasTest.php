@@ -153,7 +153,25 @@ class EtiquetasTest extends TestCase
         $this->get('/etiquetas?buscar=500')->assertSee('Imprimir ticket');
         $this->get('/etiquetas/500/ticket')
             ->assertOk()
+            ->assertSee('size: 77mm 64mm', false)
             ->assertSeeInOrder(['Pedro Picker', 'Eva Empaca', 'ACETAMINOFEN 500MG', 'IBUPROFENO 400MG', 'Unidades totales:', '5']);
+    }
+
+    public function test_etiqueta_a_medida_y_ticket_con_el_ancho_de_la_drogueria(): void
+    {
+        $this->pedidoEmpacado(500);
+        $this->crearRenglon(500, 1, ['cantdesp' => 2]);
+        $this->actingAs($this->usuario);
+
+        SidesCfg::query()->whereKey('505094939')->update(['formatoPersEtiq' => 'personalizado', 'etiquetaAncho' => 120, 'etiquetaAlto' => 75, 'ticketAncho' => 58, 'activarImpTicket' => 1]);
+
+        $this->get('/etiquetas/500/imprimir')->assertSee('size: 120mm 75mm', false)->assertSee('de 12 × 7,5 cm');
+        $this->get('/etiquetas?buscar=500')->assertSee('Formato de 12 × 7,5 cm');
+        $this->get('/etiquetas/500/ticket')->assertSee('size: 58mm 45mm', false);
+
+        // A medida pero sin medidas guardadas: sale el formato por defecto, no una página rota.
+        SidesCfg::query()->whereKey('505094939')->update(['etiquetaAlto' => null]);
+        $this->get('/etiquetas/500/imprimir')->assertSee('size: 130mm 80mm', false);
     }
 
     public function test_sin_el_modulo_activo_no_hay_etiquetas(): void

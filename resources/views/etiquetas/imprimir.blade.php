@@ -2,7 +2,7 @@
     use App\Services\Etiquetas\EtiquetasService;
     use App\Support\CodigosImpresion;
 
-    ['ancho' => $ancho, 'alto' => $alto, 'nombre' => $nombreFormato] = $formato;
+    ['ancho' => $ancho, 'alto' => $alto, 'nombre' => $nombreFormato, 'escala' => $escala] = $formato;
     $drogueria = $cfg?->nombre ?: 'SIDES';
     $logo = $cfg?->urlLogo();
     $qr = CodigosImpresion::qr((string) $pedido->codcli);
@@ -13,7 +13,7 @@
 
 <x-layouts.impresion :titulo="'Etiquetas pedido #'.$pedido->id" :pagina="$ancho.'mm '.$alto.'mm'" :volver="$volver" :resumen="$resumen" :auto-imprimir="$autoImprimir">
     <x-slot:estilos>
-        .etiqueta { --k: {{ round($alto / 80, 3) }}; width: {{ $ancho }}mm; height: {{ $alto }}mm; padding: calc(3mm * var(--k)) calc(3.5mm * var(--k)); display: flex; flex-direction: column; gap: calc(1.3mm * var(--k)); font-size: calc(3mm * var(--k)); line-height: 1.15; }
+        .etiqueta { --k: {{ $escala }}; width: {{ $ancho }}mm; height: {{ $alto }}mm; padding: calc(3mm * var(--k)) calc(3.5mm * var(--k)); display: flex; flex-direction: column; gap: calc(1.3mm * var(--k)); font-size: calc(3mm * var(--k)); line-height: 1.15; }
         .cabecera { display: flex; justify-content: space-between; align-items: flex-start; gap: 3mm; padding-bottom: calc(1.2mm * var(--k)); border-bottom: .4mm solid #000; }
         .marca { display: flex; align-items: center; gap: calc(2mm * var(--k)); min-width: 0; }
         /* Logo en negro puro con contorno (filtro del layout): las impresoras de etiquetas no marcan los tonos claros. */

@@ -119,7 +119,7 @@
         @endunless
 
         <form method="POST" action="{{ $nueva ? route('admin.store') : route('admin.update', $drogueria->codisb) }}"
-              enctype="multipart/form-data" class="space-y-4" x-data="{ batch: @js(in_array('batch', $activos, true)), etiquetas: @js(in_array('etiquetas', $activos, true)) }">
+              enctype="multipart/form-data" class="space-y-4" x-data="{ batch: @js(in_array('batch', $activos, true)), etiquetas: @js(in_array('etiquetas', $activos, true)), formato: @js(old('formatoPersEtiq', \App\Support\FormatosEtiqueta::clave($drogueria->formatoPersEtiq))) }">
             @csrf
             @unless ($nueva) @method('PUT') @endunless
 
@@ -261,12 +261,28 @@
                             <div x-show="etiquetas" x-cloak class="space-y-2.5 border-t border-slate-200 px-3 py-3 pl-11 text-sm">
                                 <div>
                                     <label for="formatoPersEtiq" class="font-semibold text-slate-800">Tamaño de la etiqueta</label>
-                                    <select id="formatoPersEtiq" name="formatoPersEtiq"
+                                    <select id="formatoPersEtiq" name="formatoPersEtiq" x-model="formato"
                                             class="mt-1 block w-full max-w-xs rounded-xl border-slate-300 py-2 text-sm shadow-sm focus:border-primary focus:ring-primary">
                                         @foreach (\App\Support\FormatosEtiqueta::FORMATOS as $claveFormato => [$nombreFormato])
-                                            <option value="{{ $claveFormato }}" @selected(old('formatoPersEtiq', \App\Support\FormatosEtiqueta::clave($drogueria->formatoPersEtiq)) === $claveFormato)>{{ $nombreFormato }}</option>
+                                            <option value="{{ $claveFormato }}">{{ $nombreFormato }}</option>
                                         @endforeach
+                                        <option value="{{ \App\Support\FormatosEtiqueta::PERSONALIZADO }}">Otro tamaño (a medida)</option>
                                     </select>
+                                    <div x-show="formato === '{{ \App\Support\FormatosEtiqueta::PERSONALIZADO }}'" class="mt-2">
+                                        <div class="flex items-end gap-2">
+                                            @foreach (['etiquetaAncho' => 'Ancho (mm)', 'etiquetaAlto' => 'Alto (mm)'] as $medida => $tituloMedida)
+                                                <div>
+                                                    <label for="{{ $medida }}" class="block text-xs font-semibold text-slate-600">{{ $tituloMedida }}</label>
+                                                    <input id="{{ $medida }}" name="{{ $medida }}" type="number" inputmode="numeric" step="1"
+                                                           min="{{ \App\Support\FormatosEtiqueta::MIN_MM }}" max="{{ \App\Support\FormatosEtiqueta::MAX_MM }}"
+                                                           value="{{ old($medida, $drogueria->{$medida}) }}"
+                                                           :disabled="formato !== '{{ \App\Support\FormatosEtiqueta::PERSONALIZADO }}'"
+                                                           class="mt-1 block w-28 rounded-xl border-slate-300 py-2 text-sm tabular-nums shadow-sm focus:border-primary focus:ring-primary">
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                        <p class="mt-1 text-xs text-slate-500">La medida del papel tal como sale de la impresora, de {{ \App\Support\FormatosEtiqueta::MIN_MM }} a {{ \App\Support\FormatosEtiqueta::MAX_MM }} mm. El contenido se ajusta solo al tamaño.</p>
+                                    </div>
                                 </div>
                                 @foreach ([
                                     'activar_etiqueta_packing' => ['Imprimir las etiquetas al terminar Packing', 'Al enviar el pedido a facturar se abren sus etiquetas listas para imprimir.'],
@@ -283,6 +299,14 @@
                                         </span>
                                     </label>
                                 @endforeach
+                                <div class="pl-7">
+                                    <label for="ticketAncho" class="font-semibold text-slate-800">Ancho del papel del ticket (mm)</label>
+                                    <input id="ticketAncho" name="ticketAncho" type="number" inputmode="numeric" step="1"
+                                           min="{{ \App\Support\FormatosEtiqueta::TICKET_MIN }}" max="{{ \App\Support\FormatosEtiqueta::TICKET_MAX }}"
+                                           value="{{ old('ticketAncho', $drogueria->ticketAncho) }}" placeholder="{{ \App\Support\FormatosEtiqueta::TICKET_ANCHO }}"
+                                           class="mt-1 block w-28 rounded-xl border-slate-300 py-2 text-sm tabular-nums shadow-sm focus:border-primary focus:ring-primary">
+                                    <p class="mt-1 text-xs text-slate-500">Vacío = {{ \App\Support\FormatosEtiqueta::TICKET_ANCHO }} mm. Los rollos más comunes son de 58 y 80 mm. El largo se ajusta solo a los renglones del pedido.</p>
+                                </div>
                             </div>
                         @endif
                     </div>
