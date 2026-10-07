@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Sides\SidesUsers;
+use App\Services\Informes\FallasService;
 use App\Services\Informes\InformesService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -12,7 +13,7 @@ use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
-/** Informes de productividad e inactividad de picking y packing. Ver InformesService. */
+/** Informes de productividad e inactividad de picking y packing (InformesService) y de fallas (FallasService). */
 class InformesController extends Controller
 {
     public function __construct(private readonly InformesService $informes)
@@ -69,6 +70,36 @@ class InformesController extends Controller
 
         return response()
             ->download($archivo, $this->nombreArchivo($tipo, $vista, $desde, $hasta, Str::slug($operario->name, '_')))
+            ->deleteFileAfterSend();
+    }
+
+    /** Fallas: lo que se pidió y se despachó de menos, por producto o renglón por renglón. */
+    public function fallas(Request $request, FallasService $fallas): View
+    {
+        [$desde, $hasta] = $this->rango($request);
+        $codisb = $request->user()->codisb;
+        $buscar = trim((string) $request->query('buscar', ''));
+        $vista = $request->query('vista') === 'pedido' ? 'pedido' : 'producto';
+
+        return view('informes.fallas', [
+            'desde' => $desde,
+            'hasta' => $hasta,
+            'buscar' => $buscar,
+            'vista' => $vista,
+            'totales' => $fallas->totales($codisb, $desde, $hasta, $buscar),
+            'filas' => $vista === 'pedido'
+                ? $fallas->porPedido($codisb, $desde, $hasta, $buscar)
+                : $fallas->porProducto($codisb, $desde, $hasta, $buscar),
+        ]);
+    }
+
+    public function excelFallas(Request $request, FallasService $fallas): BinaryFileResponse
+    {
+        [$desde, $hasta] = $this->rango($request);
+        $archivo = $fallas->excel($request->user()->codisb, $desde, $hasta, trim((string) $request->query('buscar', '')));
+
+        return response()
+            ->download($archivo, 'informe_fallas_'.$desde->format('Y-m-d').'_'.$hasta->format('Y-m-d').'.xlsx')
             ->deleteFileAfterSend();
     }
 

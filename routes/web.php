@@ -160,6 +160,8 @@ Route::middleware('auth')->group(function () {
         ->whereNumber(['usuario', 'registro'])
         ->group(function () {
             Route::get('/', 'index')->name('index');
+            Route::get('fallas', 'fallas')->name('fallas');
+            Route::get('fallas/excel', 'excelFallas')->name('fallas.excel');
             Route::get('{tipo}/{vista}', 'reporte')->name('reporte');
             Route::get('{tipo}/{vista}/excel', 'excel')->name('excel');
             Route::get('{tipo}/{vista}/operario/{usuario}', 'operario')->name('operario');

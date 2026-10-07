@@ -8,6 +8,7 @@ use App\Models\Sides\SidesLogpicking;
 use App\Models\Sides\SidesUsers;
 use App\Support\Duracion;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use OpenSpout\Reader\XLSX\Reader;
 use Tests\Concerns\TablasSides;
 use Tests\TestCase;
@@ -223,6 +224,71 @@ class InformesTest extends TestCase
         $hojas = $this->leerExcel($respuesta->baseResponse->getFile()->getPathname());
         $this->assertCount(2, $hojas['Detalle']);
         $this->assertSame(['FECHA', 'PEDIDO', 'CLIENTE', 'UNIDADES', 'RENGLONES', 'TIEMPO', 'TIPO'], $hojas['Detalle'][0]);
+    }
+
+    /** Pedido 1: faltan 6 de P1. Pedido 2: faltan 6 de P1 y 1 de P7. Lo demás salió completo o no cuenta. */
+    private function fallas(): void
+    {
+        $this->crearRenglon(1, 1, ['codprod' => 'P1', 'desprod' => 'ACETAMINOFEN 500MG', 'marcamodelo' => 'GENVEN', 'cantidad' => 10, 'cantdesp' => 4]);
+        $this->crearRenglon(1, 2, ['codprod' => 'P2', 'desprod' => 'IBUPROFENO 400MG', 'cantidad' => 5, 'cantdesp' => 5]);
+        $this->crearRenglon(2, 1, ['codprod' => 'P1', 'desprod' => 'ACETAMINOFEN 500MG', 'marcamodelo' => 'GENVEN', 'cantidad' => 6, 'cantdesp' => 0]);
+        $this->crearRenglon(2, 2, ['codprod' => 'P7', 'desprod' => 'LORATADINA 10MG', 'cantidad' => 3, 'cantdesp' => 0]);
+        // Lo que SIDES tiene en su tabla de operación manda sobre pedren.
+        DB::table('sides_pedren_operacion')->insert(['id_pedido' => 2, 'item' => 2, 'codisb' => '505094939', 'cantdesp' => 2]);
+        $this->crearRenglon(3, 1, ['codprod' => 'P3', 'desprod' => 'COMPLETO', 'cantidad' => 4, 'cantdesp' => 0]);
+        DB::table('sides_pedren_operacion')->insert(['id_pedido' => 3, 'item' => 1, 'codisb' => '505094939', 'cantdesp' => 4]);
+        // No cuentan: otra sucursal y un pedido que todavía está en picking.
+        $this->crearRenglon(9, 1, ['codprod' => 'P1', 'desprod' => 'DE OTRA SUCURSAL', 'cantidad' => 9, 'cantdesp' => 1, 'codisb' => '999999999']);
+        $this->crearPedido(['id' => 4, 'estado' => 'PICKING', 'nomcli' => 'FARMACIA EN PICKING']);
+        $this->crearRenglon(4, 1, ['codprod' => 'P8', 'desprod' => 'SIN RECOGER', 'cantidad' => 7, 'cantdesp' => 0]);
+    }
+
+    public function test_fallas_por_producto_suma_lo_que_falto_y_solo_de_pedidos_cerrados_de_la_sucursal(): void
+    {
+        $this->fallas();
+        $this->actingAs($this->ana)->get('/informes/fallas')->assertForbidden();
+
+        $this->actingAs($this->jefe)->get('/informes')->assertSee('Fallas');
+        $this->get('/informes/fallas')
+            ->assertOk()
+            ->assertViewHas('totales', fn ($t) => [(int) $t->productos, (int) $t->pedidos, (int) $t->solicitado, (int) $t->despachado, (int) $t->faltante] === [2, 2, 19, 6, 13])
+            ->assertViewHas('filas', fn ($filas) => $filas->map(fn ($f) => [$f->codprod, (int) $f->pedidos, (int) $f->solicitado, (int) $f->despachado, (int) $f->faltante])->all()
+                === [['P1', 2, 16, 4, 12], ['P7', 1, 3, 2, 1]])
+            ->assertSeeInOrder(['ACETAMINOFEN 500MG', 'GENVEN', 'LORATADINA 10MG'])
+            ->assertDontSee('IBUPROFENO 400MG')
+            ->assertDontSee('COMPLETO')
+            ->assertDontSee('DE OTRA SUCURSAL')
+            ->assertDontSee('SIN RECOGER');
+    }
+
+    public function test_fallas_por_pedido_con_busqueda_y_fechas(): void
+    {
+        $this->fallas();
+        $this->actingAs($this->jefe);
+
+        $this->get('/informes/fallas?vista=pedido')
+            ->assertOk()
+            ->assertViewHas('filas', fn ($filas) => $filas->map(fn ($f) => [(int) $f->id, $f->codprod, (int) $f->solicitado, (int) $f->despachado, (int) $f->faltante])->all()
+                === [[2, 'P1', 6, 0, 6], [2, 'P7', 3, 2, 1], [1, 'P1', 10, 4, 6]])
+            ->assertSeeInOrder(['#2', 'FARMACIA DOS', '#1', 'FARMACIA UNO']);
+
+        $this->get('/informes/fallas?vista=pedido&buscar=loratadina')->assertSee('LORATADINA 10MG')->assertDontSee('ACETAMINOFEN 500MG');
+        $this->get('/informes/fallas?vista=pedido&buscar=FARMACIA+UNO')->assertSee('#1')->assertDontSee('#2');
+        $this->get('/informes/fallas?desde=2026-09-16&hasta=2026-09-29')->assertSee('No hay fallas en estas fechas');
+    }
+
+    public function test_excel_de_fallas_con_hoja_por_producto_y_por_pedido(): void
+    {
+        $this->fallas();
+
+        $respuesta = $this->actingAs($this->jefe)->get('/informes/fallas/excel?desde=2026-09-01&hasta=2026-09-29');
+        $respuesta->assertOk()->assertDownload('informe_fallas_2026-09-01_2026-09-29.xlsx');
+
+        $hojas = $this->leerExcel($respuesta->baseResponse->getFile()->getPathname());
+        $this->assertSame(['Por producto', 'Por pedido'], array_keys($hojas));
+        $this->assertSame(['P1', 'ACETAMINOFEN 500MG', '771', 'GENVEN', 2, 16, 4, 12], $hojas['Por producto'][1]);
+        $this->assertCount(4, $hojas['Por pedido']);
+        $this->assertSame([2, '15-09-2026 08:30', 'FACTURADO', 'C001', 'FARMACIA DOS', 'RUTA 1', '', 'P1', 'ACETAMINOFEN 500MG', '771', 'GENVEN', 6, 0, 6], $hojas['Por pedido'][1]);
     }
 
     /** @return array<string, list<list<mixed>>> */
