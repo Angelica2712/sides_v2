@@ -117,6 +117,16 @@ class LogoDrogueriaTest extends TestCase
         $this->assertSame('circulo', SidesCfg::query()->find('505094939')->logoForma);
         $this->put('/admin/droguerias/505094939', $this->formulario(['logoForma' => 'estrella']))
             ->assertSessionHasErrors(['logoForma' => 'Elige si el logo va en cuadro o en círculo.']);
+
+        // Tamaño del logo en el menú: mediano por defecto, y vale para el círculo y para el cuadro.
+        $this->actingAs($this->operario->fresh())->get('/home')->assertSee("'size-16'", false);
+        $this->actingAs($this->admin)->put('/admin/droguerias/505094939', $this->formulario(['logoTamano' => 'pequeno']))->assertSessionHasNoErrors();
+        $this->assertSame(['circulo', 'pequeno'], [SidesCfg::query()->find('505094939')->logoForma, SidesCfg::query()->find('505094939')->logoTamano]);
+        $this->actingAs($this->operario->fresh())->get('/home')->assertSee("'size-12'", false);
+        $this->actingAs($this->admin)->put('/admin/droguerias/505094939', $this->formulario(['logoForma' => 'cuadro', 'logoTamano' => 'grande']));
+        $this->actingAs($this->operario->fresh())->get('/home')->assertSee("'h-20 max-w-[230px] p-1.5'", false);
+        $this->actingAs($this->admin)->put('/admin/droguerias/505094939', $this->formulario(['logoTamano' => 'enorme']))
+            ->assertSessionHasErrors(['logoTamano' => 'Elige el tamaño del logo: pequeño, mediano o grande.']);
     }
 
     public function test_rechaza_archivos_que_no_son_imagen(): void

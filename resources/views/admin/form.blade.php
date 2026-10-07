@@ -203,6 +203,19 @@
                                 <p class="mt-1 text-xs text-slate-500">Círculo para logos redondos; cuadro para los horizontales o con texto. Cambia cómo se ve en el encabezado, el inicio de sesión y la pestaña del navegador, no en las etiquetas ni las guías.</p>
                                 @error('logoForma') <p class="mt-1 text-xs font-semibold text-rose-600">{{ $message }}</p> @enderror
                             </fieldset>
+                            <fieldset>
+                                <legend class="font-semibold text-slate-700">Tamaño del logo</legend>
+                                <div class="mt-1 flex flex-wrap gap-x-5 gap-y-1">
+                                    @foreach (\App\Models\Sides\SidesCfg::TAMANOS_LOGO as $valor => $etiqueta)
+                                        <label class="flex cursor-pointer items-center gap-2">
+                                            <input type="radio" name="logoTamano" value="{{ $valor }}" @checked(old('logoTamano', $drogueria->tamanoLogo()) === $valor) class="size-4 border-slate-300 text-primary focus:ring-primary">
+                                            <span class="text-slate-700">{{ $etiqueta }}</span>
+                                        </label>
+                                    @endforeach
+                                </div>
+                                <p class="mt-1 text-xs text-slate-500">Qué tan grande sale el logo, en cuadro o en círculo, arriba del menú de SIDES.</p>
+                                @error('logoTamano') <p class="mt-1 text-xs font-semibold text-rose-600">{{ $message }}</p> @enderror
+                            </fieldset>
                             @if ($drogueria->logo)
                                 <label class="flex cursor-pointer items-center gap-2">
                                     <input type="checkbox" name="quitarLogo" value="1" x-model="quitar" class="size-4 rounded border-slate-300 text-rose-600 focus:ring-rose-500">

@@ -10,6 +10,12 @@
     );
     $nombreCorto = $cfg?->nomcorto ?: ($cfg?->nombre ?: 'SIDES');
     $logoDrogueria = $cfg?->urlLogo();
+    // Tamaño del logo con el menú abierto (sides_cfg.logoTamano): [círculo, cuadro].
+    [$logoCirculo, $logoCuadro] = [
+        'pequeno' => ['size-12', 'h-12 max-w-[150px] p-1'],
+        'mediano' => ['size-16', 'h-16 max-w-[200px] p-1.5'],
+        'grande' => ['size-20', 'h-20 max-w-[230px] p-1.5'],
+    ][$cfg?->tamanoLogo() ?? 'mediano'];
 @endphp
 
 <!DOCTYPE html>
@@ -54,14 +60,15 @@
                             {{-- Logo de la droguería (cualquier forma y color): sobre una placa blanca para que se lea en el azul. --}}
                             @if ($cfg->logoCircular())
                                 {{-- Logo redondo: llena un círculo, como el de SIDES. --}}
-                                <span :class="sidebarCollapsed ? 'size-11' : 'size-16'"
+                                <span :class="sidebarCollapsed ? 'size-11' : '{{ $logoCirculo }}'"
                                       class="flex items-center justify-center overflow-hidden rounded-full bg-white shadow-md transition-all duration-300 group-hover:scale-105">
                                     <img src="{{ $logoDrogueria }}" alt="{{ $cfg->nombre }}" class="size-full object-cover">
                                 </span>
                             @else
-                                <span :class="sidebarCollapsed ? 'h-11 w-14 p-1' : 'h-16 w-[200px] p-1.5'"
+                                {{-- La placa se ciñe al logo: uno cuadrado ocupa lo mismo que el círculo y uno horizontal se ensancha hasta el tope. --}}
+                                <span :class="sidebarCollapsed ? 'h-11 max-w-14 p-1' : '{{ $logoCuadro }}'"
                                       class="flex items-center justify-center rounded-xl bg-white shadow-md transition-all duration-300 group-hover:scale-105">
-                                    <img src="{{ $logoDrogueria }}" alt="{{ $cfg->nombre }}" class="max-h-full max-w-full object-contain">
+                                    <img src="{{ $logoDrogueria }}" alt="{{ $cfg->nombre }}" class="h-full w-auto max-w-full object-contain">
                                 </span>
                             @endif
                         @else

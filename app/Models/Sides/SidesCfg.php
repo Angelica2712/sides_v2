@@ -14,10 +14,13 @@ class SidesCfg extends Model
     protected $keyType = 'string';
     public $incrementing = false;
     protected $primaryKey = 'codisb';
-    protected $fillable = ['codisb', 'nombre', 'nomcorto', 'rif', 'direccion', 'contacto', 'telefono', 'localidad', 'activarPacking', 'fecha', 'pedidoxAprobar', 'valorIva', 'modoAlcabala', 'activarValPicking', 'activarEtiPacking', 'claveValPicking', 'ordenPedSides', 'EtiPieNota', 'ModoCesta', 'pitarPacking', 'activarValPacking', 'EstiloPicking', 'TamLetraMonitor', 'activarVerOperadorMonitor', 'MostrarTituloMonitor', 'formatoPersEtiq', 'etiquetaAncho', 'etiquetaAlto', 'ticketAncho', 'mostrarEntrega', 'mostrarDepPiking', 'nomdominio', 'imagenPdfRutaAbsoluta', 'nomsubdominio', 'activarImpTicket', 'mostrarObsMonitor', 'mostrarTranMonitor', 'dominioapiSeped', 'titulopagina', 'mostrarExiRealPick', 'activar_separador_automatico', 'activar_etiqueta_packing', 'latitud', 'longitud', 'activarSincronizacionRutas', 'procAlcabalaPicking', 'pickingOrdenLibre', 'logo', 'logoForma'];
+    protected $fillable = ['codisb', 'nombre', 'nomcorto', 'rif', 'direccion', 'contacto', 'telefono', 'localidad', 'activarPacking', 'fecha', 'pedidoxAprobar', 'valorIva', 'modoAlcabala', 'activarValPicking', 'activarEtiPacking', 'claveValPicking', 'ordenPedSides', 'EtiPieNota', 'ModoCesta', 'pitarPacking', 'activarValPacking', 'EstiloPicking', 'TamLetraMonitor', 'activarVerOperadorMonitor', 'MostrarTituloMonitor', 'formatoPersEtiq', 'etiquetaAncho', 'etiquetaAlto', 'ticketAncho', 'mostrarEntrega', 'mostrarDepPiking', 'nomdominio', 'imagenPdfRutaAbsoluta', 'nomsubdominio', 'activarImpTicket', 'mostrarObsMonitor', 'mostrarTranMonitor', 'dominioapiSeped', 'titulopagina', 'mostrarExiRealPick', 'activar_separador_automatico', 'activar_etiqueta_packing', 'latitud', 'longitud', 'activarSincronizacionRutas', 'procAlcabalaPicking', 'pickingOrdenLibre', 'logo', 'logoForma', 'logoTamano'];
 
     /** Formas en que se muestra el logo en pantalla (encabezado e inicio de sesión). */
     public const FORMAS_LOGO = ['cuadro' => 'Cuadro', 'circulo' => 'Círculo'];
+
+    /** Tamaños del logo en el encabezado del menú. */
+    public const TAMANOS_LOGO = ['pequeno' => 'Pequeño', 'mediano' => 'Mediano', 'grande' => 'Grande'];
 
     /** modulo => activo, leído una vez por instancia. */
     private ?array $estadoModulos = null;
@@ -50,6 +53,11 @@ class SidesCfg extends Model
     public function formaLogo(): string
     {
         return isset(self::FORMAS_LOGO[$this->logoForma]) ? $this->logoForma : 'cuadro';
+    }
+
+    public function tamanoLogo(): string
+    {
+        return isset(self::TAMANOS_LOGO[$this->logoTamano]) ? $this->logoTamano : 'mediano';
     }
 
     /** Archivo del ícono de pestaña de un logo en una forma: junto al logo, con la forma en el nombre. */

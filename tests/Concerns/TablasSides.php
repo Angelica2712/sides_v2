@@ -64,6 +64,7 @@ trait TablasSides
             $table->integer('activarSincronizacionRutas')->default(0);
             $table->string('logo', 255)->nullable();
             $table->string('logoForma', 10)->default('cuadro');
+            $table->string('logoTamano', 10)->default('mediano');
         });
 
         Schema::create('sides_users', function (Blueprint $table) {

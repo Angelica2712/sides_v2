@@ -55,7 +55,7 @@ class AdminController extends Controller
             ...$this->reglas(),
         ], $this->mensajes(), $this->atributos());
 
-        $drogueria = new SidesCfg(['codisb' => $datos['codisb'], 'titulopagina' => 'SIDES', 'logoForma' => $datos['logoForma'] ?? 'cuadro', ...$this->datos($datos)]);
+        $drogueria = new SidesCfg(['codisb' => $datos['codisb'], 'titulopagina' => 'SIDES', 'logoForma' => $datos['logoForma'] ?? 'cuadro', 'logoTamano' => $datos['logoTamano'] ?? 'mediano', ...$this->datos($datos)]);
         $this->modulos->guardar($drogueria, $datos['modulos'] ?? [], $this->opciones($request), $request->user());
         $this->logo->aplicar($drogueria, $request->file('logo'), false);
 
@@ -79,7 +79,7 @@ class AdminController extends Controller
         $drogueria = SidesCfg::query()->findOrFail($codisb);
         $datos = $request->validate($this->reglas(), $this->mensajes(), $this->atributos());
 
-        $drogueria->fill([...$this->datos($datos), 'logoForma' => $datos['logoForma'] ?? ($drogueria->logoForma ?: 'cuadro')]);
+        $drogueria->fill([...$this->datos($datos), 'logoForma' => $datos['logoForma'] ?? ($drogueria->logoForma ?: 'cuadro'), 'logoTamano' => $datos['logoTamano'] ?? $drogueria->tamanoLogo()]);
         $this->modulos->guardar($drogueria, $datos['modulos'] ?? [], $this->opciones($request), $request->user());
         $this->logo->aplicar($drogueria, $request->file('logo'), $request->boolean('quitarLogo'));
 
@@ -176,6 +176,7 @@ class AdminController extends Controller
             'telefono' => ['nullable', 'string', 'max:50'],
             'logo' => LogoDrogueria::REGLAS,
             'logoForma' => ['nullable', Rule::in(array_keys(SidesCfg::FORMAS_LOGO))],
+            'logoTamano' => ['nullable', Rule::in(array_keys(SidesCfg::TAMANOS_LOGO))],
             'modulos' => ['array'],
             'modulos.*' => ['string'],
             'formatoPersEtiq' => ['nullable', Rule::in([...array_keys(FormatosEtiqueta::FORMATOS), FormatosEtiqueta::PERSONALIZADO])],
@@ -199,6 +200,7 @@ class AdminController extends Controller
             'etiquetaAlto.*' => 'El alto de la etiqueta debe ser un número entero entre '.FormatosEtiqueta::MIN_MM.' y '.FormatosEtiqueta::MAX_MM.' mm.',
             'ticketAncho.*' => 'El ancho del ticket debe ser un número entero entre '.FormatosEtiqueta::TICKET_MIN.' y '.FormatosEtiqueta::TICKET_MAX.' mm.',
             'logoForma.in' => 'Elige si el logo va en cuadro o en círculo.',
+            'logoTamano.in' => 'Elige el tamaño del logo: pequeño, mediano o grande.',
             // Los del logo van antes que *.max, que si no se queda con logo.max.
             ...LogoDrogueria::MENSAJES,
             '*.max' => 'El campo :attribute es demasiado largo.',
