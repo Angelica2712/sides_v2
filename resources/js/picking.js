@@ -5,6 +5,9 @@
  * y solo se acepta el SIGUIENTE producto pendiente, en el orden de recolección que manda el
  * servidor (sides_cfg.ordenPedSides). Un renglón está pendiente mientras cantdesp = -1.
  *
+ * `clave` (pedido-item) identifica cada renglón: con las partes de un pedido unidas
+ * (sides_cfg.unirPedidosPartidos) hay renglones de varios pedidos y el item se repite.
+ *
  * Con sides_cfg.pickingOrdenLibre se acepta cualquier producto pendiente: el escaneado (o el que
  * se toque en la lista de siguientes) pasa a ser el producto en curso. Sirve para recoger de una
  * vez todos los de una misma marca aunque en la lista queden separados.
@@ -34,10 +37,10 @@ export default function pickingPedido({ renglones, urls, requiereClave, ordenLib
             return this.renglones.filter((renglon) => renglon.cantdesp >= 0);
         },
         get actual() {
-            return this.pendientes.find((renglon) => renglon.item === this.elegido) ?? this.pendientes[0] ?? null;
+            return this.pendientes.find((renglon) => renglon.clave === this.elegido) ?? this.pendientes[0] ?? null;
         },
         get siguientes() {
-            return this.pendientes.filter((renglon) => renglon.item !== this.actual?.item);
+            return this.pendientes.filter((renglon) => renglon.clave !== this.actual?.clave);
         },
         get unidadesSolicitadas() {
             return this.renglones.reduce((total, renglon) => total + renglon.cantidad, 0);
@@ -54,6 +57,11 @@ export default function pickingPedido({ renglones, urls, requiereClave, ordenLib
 
         init() {
             this.iniciarLector();
+        },
+
+        /** Cada renglón se guarda en su propio pedido (varios si las partes se trabajan unidas). */
+        urlDe(accion, renglon) {
+            return urls[accion].replace('__PEDIDO__', renglon.pedido);
         },
 
         normalizar(codigo) {
@@ -81,11 +89,11 @@ export default function pickingPedido({ renglones, urls, requiereClave, ordenLib
                 return this.avisar('Ese producto ya fue revisado.');
             }
 
-            if (pendiente.item !== this.actual.item) {
+            if (pendiente.clave !== this.actual.clave) {
                 if (!this.ordenLibre) {
                     return this.avisar(`Ese no es el siguiente producto. Busca primero ${this.actual.desprod} en ${this.actual.ubicacion}.`);
                 }
-                this.elegido = pendiente.item;
+                this.elegido = pendiente.clave;
             }
 
             sonido.exito();
@@ -97,7 +105,7 @@ export default function pickingPedido({ renglones, urls, requiereClave, ordenLib
             if (!this.ordenLibre || this.seleccionado) {
                 return;
             }
-            this.elegido = renglon.item;
+            this.elegido = renglon.clave;
             this.mensaje = '';
             window.scrollTo({ top: 0, behavior: 'smooth' });
             this.$nextTick(() => this.$refs.lectura?.focus());
@@ -120,7 +128,7 @@ export default function pickingPedido({ renglones, urls, requiereClave, ordenLib
 
         empezarConfirmacion(manual) {
             this.manual = manual;
-            this.seleccionado = this.actual.item;
+            this.seleccionado = this.actual.clave;
             this.cantidad = this.actual.cantidad;
             this.mensaje = '';
             this.$nextTick(() => this.$refs.confirmar?.focus());
@@ -131,7 +139,7 @@ export default function pickingPedido({ renglones, urls, requiereClave, ordenLib
         },
 
         async guardar() {
-            const renglon = this.renglones.find((r) => r.item === this.seleccionado);
+            const renglon = this.renglones.find((r) => r.clave === this.seleccionado);
             if (!renglon || this.guardando) {
                 return;
             }
@@ -143,7 +151,7 @@ export default function pickingPedido({ renglones, urls, requiereClave, ordenLib
 
             this.guardando = true;
             try {
-                const { data } = await window.axios.post(urls.cantidad, {
+                const { data } = await window.axios.post(this.urlDe('cantidad', renglon), {
                     item: renglon.item,
                     cantidad,
                     manual: this.manual,
@@ -173,7 +181,7 @@ export default function pickingPedido({ renglones, urls, requiereClave, ordenLib
             const anterior = renglon.alertalote;
             renglon.alertalote = anterior ? 0 : 1;
             try {
-                const { data } = await window.axios.post(urls.alerta, { item: renglon.item });
+                const { data } = await window.axios.post(this.urlDe('alerta', renglon), { item: renglon.item });
                 renglon.alertalote = data.alertalote;
             } catch (error) {
                 renglon.alertalote = anterior;

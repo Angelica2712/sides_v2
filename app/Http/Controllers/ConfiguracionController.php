@@ -37,6 +37,7 @@ class ConfiguracionController extends Controller
         'MostrarTituloMonitor', 'activarVerOperadorMonitor', 'mostrarObsMonitor', 'mostrarTranMonitor',
         'activarValPicking', 'pickingOrdenLibre', 'mostrarExiRealPick', 'mostrarDepPiking',
         'activarValPacking', 'activar_separador_automatico',
+        'unirPedidosPartidos', 'pickingSiguienteParte',
     ];
 
     public function edit(Request $request): View

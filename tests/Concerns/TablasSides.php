@@ -65,6 +65,8 @@ trait TablasSides
             $table->string('logo', 255)->nullable();
             $table->string('logoForma', 10)->default('cuadro');
             $table->string('logoTamano', 10)->default('mediano');
+            $table->tinyInteger('unirPedidosPartidos')->default(0);
+            $table->tinyInteger('pickingSiguienteParte')->default(0);
         });
 
         Schema::create('sides_users', function (Blueprint $table) {

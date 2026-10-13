@@ -11,6 +11,8 @@ use App\Models\Sides\SidesPedrenOperacion;
 use App\Models\Sides\SidesUsers;
 use App\Services\Despacho\AsignacionPicking;
 use App\Services\Despacho\DespachoSeped;
+use App\Services\Despacho\PedidosUnidos;
+use App\Support\PartesPedido;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -34,6 +36,12 @@ use Illuminate\Support\Facades\DB;
  *   en ese caso al buscar el pedido en estado PACKING).
  * - La inactividad al liberar no se registra: el legacy dependía de un estado guardado en el
  *   navegador (localStorage) que no es confiable.
+ *
+ * Pedidos que SEPED separó (pedido.idori), nuevo en v2:
+ * - sides_cfg.unirPedidosPartidos: los métodos *Unidos toman, abren, terminan y liberan juntas
+ *   las partes de un pedido (PedidosUnidos). Cada parte sigue siendo un pedido de SEPED.
+ * - sides_cfg.pickingSiguienteParte: al terminar una parte, tomarSiguienteParte() le da al
+ *   operario la siguiente parte libre con el mismo recipiente.
  */
 class PickingService
 {
@@ -49,12 +57,31 @@ class PickingService
     public function __construct(
         private readonly DespachoSeped $despachoSeped,
         private readonly AsignacionPicking $asignacion,
+        private readonly PedidosUnidos $unidos,
     ) {
     }
 
-    public function tomar(SidesUsers $usuario, int $pedidoId, ?string $recipiente): void
+    /**
+     * Toma el pedido y, con las partes unidas, las demás partes libres del mismo pedido.
+     *
+     * @return list<int> pedidos tomados
+     */
+    public function tomarUnidos(SidesUsers $usuario, int $pedidoId, ?string $recipiente): array
     {
-        DB::transaction(function () use ($usuario, $pedidoId, $recipiente) {
+        return DB::transaction(function () use ($usuario, $pedidoId, $recipiente) {
+            $ids = $this->unidos->paraTomar($usuario, $pedidoId);
+            foreach ($ids as $id) {
+                $this->tomar($usuario, $id, $recipiente, $ids);
+            }
+
+            return $ids;
+        });
+    }
+
+    /** @param  list<int>  $junto  pedidos que el usuario puede tener en picking a la vez que este */
+    public function tomar(SidesUsers $usuario, int $pedidoId, ?string $recipiente, array $junto = []): void
+    {
+        DB::transaction(function () use ($usuario, $pedidoId, $recipiente, $junto) {
             $pedido = $this->pedidoDeSucursal($usuario, $pedidoId);
             $this->exigirSinLote($pedidoId);
 
@@ -69,7 +96,7 @@ class PickingService
             }
 
             $otroPedido = $this->pedidoActivoDe($usuario);
-            if ($otroPedido && $otroPedido !== $pedidoId) {
+            if ($otroPedido && $otroPedido !== $pedidoId && ! in_array($otroPedido, $junto, true)) {
                 throw new PickingException("Ya tienes el pedido #{$otroPedido} en picking. Termínalo o libéralo antes de tomar otro.");
             }
 
@@ -83,6 +110,84 @@ class PickingService
             }
 
             $this->asignacion->asignar($pedido, $usuario, $recipiente);
+        });
+    }
+
+    /**
+     * Si la sucursal lo pide (sides_cfg.pickingSiguienteParte), toma para el usuario la siguiente
+     * parte libre del pedido que acaba de terminar, con el mismo recipiente.
+     */
+    public function tomarSiguienteParte(SidesUsers $usuario, int $pedidoId): ?int
+    {
+        // Lectura fresca: decide si el operario sigue con otra parte.
+        if (! SidesCfg::query()->whereKey($usuario->codisb)->value('pickingSiguienteParte')) {
+            return null;
+        }
+
+        $pedido = Pedido::query()->where('codisb', $usuario->codisb)->whereKey($pedidoId)->first(['id', 'idori', 'codcli', 'codisb']);
+        if (! $pedido) {
+            return null;
+        }
+
+        $raiz = PartesPedido::raiz($pedido);
+        $siguiente = DB::table('pedido')
+            ->leftJoin('sides_pedido_operacion as op', 'op.id_pedido', '=', 'pedido.id')
+            ->where('pedido.codisb', $pedido->codisb)
+            ->where('pedido.codcli', $pedido->codcli)
+            ->where(fn ($q) => $q->where('pedido.id', $raiz)->orWhere('pedido.idori', (string) $raiz))
+            ->where('pedido.id', '<>', $pedidoId)
+            ->whereIn('pedido.estado', self::ESTADOS_LISTA)
+            ->where(fn ($q) => $q->whereNull('op.id_pedido')->orWhere('op.despasignado', 0)->orWhereNull('op.despachador')->orWhere('op.despachador', ''))
+            ->whereNotExists(function ($consulta) {
+                $consulta->select(DB::raw(1))
+                    ->from('sides_alcabala_lote_pedido as alp')
+                    ->whereColumn('alp.numped', 'pedido.id');
+            })
+            ->orderBy('pedido.id')
+            ->value('pedido.id');
+
+        if ($siguiente === null) {
+            return null;
+        }
+
+        try {
+            $this->tomarUnidos($usuario, (int) $siguiente, SidesPedidoOperacion::query()->whereKey($pedidoId)->value('recipiente'));
+        } catch (PickingException) {
+            // Otro operario la tomó primero, o el usuario ya tiene otro trabajo: sigue en la lista.
+            return null;
+        }
+
+        return (int) $siguiente;
+    }
+
+    /**
+     * Abre el pedido y las partes que el usuario tiene en picking con él. Las partes libres que
+     * aún no tiene (llegaron después, o la opción se activó con el picking empezado) se le suman
+     * con el mismo recipiente.
+     *
+     * @return list<int>
+     */
+    public function abrirUnidos(SidesUsers $usuario, int $pedidoId): array
+    {
+        return DB::transaction(function () use ($usuario, $pedidoId) {
+            $this->abrir($usuario, $pedidoId);
+
+            $libres = array_diff($disponibles = $this->unidos->paraTomar($usuario, $pedidoId), $this->unidos->enPicking($usuario, $pedidoId));
+            $recipiente = SidesPedidoOperacion::query()->whereKey($pedidoId)->value('recipiente');
+            foreach ($libres as $id) {
+                try {
+                    $this->tomar($usuario, $id, $recipiente, $disponibles);
+                } catch (PickingException) {
+                    // Otro operario la tomó en este instante: esa parte sigue por su cuenta.
+                }
+            }
+
+            $ids = $this->unidos->enPicking($usuario, $pedidoId);
+            foreach ($ids as $id) {
+                $this->abrir($usuario, $id);
+            }
+
+            return $ids;
         });
     }
 
@@ -147,10 +252,34 @@ class PickingService
         });
     }
 
-    /** @return 'PACKING'|'PEND-FACTURA'|'ANULADO' */
-    public function terminar(SidesUsers $usuario, int $pedidoId): string
+    /**
+     * Termina el pedido y las partes que el usuario tiene en picking con él. Si a alguna le
+     * faltan productos por revisar, no se termina ninguna.
+     *
+     * @return array<int, 'PACKING'|'PEND-FACTURA'|'ANULADO'> resultado de cada pedido
+     */
+    public function terminarUnidos(SidesUsers $usuario, int $pedidoId): array
     {
         return DB::transaction(function () use ($usuario, $pedidoId) {
+            $resultados = [];
+            $registrado = false;
+            foreach ($this->unidos->enPicking($usuario, $pedidoId) as $id) {
+                $resultados[$id] = $this->terminar($usuario, $id, $registrado);
+                $registrado = $registrado || $resultados[$id] !== 'ANULADO';
+            }
+
+            return $resultados;
+        });
+    }
+
+    /**
+     * @param  bool  $continuacion  el tiempo de esta sesión ya quedó registrado en otra parte del
+     *                              mismo pedido: esta registra sus renglones y unidades con tiempo 0
+     * @return 'PACKING'|'PEND-FACTURA'|'ANULADO'
+     */
+    public function terminar(SidesUsers $usuario, int $pedidoId, bool $continuacion = false): string
+    {
+        return DB::transaction(function () use ($usuario, $pedidoId, $continuacion) {
             $pedido = $this->pedidoDeSucursal($usuario, $pedidoId);
             $operacion = $this->operacionPropia($usuario, $pedido);
 
@@ -161,8 +290,8 @@ class PickingService
 
             $ahora = Carbon::now();
             // Se calcula antes de insertar el log de este pedido.
-            $inicioSesion = $operacion->fecpicking2 ? Carbon::parse($operacion->fecpicking2) : $ahora;
-            $anterior = $this->ultimoLogDelDia($usuario, $inicioSesion);
+            $inicioSesion = ! $continuacion && $operacion->fecpicking2 ? Carbon::parse($operacion->fecpicking2) : $ahora;
+            $anterior = $continuacion ? null : $this->ultimoLogDelDia($usuario, $inicioSesion);
 
             // Lectura fresca: decide el estado siguiente.
             $resultado = $this->cerrarPedido($pedidoId, SidesCfg::query()->find($usuario->codisb));
@@ -237,9 +366,27 @@ class PickingService
         return 'PEND-FACTURA';
     }
 
-    public function liberar(SidesUsers $usuario, int $pedidoId): void
+    /**
+     * Libera el pedido y las partes que el usuario tiene en picking con él.
+     *
+     * @return list<int>
+     */
+    public function liberarUnidos(SidesUsers $usuario, int $pedidoId): array
     {
-        DB::transaction(function () use ($usuario, $pedidoId) {
+        return DB::transaction(function () use ($usuario, $pedidoId) {
+            $ids = $this->unidos->enPicking($usuario, $pedidoId);
+            foreach ($ids as $indice => $id) {
+                $this->liberar($usuario, $id, $indice > 0);
+            }
+
+            return $ids;
+        });
+    }
+
+    /** @param  bool  $continuacion  ver terminar() */
+    public function liberar(SidesUsers $usuario, int $pedidoId, bool $continuacion = false): void
+    {
+        DB::transaction(function () use ($usuario, $pedidoId, $continuacion) {
             $pedido = $this->pedidoDeSucursal($usuario, $pedidoId);
             $operacion = $this->operacionPropia($usuario, $pedido);
             $ahora = Carbon::now();
@@ -255,7 +402,7 @@ class PickingService
                     'numren' => $numren - $parciales['numren'],
                     'numund' => (int) (clone $revisados)->sum('cantdesp') - $parciales['numund'],
                     'tiempo_picking' => $this->segundos(
-                        $operacion->fecpicking2 ? Carbon::parse($operacion->fecpicking2) : $ahora,
+                        ! $continuacion && $operacion->fecpicking2 ? Carbon::parse($operacion->fecpicking2) : $ahora,
                         $ahora
                     ),
                     'fecha_del_picking' => $ahora,

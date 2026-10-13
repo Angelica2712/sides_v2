@@ -26,6 +26,10 @@
             'activarValPacking' => ['Pedir clave de supervisor para ajustar cantidades', 'Ajustar a mano lo despachado requiere la clave.'],
             'activar_separador_automatico' => ['Separador automático de cestas', 'Al escribir cestas, agrega la coma para la siguiente después de 1 segundo.'],
         ],
+        'Pedidos separados' => [
+            'unirPedidosPartidos' => ['Trabajar las partes como un solo pedido', 'Cuando SEPED separa un pedido (por el tope de renglones o por indexados), Picking y Packing lo muestran como uno solo: se toma, se recoge y se empaca junto. Cada parte se sigue facturando aparte.'],
+            'pickingSiguienteParte' => ['Dar la siguiente parte al mismo operario', 'Al terminar el picking de una parte, el operario recibe enseguida la siguiente parte libre del mismo pedido, con el mismo recipiente.'],
+        ],
     ];
     if (in_array('rutas', $modulos, true)) {
         $secciones['Rutas'] = [
