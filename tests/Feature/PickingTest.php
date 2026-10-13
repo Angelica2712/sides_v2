@@ -288,4 +288,22 @@ class PickingTest extends TestCase
         // Retomar no reinicia el inicio del picking que ve el monitor.
         $this->assertSame('2026-09-15 10:00:00', (string) Pedido::query()->find(500)->fecpicking);
     }
+
+    public function test_existencia_real_sale_del_catalogo_de_la_sucursal_solo_si_esta_activada(): void
+    {
+        $this->tomado(500);
+        DB::table('producto')->insert([
+            ['codprod' => 'P1', 'codisb' => '505094939', 'cantidad' => 5, 'cantreal' => 40],
+            ['codprod' => 'P1', 'codisb' => '999', 'cantidad' => 7, 'cantreal' => 70],
+        ]);
+        $existencias = fn () => collect($this->actingAs($this->operario->fresh())->get('/picking/500')->viewData('renglones'))
+            ->pluck('existencia', 'codprod')->all();
+
+        $this->assertSame(['P2' => null, 'P1' => null], $existencias());
+
+        SidesCfg::query()->update(['mostrarExiRealPick' => 1]);
+
+        // P2 no está en el catálogo: sin dato, no un cero.
+        $this->assertSame(['P2' => null, 'P1' => 40], $existencias());
+    }
 }

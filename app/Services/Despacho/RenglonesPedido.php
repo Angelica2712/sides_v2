@@ -42,6 +42,23 @@ class RenglonesPedido
     }
 
     /**
+     * Existencia real de cada producto según el catálogo que SEPED sincroniza del ERP
+     * (producto.cantreal; `cantidad` puede venir pisada por la cantidad pública). Un
+     * producto que no está en el catálogo no aparece en el resultado.
+     *
+     * @param  iterable<string>  $codprods
+     * @return Collection<string, int>
+     */
+    public function existencias(string $codisb, iterable $codprods): Collection
+    {
+        return DB::table('producto')
+            ->where('codisb', $codisb)
+            ->whereIn('codprod', collect($codprods)->unique()->values()->all())
+            ->pluck('cantreal', 'codprod')
+            ->map(fn ($cantidad) => (int) $cantidad);
+    }
+
+    /**
      * Lotes disponibles de un producto. pedren.listalote viene del ERP como
      * "lote_vencimiento_cantidad_deposito_codprod;" repetido.
      *

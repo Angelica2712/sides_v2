@@ -98,7 +98,12 @@ class PickingController extends Controller
             ->whereKey($pedido)
             ->first(['pedido.*', 'op.recipiente']);
 
-        $renglones = $this->renglonesPedido->consultar($pedido, $cfg)->map(fn ($renglon) => [
+        $filas = $this->renglonesPedido->consultar($pedido, $cfg);
+        $existencias = $cfg?->mostrarExiRealPick
+            ? $this->renglonesPedido->existencias($usuario->codisb, $filas->pluck('codprod'))
+            : collect();
+
+        $renglones = $filas->map(fn ($renglon) => [
             'item' => (int) $renglon->item,
             'codprod' => (string) $renglon->codprod,
             'desprod' => (string) $renglon->desprod,
@@ -111,7 +116,7 @@ class PickingController extends Controller
             'vence' => RenglonesPedido::limpiarFecha($renglon->feclote),
             'marca' => (string) $renglon->marcamodelo,
             'refrigerado' => (int) $renglon->refrigerado > 0,
-            'existencia' => (int) $renglon->ExiRealPick,
+            'existencia' => $existencias->get((string) $renglon->codprod),
             'alertalote' => (int) $renglon->alertalote,
             'variosLotes' => substr_count((string) $renglon->listalote, ';') >= 2,
         ])->values()->all();

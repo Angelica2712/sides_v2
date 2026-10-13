@@ -103,7 +103,7 @@
                         <div class="flex flex-wrap gap-2 pt-1">
                             <span x-show="actual.refrigerado" class="rounded-full bg-sky-100 px-2.5 py-1 text-xs font-bold text-sky-800">Refrigerado</span>
                             @if ($mostrarExistencia)
-                                <span class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-700">Existencia <span x-text="actual.existencia"></span></span>
+                                <span x-show="actual.existencia !== null" class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-700">Existencia <span x-text="actual.existencia"></span></span>
                             @endif
                             @if ($mostrarDeposito)
                                 <span x-show="actual.deposito" class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-700">Depósito <span x-text="actual.deposito"></span></span>

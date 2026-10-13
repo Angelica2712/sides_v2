@@ -19,7 +19,7 @@
         'Picking' => [
             'pickingOrdenLibre' => ['Escanear en cualquier orden', 'El despachador puede escanear cualquier producto pendiente, no solo el siguiente de la lista. Útil con el orden "Por marca" para recoger juntos los de un mismo laboratorio.'],
             'activarValPicking' => ['Pedir clave de supervisor al escribir cantidades a mano', 'Sin la clave, el operario solo puede registrar productos escaneando.'],
-            'mostrarExiRealPick' => ['Pedir la existencia real', 'El operario anota cuántas unidades quedaron en la ubicación.'],
+            'mostrarExiRealPick' => ['Mostrar la existencia real', 'Muestra en el picking cuántas unidades hay de cada producto según el inventario del sistema.'],
             'mostrarDepPiking' => ['Mostrar el depósito', 'Depósito del producto en letra grande junto a la descripción.'],
         ],
         'Packing' => [

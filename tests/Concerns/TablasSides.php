@@ -285,6 +285,15 @@ trait TablasSides
             $table->primary(['id', 'item']);
         });
 
+        Schema::create('producto', function (Blueprint $table) {
+            $table->string('codprod', 50);
+            $table->string('codisb', 100);
+            $table->string('desprod', 250)->default('');
+            $table->decimal('cantidad', 24, 2)->default(0);
+            $table->integer('cantreal')->default(0);
+            $table->primary(['codprod', 'codisb']);
+        });
+
         Schema::create('sides_pedren_operacion', function (Blueprint $table) {
             $table->integer('id_pedido');
             $table->integer('item');
