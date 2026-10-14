@@ -69,8 +69,8 @@
             </section>
         @else
             <p class="text-xs text-slate-500">
-                La secuencia marca el orden de visita (de menor a mayor). Van de 20 en 20 para poder intercalar: un cliente con 30 queda entre el 20 y el 40.
-                Los que retiran en local no entran en las guías de la ruta.
+                El chofer visita a los clientes en orden, del número más bajo al más alto. Los números van de 20 en 20 para que puedas meter un cliente en el medio
+                (por ejemplo, con 30 queda entre el 20 y el 40) sin cambiar los demás. Los clientes que retiran en la droguería no se incluyen en la guía del camión.
             </p>
             <x-tabla-desplazable etiqueta="Clientes de la ruta" class="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
                 <table class="min-w-full text-sm">
