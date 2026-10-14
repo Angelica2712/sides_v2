@@ -13,23 +13,22 @@ use Illuminate\Support\Facades\DB;
  */
 class RenglonesPedido
 {
-    /** @param  int|list<int>  $pedidoId  varios cuando las partes de un pedido se trabajan unidas */
-    public function consultar(int|array $pedidoId, ?SidesCfg $cfg): Collection
+    public function consultar(int $pedidoId, ?SidesCfg $cfg): Collection
     {
         $orden = match ($cfg?->ordenPedSides) {
             'DESCRIPCION' => 'pedren.desprod',
             'UBICACION' => 'ubicacion',
             'MARCA' => 'pedren.marcamodelo',
-            default => 'pedren.id',
+            default => 'pedren.item',
         };
 
         return DB::table('pedren')
             ->join('sides_pedren_operacion as op', function ($join) {
                 $join->on('op.id_pedido', '=', 'pedren.id')->on('op.item', '=', 'pedren.item');
             })
-            ->whereIn('pedren.id', (array) $pedidoId)
+            ->where('pedren.id', $pedidoId)
             ->select([
-                'pedren.id as pedido', 'pedren.item', 'pedren.codprod', 'pedren.desprod', 'pedren.barra', 'pedren.cantidad',
+                'pedren.item', 'pedren.codprod', 'pedren.desprod', 'pedren.barra', 'pedren.cantidad',
                 'pedren.marcamodelo', 'pedren.refrigerado', 'pedren.psicotropico', 'pedren.listalote',
                 DB::raw("COALESCE(NULLIF(op.ubicacion, ''), pedren.ubicacion) as ubicacion"),
                 DB::raw("COALESCE(NULLIF(op.deposito, ''), pedren.deposito) as deposito"),
@@ -38,7 +37,6 @@ class RenglonesPedido
                 'op.cantdesp', 'op.chequeado', 'op.packing', 'op.alertalote', 'op.ExiRealPick',
             ])
             ->orderBy($orden)
-            ->orderBy('pedren.id')
             ->orderBy('pedren.item')
             ->get();
     }

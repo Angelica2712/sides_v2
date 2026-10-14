@@ -65,7 +65,6 @@ trait TablasSides
             $table->string('logo', 255)->nullable();
             $table->string('logoForma', 10)->default('cuadro');
             $table->string('logoTamano', 10)->default('mediano');
-            $table->tinyInteger('unirPedidosPartidos')->default(0);
             $table->tinyInteger('pickingSiguienteParte')->default(0);
         });
 
@@ -211,7 +210,7 @@ trait TablasSides
             $table->dateTime('fecpacking2')->default('2020-01-01 00:00:00');
             $table->integer('comprometeunidades')->default(0);
             $table->integer('pedido_recibido')->default(0);
-            // Número del pedido original cuando SEPED lo partió por exceso de renglones.
+            // Número del pedido original cuando SEPED lo partió (tope de renglones o criterio de separación).
             $table->string('idori', 50)->nullable();
         });
 

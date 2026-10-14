@@ -9,7 +9,7 @@ use Illuminate\Support\Carbon;
 use Tests\Concerns\TablasSides;
 use Tests\TestCase;
 
-/** Pedidos que SEPED partió por exceso de renglones: cada parte lleva el número del original en idori. */
+/** Pedidos que SEPED partió (tope de renglones o criterios de separación): cada parte lleva el número del original en idori. */
 class PartesPedidoTest extends TestCase
 {
     use TablasSides;
@@ -48,9 +48,9 @@ class PartesPedidoTest extends TestCase
         $partes = PartesPedido::deLista('505094939', Pedido::query()->orderBy('id')->get());
 
         $this->assertSame([
-            500 => ['raiz' => 500, 'parte' => 1, 'total' => 3],
-            501 => ['raiz' => 500, 'parte' => 2, 'total' => 3],
-            502 => ['raiz' => 500, 'parte' => 3, 'total' => 3],
+            500 => ['raiz' => 500, 'parte' => 1, 'total' => 3, 'raizExiste' => true],
+            501 => ['raiz' => 500, 'parte' => 2, 'total' => 3, 'raizExiste' => true],
+            502 => ['raiz' => 500, 'parte' => 3, 'total' => 3, 'raizExiste' => true],
         ], $partes);
     }
 
@@ -60,7 +60,7 @@ class PartesPedidoTest extends TestCase
 
         $partes = PartesPedido::deLista('505094939', [Pedido::query()->find(701)]);
 
-        $this->assertSame([701 => ['raiz' => 700, 'parte' => 2, 'total' => 2]], $partes);
+        $this->assertSame([701 => ['raiz' => 700, 'parte' => 2, 'total' => 2, 'raizExiste' => false]], $partes);
     }
 
     public function test_no_mezcla_familias_de_otra_sucursal(): void
@@ -92,11 +92,24 @@ class PartesPedidoTest extends TestCase
         $this->actingAs($this->usuario);
 
         $this->get('/pedidos/502')->assertOk()
-            ->assertSee('Pedido partido por exceso de renglones')
+            ->assertSee('Pedido separado por SEPED')
             ->assertSee('una parte del pedido original', false)
             ->assertSeeInOrder(['#500', 'original', '#501', 'parte', '#502', 'parte']);
 
         $this->get('/pedidos/500')->assertOk()->assertSee('separó este pedido en 3 partes');
-        $this->get('/pedidos/600')->assertOk()->assertDontSee('Pedido partido');
+        $this->get('/pedidos/600')->assertOk()->assertDontSee('Pedido separado por SEPED');
+    }
+
+    public function test_el_detalle_dice_por_que_se_separo_cada_parte(): void
+    {
+        // Así las marca SeparadorPedido de SEPED; la 502 salió de la 501 y hereda su marca.
+        Pedido::query()->whereKey(501)->update(['observacion' => 'URGENTE - SEPARADO (Psicotrópicos)']);
+        Pedido::query()->whereKey(502)->update(['observacion' => 'URGENTE - SEPARADO (Psicotrópicos) - SEPARADO (límite de 30 renglones)']);
+
+        $this->actingAs($this->usuario)->get('/pedidos/500')->assertOk()
+            ->assertSeeInOrder(['#501', 'Psicotrópicos', '#502', 'límite de 30 renglones']);
+
+        $this->assertNull(PartesPedido::motivo('URGENTE'));
+        $this->assertNull(PartesPedido::motivo(null));
     }
 }

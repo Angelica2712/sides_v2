@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Seped\Pedido;
 use App\Models\Sides\SidesCfg;
 use App\Models\Sides\SidesUsers;
-use App\Services\Despacho\PedidosUnidos;
 use App\Services\Despacho\RenglonesPedido;
 use App\Services\Etiquetas\EtiquetasException;
 use App\Services\Etiquetas\EtiquetasService;
@@ -25,7 +24,6 @@ class PackingController extends Controller
         private readonly PackingService $packing,
         private readonly RenglonesPedido $renglonesPedido,
         private readonly EtiquetasService $etiquetas,
-        private readonly PedidosUnidos $unidos,
     ) {
     }
 
@@ -52,28 +50,9 @@ class PackingController extends Controller
                 'pedido.numren', 'pedido.numund', 'pedido.idori', 'op.recipiente', 'op.despachador', 'op.embalador',
             ]);
 
-        $usuario = $request->user();
-        $partes = PartesPedido::deLista($usuario->codisb, $pedidos);
-
-        if ($this->unidos->activo($usuario->codisb)) {
-            // Una fila por pedido: en uso si alguna parte la empaca el usuario, o si otros las tienen todas.
-            $pedidos = $this->unidos->agrupar($pedidos, function ($grupo) use ($usuario) {
-                $abiertas = $grupo->filter(fn ($parte) => $parte->embalador);
-                $mia = $abiertas->firstWhere('embalador', $usuario->name);
-                $ajena = $abiertas->count() === $grupo->count() ? $abiertas->first() : null;
-
-                return [
-                    // La fila abre una parte que el usuario pueda empacar: la suya o la primera libre.
-                    'id' => ($mia ?? $grupo->first(fn ($parte) => ! $parte->embalador) ?? $grupo->first())->id,
-                    'embalador' => ($mia ?? $ajena)?->embalador,
-                    'despachador' => $grupo->pluck('despachador')->filter()->unique()->implode(', '),
-                ];
-            });
-        }
-
         return view('packing.index', [
             'pedidos' => $pedidos,
-            'partes' => $partes,
+            'partes' => PartesPedido::deLista($request->user()->codisb, $pedidos),
             'buscar' => $buscar,
         ]);
     }
@@ -83,7 +62,7 @@ class PackingController extends Controller
         $usuario = $request->user();
 
         try {
-            $unidos = $this->packing->abrirUnidos($usuario, $pedido);
+            $this->packing->abrir($usuario, $pedido);
         } catch (PackingException $e) {
             return redirect()->route('packing.index')->with('error', $e->getMessage());
         }
@@ -94,9 +73,7 @@ class PackingController extends Controller
             ->whereKey($pedido)
             ->first(['pedido.*', 'op.recipiente', 'op.despachador', 'op.cantBultos', 'op.num_cesta_ped']);
 
-        $renglones = $this->renglonesPedido->consultar($unidos, $cfg)->map(fn ($renglon) => [
-            'clave' => "{$renglon->pedido}-{$renglon->item}",
-            'pedido' => (int) $renglon->pedido,
+        $renglones = $this->renglonesPedido->consultar($pedido, $cfg)->map(fn ($renglon) => [
             'item' => (int) $renglon->item,
             'codprod' => (string) $renglon->codprod,
             'desprod' => (string) $renglon->desprod,
@@ -117,7 +94,6 @@ class PackingController extends Controller
             'pedido' => $datosPedido,
             'parte' => PartesPedido::deLista($usuario->codisb, [$datosPedido])[(int) $datosPedido->id] ?? null,
             'renglones' => $renglones,
-            'unidos' => $unidos,
             'cfg' => $cfg,
         ]);
     }
@@ -180,7 +156,7 @@ class PackingController extends Controller
         ]);
 
         try {
-            $resultados = $this->packing->terminarUnidos($request->user(), $pedido, [
+            $resultado = $this->packing->terminar($request->user(), $pedido, [
                 'cantBultos' => $datos['cantBultos'],
                 'despachador' => $datos['despachador'] ?? null,
                 'embalador' => $datos['embalador'] ?? null,
@@ -190,26 +166,19 @@ class PackingController extends Controller
             return back()->with('error', $e->getMessage());
         }
 
-        foreach (array_keys($resultados) as $id) {
-            NotificarMonitor::cambio($request->user()->codisb, 'packing.terminar', $id);
-        }
+        NotificarMonitor::cambio($request->user()->codisb, 'packing.terminar', $pedido);
 
-        $mensaje = collect($resultados)
-            ->map(fn ($resultado, $id) => $resultado === 'ANULADO'
-                ? "Pedido #{$id} anulado automáticamente: no tiene unidades para despachar."
-                : "Pedido #{$id} enviado a facturar.")
-            ->implode(' ');
-
-        // Con las partes unidas, los bultos y sus etiquetas van en la primera parte que se despacha.
-        $conBultos = array_key_first(array_filter($resultados, fn ($resultado) => $resultado !== 'ANULADO'));
+        $mensaje = $resultado === 'ANULADO'
+            ? "Pedido #{$pedido} anulado automáticamente: no tiene unidades para despachar."
+            : "Pedido #{$pedido} enviado a facturar.";
 
         // sides_cfg.activar_etiqueta_packing: al terminar se imprimen las etiquetas de los bultos.
-        if ($conBultos !== null && $this->imprimeEtiquetasAlTerminar($request->user())) {
+        if ($resultado !== 'ANULADO' && $this->imprimeEtiquetasAlTerminar($request->user())) {
             try {
-                $this->etiquetas->generar($request->user(), $conBultos, max(1, (int) $datos['cantBultos']));
+                $this->etiquetas->generar($request->user(), $pedido, max(1, (int) $datos['cantBultos']));
 
                 return redirect()
-                    ->route('etiquetas.imprimir', ['pedido' => $conBultos, 'imprimir' => 1, 'volver' => 'packing'])
+                    ->route('etiquetas.imprimir', ['pedido' => $pedido, 'imprimir' => 1, 'volver' => 'packing'])
                     ->with('mensaje', $mensaje);
             } catch (EtiquetasException $e) {
                 return redirect()->route('packing.index')
@@ -231,14 +200,12 @@ class PackingController extends Controller
     public function liberar(Request $request, int $pedido): RedirectResponse
     {
         try {
-            $liberados = $this->packing->liberarUnidos($request->user(), $pedido);
+            $this->packing->liberar($request->user(), $pedido);
         } catch (PackingException $e) {
             return back()->with('error', $e->getMessage());
         }
 
-        foreach ($liberados as $id) {
-            NotificarMonitor::cambio($request->user()->codisb, 'packing.liberar', $id);
-        }
+        NotificarMonitor::cambio($request->user()->codisb, 'packing.liberar', $pedido);
 
         return redirect()->route('packing.index')->with('mensaje', "Liberaste el pedido #{$pedido}. Otro empacador puede abrirlo.");
     }

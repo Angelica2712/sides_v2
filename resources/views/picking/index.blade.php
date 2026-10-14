@@ -27,6 +27,30 @@
             </form>
         </div>
 
+        {{-- sides_cfg.pickingSiguienteParte: al terminar una parte se pregunta si sigue con la otra. --}}
+        @if (($siguiente = session('siguienteParte')) && ! $miPedido)
+            <div x-data x-init="$nextTick(() => $refs.siguiente.showModal())">
+                <dialog x-ref="siguiente" class="m-auto w-[min(26rem,calc(100%-2rem))] rounded-2xl p-0 shadow-xl backdrop:bg-slate-900/60">
+                    <form method="POST" action="{{ route('picking.tomar', $siguiente['pedido']) }}" class="space-y-4 p-6">
+                        @csrf
+                        <input type="hidden" name="recipiente" value="{{ $siguiente['recipiente'] }}">
+                        <div>
+                            <h3 class="text-lg font-extrabold text-slate-900">¿Sigues con el pedido #{{ $siguiente['pedido'] }}?</h3>
+                            <p class="mt-1 text-sm text-slate-600">
+                                Es otra parte del mismo pedido que terminaste (#{{ $siguiente['anterior'] }}).
+                                @if ($siguiente['recipiente']) Se toma con el mismo recipiente, {{ $siguiente['recipiente'] }}. @endif
+                                Si dices que no, queda libre para otro operario.
+                            </p>
+                        </div>
+                        <div class="flex justify-end gap-2">
+                            <button type="button" @click="$refs.siguiente.close()" class="rounded-xl px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100">No, dejarlo libre</button>
+                            <button type="submit" autofocus class="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-on-primary hover:bg-primary-dark">Sí, seguir</button>
+                        </div>
+                    </form>
+                </dialog>
+            </div>
+        @endif
+
         @if ($miPedido)
             <div class="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-primary px-5 py-4 text-on-primary shadow-sm">
                 <p class="font-semibold">Tienes el pedido <span class="font-black">#{{ $miPedido }}</span> en picking.</p>
@@ -78,11 +102,7 @@
                         <div class="min-w-0 flex-1">
                             <div class="flex flex-wrap items-center gap-2">
                                 <span class="text-2xl font-black text-slate-900 tabular-nums">#{{ $pedido->id }}</span>
-                                @if (count($pedido->unidos ?? []) > 1)
-                                    <x-partes-unidas :unidos="$pedido->unidos" />
-                                @else
-                                    <x-parte-pedido :parte="$partes[$pedido->id] ?? null" />
-                                @endif
+                                <x-parte-pedido :parte="$partes[$pedido->id] ?? null" />
                                 <span class="rounded-full px-2.5 py-0.5 text-xs font-bold ring-1 {{ $pedido->estado === 'PICKING' ? 'bg-amber-50 text-amber-700 ring-amber-200' : 'bg-slate-100 text-slate-700 ring-slate-200' }}">
                                     {{ $pedido->estado }}
                                 </span>

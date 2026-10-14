@@ -10,7 +10,6 @@ use App\Models\Sides\SidesPedidoOperacion;
 use App\Models\Sides\SidesPedrenOperacion;
 use App\Models\Sides\SidesUsers;
 use App\Services\Despacho\DespachoSeped;
-use App\Services\Despacho\PedidosUnidos;
 use App\Services\Despacho\RenglonesPedido;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Carbon;
@@ -32,68 +31,11 @@ use Illuminate\Support\Facades\DB;
  * (DespachoSeped); bultos, cestas y responsables van en sides_pedido_operacion.
  * Las etiquetas al terminar (sides_cfg.activar_etiqueta_packing) las prepara PackingController
  * con EtiquetasService.
- *
- * Con sides_cfg.unirPedidosPartidos los métodos *Unidos abren, terminan y liberan juntas las
- * partes en que SEPED separó un pedido (PedidosUnidos). Los bultos se anotan una sola vez, en
- * la primera parte que se despacha; las demás quedan con 0 porque viajan en los mismos bultos.
  */
 class PackingService
 {
-    public function __construct(
-        private readonly DespachoSeped $despachoSeped,
-        private readonly PedidosUnidos $unidos,
-    ) {
-    }
-
-    /**
-     * Abre el pedido y las partes del mismo pedido que están en packing sin otro empacador.
-     *
-     * @return list<int>
-     */
-    public function abrirUnidos(SidesUsers $usuario, int $pedidoId): array
+    public function __construct(private readonly DespachoSeped $despachoSeped)
     {
-        return DB::transaction(function () use ($usuario, $pedidoId) {
-            $ids = $this->unidos->enPacking($usuario, $pedidoId);
-            foreach ($ids as $id) {
-                $this->abrir($usuario, $id);
-            }
-
-            return $ids;
-        });
-    }
-
-    /**
-     * Termina el pedido y las partes que el usuario empaca con él. Si a alguna le falta
-     * verificar productos, no se termina ninguna.
-     *
-     * @param  array{cantBultos: string, despachador: ?string, embalador: ?string, cestas: ?string}  $datos
-     * @return array<int, 'PEND-FACTURA'|'ANULADO'> resultado de cada pedido
-     */
-    public function terminarUnidos(SidesUsers $usuario, int $pedidoId, array $datos): array
-    {
-        return DB::transaction(function () use ($usuario, $pedidoId, $datos) {
-            $resultados = [];
-            $registrado = false;
-            foreach ($this->unidos->enPacking($usuario, $pedidoId) as $id) {
-                $resultados[$id] = $this->terminar($usuario, $id, $registrado ? ['cantBultos' => '0'] + $datos : $datos, $registrado);
-                $registrado = $registrado || $resultados[$id] !== 'ANULADO';
-            }
-
-            return $resultados;
-        });
-    }
-
-    /** @return list<int> */
-    public function liberarUnidos(SidesUsers $usuario, int $pedidoId): array
-    {
-        return DB::transaction(function () use ($usuario, $pedidoId) {
-            $ids = $this->unidos->enPacking($usuario, $pedidoId);
-            foreach ($ids as $id) {
-                $this->liberar($usuario, $id);
-            }
-
-            return $ids;
-        });
     }
 
     /** Abre el pedido para empacar: lo deja a nombre del usuario y marca el inicio (fecpacking2). */
@@ -210,13 +152,11 @@ class PackingService
 
     /**
      * @param  array{cantBultos: string, despachador: ?string, embalador: ?string, cestas: ?string}  $datos
-     * @param  bool  $continuacion  el tiempo de esta sesión ya quedó registrado en otra parte del
-     *                              mismo pedido: esta registra sus renglones y unidades con tiempo 0
      * @return 'PEND-FACTURA'|'ANULADO'
      */
-    public function terminar(SidesUsers $usuario, int $pedidoId, array $datos, bool $continuacion = false): string
+    public function terminar(SidesUsers $usuario, int $pedidoId, array $datos): string
     {
-        return DB::transaction(function () use ($usuario, $pedidoId, $datos, $continuacion) {
+        return DB::transaction(function () use ($usuario, $pedidoId, $datos) {
             $pedido = $this->pedidoDeSucursal($usuario, $pedidoId);
             if ($pedido->estado === 'PEND-FACTURA') {
                 throw new PackingException("El pedido #{$pedidoId} ya fue enviado a facturar.");
@@ -246,8 +186,8 @@ class PackingService
             }
 
             // Se calcula antes de insertar el log de este pedido.
-            $inicioSesion = ! $continuacion && $operacion->fecpacking2 ? Carbon::parse($operacion->fecpacking2) : $ahora;
-            $anterior = $continuacion ? null : $this->ultimoLogDelDia($usuario, $inicioSesion);
+            $inicioSesion = $operacion->fecpacking2 ? Carbon::parse($operacion->fecpacking2) : $ahora;
+            $anterior = $this->ultimoLogDelDia($usuario, $inicioSesion);
 
             Pedido::query()->whereKey($pedidoId)->update(['estado' => 'PEND-FACTURA', 'feccompletado' => $ahora]);
 

@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Seped\Pedido;
+use App\Models\Sides\SidesPedidoOperacion;
 use App\Services\BatchPicking\BatchPickingService;
-use App\Services\Despacho\PedidosUnidos;
 use App\Services\Despacho\RenglonesPedido;
 use App\Services\Picking\PickingException;
 use App\Services\Picking\PickingService;
@@ -22,7 +22,6 @@ class PickingController extends Controller
     public function __construct(
         private readonly PickingService $picking,
         private readonly RenglonesPedido $renglonesPedido,
-        private readonly PedidosUnidos $unidos,
     ) {
     }
 
@@ -58,28 +57,9 @@ class PickingController extends Controller
                 'op.recipiente', 'op.despachador', 'op.despasignado',
             ]);
 
-        $partes = PartesPedido::deLista($usuario->codisb, $pedidos);
-
-        if ($this->unidos->activo($usuario->codisb)) {
-            // Una fila por pedido: tomada si alguna parte es del usuario, o si otro las tiene todas.
-            $pedidos = $this->unidos->agrupar($pedidos, function ($grupo) use ($usuario) {
-                $tomadas = $grupo->filter(fn ($parte) => $parte->despasignado && $parte->despachador);
-                $mia = $tomadas->firstWhere('despachador', $usuario->name);
-                $ajena = $tomadas->count() === $grupo->count() ? $tomadas->first() : null;
-
-                return [
-                    // La fila abre una parte que el usuario pueda trabajar: la suya o la primera libre.
-                    'id' => ($mia ?? $grupo->first(fn ($parte) => ! ($parte->despasignado && $parte->despachador)) ?? $grupo->first())->id,
-                    'estado' => $grupo->contains('estado', 'PICKING') ? 'PICKING' : 'RECIBIDO',
-                    'despachador' => ($mia ?? $ajena)?->despachador,
-                    'despasignado' => $mia || $ajena ? 1 : 0,
-                ];
-            });
-        }
-
         return view('picking.index', [
             'pedidos' => $pedidos,
-            'partes' => $partes,
+            'partes' => PartesPedido::deLista($usuario->codisb, $pedidos),
             'buscar' => $buscar,
             'miPedido' => $this->picking->pedidoActivoDe($usuario),
             'lotes' => MenuSides::puede($usuario, $usuario->cfg, 'batch')
@@ -93,14 +73,14 @@ class PickingController extends Controller
         $datos = $request->validate(['recipiente' => ['nullable', 'string', 'max:50']]);
 
         try {
-            $tomados = $this->picking->tomarUnidos($request->user(), $pedido, $datos['recipiente'] ?? null);
+            $this->picking->tomar($request->user(), $pedido, $datos['recipiente'] ?? null);
         } catch (PickingException $e) {
             return redirect()->route('picking.index')->with('error', $e->getMessage());
         }
 
-        $this->notificar($request, 'picking.tomar', $tomados);
+        NotificarMonitor::cambio($request->user()->codisb, 'picking.tomar', $pedido);
 
-        return redirect()->route('picking.show', $pedido)->with('mensaje', 'Tomaste el '.$this->nombrar($tomados).'.');
+        return redirect()->route('picking.show', $pedido)->with('mensaje', "Tomaste el pedido #{$pedido}.");
     }
 
     public function show(Request $request, int $pedido): View|RedirectResponse
@@ -108,25 +88,23 @@ class PickingController extends Controller
         $usuario = $request->user();
 
         try {
-            $unidos = $this->picking->abrirUnidos($usuario, $pedido);
+            $modelo = $this->picking->abrir($usuario, $pedido);
         } catch (PickingException $e) {
             return redirect()->route('picking.index')->with('error', $e->getMessage());
         }
 
         $cfg = $usuario->cfg;
-        $operacion = Pedido::query()
+        $operacion = $modelo->newQuery()
             ->leftJoin('sides_pedido_operacion as op', 'op.id_pedido', '=', 'pedido.id')
             ->whereKey($pedido)
             ->first(['pedido.*', 'op.recipiente']);
 
-        $filas = $this->renglonesPedido->consultar($unidos, $cfg);
+        $filas = $this->renglonesPedido->consultar($pedido, $cfg);
         $existencias = $cfg?->mostrarExiRealPick
             ? $this->renglonesPedido->existencias($usuario->codisb, $filas->pluck('codprod'))
             : collect();
 
         $renglones = $filas->map(fn ($renglon) => [
-            'clave' => "{$renglon->pedido}-{$renglon->item}",
-            'pedido' => (int) $renglon->pedido,
             'item' => (int) $renglon->item,
             'codprod' => (string) $renglon->codprod,
             'desprod' => (string) $renglon->desprod,
@@ -148,7 +126,6 @@ class PickingController extends Controller
             'pedido' => $operacion,
             'parte' => PartesPedido::deLista($usuario->codisb, [$operacion])[(int) $operacion->id] ?? null,
             'renglones' => $renglones,
-            'unidos' => $unidos,
             'cfg' => $cfg,
         ]);
     }
@@ -194,67 +171,43 @@ class PickingController extends Controller
     public function terminar(Request $request, int $pedido): RedirectResponse
     {
         try {
-            $resultados = $this->picking->terminarUnidos($request->user(), $pedido);
+            $resultado = $this->picking->terminar($request->user(), $pedido);
         } catch (PickingException $e) {
             return back()->with('error', $e->getMessage());
         }
 
-        $this->notificar($request, 'picking.terminar', array_keys($resultados));
+        NotificarMonitor::cambio($request->user()->codisb, 'picking.terminar', $pedido);
 
-        $mensaje = collect($resultados)
-            ->map(fn ($resultado, $id) => ['id' => $id, 'resultado' => $resultado])
-            ->groupBy('resultado')
-            ->map(function ($grupo, $resultado) {
-                $nombre = ucfirst($this->nombrar($grupo->pluck('id')->all()));
-                $varios = $grupo->count() > 1;
+        $mensaje = match ($resultado) {
+            'PACKING' => "Pedido #{$pedido} enviado a packing.",
+            'PEND-FACTURA' => "Pedido #{$pedido} enviado a facturar.",
+            'ANULADO' => "Pedido #{$pedido} anulado automáticamente: no tiene unidades para despachar.",
+        };
 
-                return match ($resultado) {
-                    'PACKING' => $nombre.($varios ? ' enviados a packing.' : ' enviado a packing.'),
-                    'PEND-FACTURA' => $nombre.($varios ? ' enviados a facturar.' : ' enviado a facturar.'),
-                    'ANULADO' => $nombre.($varios ? ' anulados automáticamente: no tienen' : ' anulado automáticamente: no tiene').' unidades para despachar.',
-                };
-            })
-            ->implode(' ');
+        $redireccion = redirect()->route('picking.index')->with('mensaje', $mensaje);
 
-        if ($siguiente = $this->picking->tomarSiguienteParte($request->user(), $pedido)) {
-            $this->notificar($request, 'picking.tomar', [$siguiente]);
-
-            return redirect()->route('picking.show', $siguiente)
-                ->with('mensaje', "{$mensaje} Sigues con el pedido #{$siguiente}, otra parte del mismo pedido.");
+        // sides_cfg.pickingSiguienteParte: la lista le pregunta si sigue con la otra parte.
+        if ($siguiente = $this->picking->siguienteParte($request->user(), $pedido)) {
+            $redireccion->with('siguienteParte', [
+                'pedido' => $siguiente,
+                'anterior' => $pedido,
+                'recipiente' => SidesPedidoOperacion::query()->whereKey($pedido)->value('recipiente'),
+            ]);
         }
 
-        return redirect()->route('picking.index')->with('mensaje', $mensaje);
+        return $redireccion;
     }
 
     public function liberar(Request $request, int $pedido): RedirectResponse
     {
         try {
-            $liberados = $this->picking->liberarUnidos($request->user(), $pedido);
+            $this->picking->liberar($request->user(), $pedido);
         } catch (PickingException $e) {
             return back()->with('error', $e->getMessage());
         }
 
-        $this->notificar($request, 'picking.liberar', $liberados);
+        NotificarMonitor::cambio($request->user()->codisb, 'picking.liberar', $pedido);
 
-        return redirect()->route('picking.index')->with('mensaje', 'Liberaste el '.$this->nombrar($liberados).'. Otro operario puede tomarlo.');
-    }
-
-    /** @param  list<int>  $pedidos */
-    private function notificar(Request $request, string $evento, array $pedidos): void
-    {
-        foreach ($pedidos as $id) {
-            NotificarMonitor::cambio($request->user()->codisb, $evento, $id);
-        }
-    }
-
-    /** "pedido #500" o "pedido #500 y sus partes #501 y #502". @param  list<int>  $pedidos */
-    private function nombrar(array $pedidos): string
-    {
-        $numeros = array_map(fn ($id) => "#{$id}", array_values($pedidos));
-        $primero = array_shift($numeros);
-
-        return $numeros === []
-            ? "pedido {$primero}"
-            : "pedido {$primero} y ".(count($numeros) === 1 ? 'su parte ' : 'sus partes ').implode(' y ', array_filter([implode(', ', array_slice($numeros, 0, -1)), end($numeros)]));
+        return redirect()->route('picking.index')->with('mensaje', "Liberaste el pedido #{$pedido}. Otro operario puede tomarlo.");
     }
 }

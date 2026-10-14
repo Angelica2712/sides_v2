@@ -6,9 +6,6 @@
  * guarda en el servidor al momento; las lecturas se envían en cola para no perder ninguna
  * cuando se escanea rápido. Un código que no está en el pedido, o de un producto ya completo,
  * bloquea la pantalla hasta que un supervisor escribe su clave (legacy: bValidar).
- *
- * `clave` (pedido-item) identifica cada renglón: con las partes de un pedido unidas
- * (sides_cfg.unirPedidosPartidos) hay renglones de varios pedidos y el item se repite.
  */
 import { lector, sonido } from './lector';
 
@@ -61,11 +58,6 @@ export default function packingPedido({ renglones, urls, claveParaAjustar, separ
             return renglon.chequeado > 0 ? 'parcial' : 'pendiente';
         },
 
-        /** Cada renglón se guarda en su propio pedido (varios si las partes se trabajan unidas). */
-        urlDe(accion, renglon) {
-            return urls[accion].replace('__PEDIDO__', renglon.pedido);
-        },
-
         normalizar(codigo) {
             // El legacy ignora los ceros a la izquierda al comparar códigos de barras.
             return String(codigo ?? '').trim().replace(/^0+/, '');
@@ -103,12 +95,12 @@ export default function packingPedido({ renglones, urls, claveParaAjustar, separ
 
             // Se refleja al instante y se confirma con el servidor en orden.
             renglon.chequeado += unidades;
-            this.ultimoItem = renglon.clave;
+            this.ultimoItem = renglon.item;
             this.avisar(`${renglon.desprod}: ${renglon.chequeado} de ${renglon.cantdesp}`, 'exito');
 
             this.cola = this.cola.then(async () => {
                 try {
-                    const { data } = await window.axios.post(this.urlDe('escanear', renglon), { item: renglon.item, unidades });
+                    const { data } = await window.axios.post(urls.escanear, { item: renglon.item, unidades });
                     renglon.chequeado = data.chequeado;
                 } catch (error) {
                     renglon.chequeado = Math.max(renglon.chequeado - unidades, 0);
@@ -161,10 +153,10 @@ export default function packingPedido({ renglones, urls, claveParaAjustar, separ
             this.enviando = true;
             this.errorClave = '';
             try {
-                const { data } = await window.axios.post(this.urlDe('ajustar', renglon), { item: renglon.item, cantidad, clave: this.clave || null });
+                const { data } = await window.axios.post(urls.ajustar, { item: renglon.item, cantidad, clave: this.clave || null });
                 renglon.cantdesp = data.cantdesp;
                 renglon.chequeado = data.cantdesp;
-                this.ultimoItem = renglon.clave;
+                this.ultimoItem = renglon.item;
                 this.$refs.ajuste.close();
                 this.avisar(`${renglon.desprod}: ajustado a ${data.cantdesp}.`, 'exito');
                 this.$nextTick(() => this.$refs.lectura?.focus());
@@ -177,7 +169,7 @@ export default function packingPedido({ renglones, urls, claveParaAjustar, separ
 
         async cambiarLote(renglon, valor) {
             try {
-                const { data } = await window.axios.post(this.urlDe('lote', renglon), { item: renglon.item, lote: valor });
+                const { data } = await window.axios.post(urls.lote, { item: renglon.item, lote: valor });
                 renglon.lote = data.lote;
                 renglon.vence = data.vence;
                 this.avisar(`${renglon.desprod}: lote cambiado a ${data.lote}.`, 'exito');

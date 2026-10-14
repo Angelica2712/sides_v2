@@ -84,9 +84,9 @@
 
         @if ($familia->isNotEmpty())
             @php $raiz = \App\Support\PartesPedido::raiz($pedido); @endphp
-            {{-- SEPED parte el pedido cuando pasa de cfg.numRengPedido renglones: cada parte lleva el número del original en idori. --}}
+            {{-- SEPED parte el pedido por el tope de renglones (cfg.numRengPedido) o por sus criterios de separación: cada parte lleva el número del original en idori. --}}
             <section class="rounded-2xl bg-sky-50 p-5 ring-1 ring-sky-200">
-                <h3 class="font-extrabold text-sky-900">Pedido partido por exceso de renglones</h3>
+                <h3 class="font-extrabold text-sky-900">Pedido separado por SEPED</h3>
                 <p class="mt-1 text-sm text-sky-800">
                     @if ($raiz === (int) $pedido->id)
                         SEPED separó este pedido en {{ $familia->count() }} partes al pasarlo a SIDES.
@@ -104,7 +104,8 @@
                             <a href="{{ route('pedidos.show', $miembro->id) }}" @if ($actual) aria-current="page" @endif
                                class="flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm ring-1 {{ $actual ? 'ring-2 ring-primary' : 'ring-sky-200 hover:ring-primary' }}">
                                 <span class="font-black tabular-nums text-slate-900">#{{ $miembro->id }}</span>
-                                <span class="text-xs text-slate-500">{{ (int) $miembro->id === $raiz ? 'original' : 'parte' }} · {{ $numero($miembro->numren) }} reng.</span>
+                                @php $motivo = (int) $miembro->id === $raiz ? null : \App\Support\PartesPedido::motivo($miembro->observacion); @endphp
+                                <span class="text-xs text-slate-500">{{ (int) $miembro->id === $raiz ? 'original' : 'parte' }}@if ($motivo) · <span class="font-semibold text-sky-800">{{ $motivo }}</span>@endif · {{ $numero($miembro->numren) }} reng.</span>
                                 <x-estado-pedido :estado="$miembro->estado" />
                             </a>
                         </li>

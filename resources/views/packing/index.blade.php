@@ -43,11 +43,7 @@
                         <div class="min-w-0 flex-1">
                             <div class="flex flex-wrap items-center gap-2">
                                 <span class="text-2xl font-black text-slate-900 tabular-nums">#{{ $pedido->id }}</span>
-                                @if (count($pedido->unidos ?? []) > 1)
-                                    <x-partes-unidas :unidos="$pedido->unidos" />
-                                @else
-                                    <x-parte-pedido :parte="$partes[$pedido->id] ?? null" />
-                                @endif
+                                <x-parte-pedido :parte="$partes[$pedido->id] ?? null" />
                                 @if ($pedido->recipiente)
                                     <span class="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700">Recipiente {{ $pedido->recipiente }}</span>
                                 @endif

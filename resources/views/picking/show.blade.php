@@ -2,9 +2,8 @@
     $datos = [
         'renglones' => $renglones,
         'urls' => [
-            // Cada producto se guarda en su pedido: con las partes unidas hay varios en pantalla.
-            'cantidad' => route('picking.cantidad', '__PEDIDO__'),
-            'alerta' => route('picking.alerta', '__PEDIDO__'),
+            'cantidad' => route('picking.cantidad', $pedido->id),
+            'alerta' => route('picking.alerta', $pedido->id),
         ],
         'requiereClave' => (bool) $cfg?->activarValPicking,
         'ordenLibre' => (bool) $cfg?->pickingOrdenLibre,
@@ -23,11 +22,7 @@
                     <a href="{{ route('picking.index') }}" class="text-sm font-semibold text-primary-ink hover:underline">← Volver a la lista</a>
                     <div class="mt-1 flex flex-wrap items-center gap-2">
                         <h2 class="text-2xl font-black text-slate-900 tabular-nums">Pedido #{{ $pedido->id }}</h2>
-                        @if (count($unidos) > 1)
-                            <x-partes-unidas :unidos="$unidos" class="text-xs" />
-                        @else
-                            <x-parte-pedido :parte="$parte" class="text-xs" />
-                        @endif
+                        <x-parte-pedido :parte="$parte" class="text-xs" />
                         <span class="rounded-lg bg-primary px-2.5 py-1 text-sm font-bold text-on-primary">Recipiente {{ $pedido->recipiente }}</span>
                     </div>
                     <p class="mt-1 truncate text-sm text-slate-600">{{ $pedido->ruta ?: 'Sin ruta' }} · {{ $pedido->codcli }} · {{ $pedido->nomcli }}</p>
@@ -173,7 +168,7 @@
                 <p x-show="ordenLibre && siguientes.length" x-cloak class="-mt-1 mb-2 text-xs text-slate-500">Toca un producto para recogerlo ahora.</p>
                 <p x-show="siguientes.length === 0" class="py-3 text-sm text-slate-400">No hay más productos pendientes.</p>
                 <ul class="divide-y divide-slate-100">
-                    <template x-for="renglon in siguientes" :key="renglon.clave">
+                    <template x-for="renglon in siguientes" :key="renglon.item">
                         <li class="flex items-center justify-between gap-3 py-2"
                             :class="ordenLibre && !seleccionado ? 'cursor-pointer rounded-lg px-2 -mx-2 hover:bg-primary-soft' : ''"
                             :role="ordenLibre ? 'button' : null" :tabindex="ordenLibre ? 0 : null"
@@ -195,7 +190,7 @@
                 <h3 class="mb-2 text-sm font-bold uppercase tracking-wide text-slate-500">Revisados (<span x-text="revisados.length"></span>)</h3>
                 <p x-show="revisados.length === 0" class="py-3 text-sm text-slate-400">Todavía no revisaste productos.</p>
                 <ul class="divide-y divide-slate-100">
-                    <template x-for="renglon in revisados" :key="renglon.clave">
+                    <template x-for="renglon in revisados" :key="renglon.item">
                         <li class="flex items-center justify-between gap-3 py-2">
                             <div class="min-w-0">
                                 <p class="truncate text-sm font-semibold text-slate-800" x-text="renglon.desprod"></p>

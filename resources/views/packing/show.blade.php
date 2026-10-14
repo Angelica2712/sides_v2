@@ -2,11 +2,10 @@
     $datos = [
         'renglones' => $renglones,
         'urls' => [
-            // Cada producto se guarda en su pedido: con las partes unidas hay varios en pantalla.
-            'escanear' => route('packing.escanear', '__PEDIDO__'),
-            'ajustar' => route('packing.ajustar', '__PEDIDO__'),
+            'escanear' => route('packing.escanear', $pedido->id),
+            'ajustar' => route('packing.ajustar', $pedido->id),
             'clave' => route('packing.clave', $pedido->id),
-            'lote' => route('packing.lote', '__PEDIDO__'),
+            'lote' => route('packing.lote', $pedido->id),
         ],
         'claveParaAjustar' => (bool) $cfg?->activarValPacking,
         'separadorCestas' => (bool) $cfg?->activar_separador_automatico,
@@ -23,11 +22,7 @@
                     <a href="{{ route('packing.index') }}" class="text-sm font-semibold text-primary-ink hover:underline">← Volver a la lista</a>
                     <div class="mt-1 flex flex-wrap items-center gap-2">
                         <h2 class="text-2xl font-black text-slate-900 tabular-nums">Pedido #{{ $pedido->id }}</h2>
-                        @if (count($unidos) > 1)
-                            <x-partes-unidas :unidos="$unidos" class="text-xs" />
-                        @else
-                            <x-parte-pedido :parte="$parte" class="text-xs" />
-                        @endif
+                        <x-parte-pedido :parte="$parte" class="text-xs" />
                         <span class="rounded-lg bg-primary px-2.5 py-1 text-sm font-bold text-on-primary">Recipiente {{ $pedido->recipiente }}</span>
                     </div>
                     <p class="mt-1 truncate text-sm text-slate-600">{{ $pedido->ruta ?: 'Sin ruta' }} · {{ $pedido->codcli }} · {{ $pedido->nomcli }}</p>
@@ -101,14 +96,14 @@
 
         {{-- Renglones: pendientes primero, verificados al final --}}
         <ul class="space-y-2.5">
-            <template x-for="renglon in ordenados" :key="renglon.clave">
+            <template x-for="renglon in ordenados" :key="renglon.item">
                 <li class="rounded-2xl border-l-4 bg-white p-4 shadow-sm ring-1 ring-slate-200 transition"
                     :class="{
                         'border-l-emerald-500': estadoDe(renglon) === 'completo',
                         'border-l-amber-400': estadoDe(renglon) === 'parcial',
                         'border-l-slate-300': estadoDe(renglon) === 'pendiente',
                         'border-l-slate-200 opacity-70': estadoDe(renglon) === 'sin-despacho',
-                        'ring-2 ring-primary': ultimoItem === renglon.clave,
+                        'ring-2 ring-primary': ultimoItem === renglon.item,
                     }">
                     <div class="flex flex-wrap items-start justify-between gap-3">
                         <div class="min-w-0 flex-1">
@@ -128,8 +123,8 @@
                             {{-- Cambio de lote (renglones marcados con alerta de lote en picking) --}}
                             <form x-show="renglon.alertalote && renglon.lotes.length > 1" @submit.prevent="cambiarLote(renglon, $event.target.lote.value)"
                                   class="mt-2 flex flex-wrap items-center gap-2 rounded-xl bg-amber-50 p-2 ring-1 ring-amber-200">
-                                <label :for="'lote-' + renglon.clave" class="text-xs font-bold text-amber-900">Lote</label>
-                                <select name="lote" :id="'lote-' + renglon.clave" class="rounded-lg border-amber-300 py-1 text-sm focus:border-amber-500 focus:ring-amber-500">
+                                <label :for="'lote-' + renglon.item" class="text-xs font-bold text-amber-900">Lote</label>
+                                <select name="lote" :id="'lote-' + renglon.item" class="rounded-lg border-amber-300 py-1 text-sm focus:border-amber-500 focus:ring-amber-500">
                                     <template x-for="opcion in renglon.lotes" :key="opcion.valor">
                                         <option :value="opcion.valor" :selected="opcion.lote === renglon.lote"
                                                 x-text="opcion.lote + ' · vence ' + opcion.vence + ' · ' + opcion.cantidad + ' und'"></option>
@@ -206,11 +201,6 @@
                 <p x-show="!listo" class="rounded-lg bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900">
                     Todavía faltan <span x-text="unidadesADespachar - unidadesVerificadas"></span> unidades por verificar.
                 </p>
-                @if (count($unidos) > 1)
-                    <p class="rounded-lg bg-sky-50 px-3 py-2 text-sm text-sky-900">
-                        Se terminan juntas las {{ count($unidos) }} partes. Los bultos se anotan una sola vez, en el pedido #{{ $unidos[0] }}.
-                    </p>
-                @endif
                 <div class="grid gap-3 sm:grid-cols-2">
                     <div>
                         <label for="cantBultos" class="block text-sm font-semibold text-slate-700">Total de bultos</label>

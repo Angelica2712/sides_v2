@@ -7,7 +7,8 @@ use Illuminate\Support\Collection;
 
 /**
  * Pedidos que SEPED partió por exceso de renglones (cfg.numRengPedido) o por
- * los criterios de separación: el original conserva su número y cada parte
+ * los criterios de separación (pedcrisep: psicotrópicos, indexados, promociones
+ * por días de crédito...): el original conserva su número y cada parte
  * nueva lleva en pedido.idori el número del original. Siempre quedan con el
  * mismo cliente, así que se buscan por (codisb, codcli), que tiene índice.
  */
@@ -26,7 +27,7 @@ class PartesPedido
      * Solo trae los que pertenecen a un pedido partido.
      *
      * @param  iterable<object>  $pedidos
-     * @return array<int, array{raiz: int, parte: int, total: int}>
+     * @return array<int, array{raiz: int, parte: int, total: int, raizExiste: bool}>
      */
     public static function deLista(string $codisb, iterable $pedidos): array
     {
@@ -62,11 +63,25 @@ class PartesPedido
             ->where('codcli', $pedido->codcli)
             ->where(fn ($q) => $q->where('id', $raiz)->orWhere('idori', (string) $raiz))
             ->orderBy('id')
-            ->get(['id', 'idori', 'estado', 'numren', 'numund', 'documento']);
+            ->get(['id', 'idori', 'estado', 'numren', 'numund', 'documento', 'observacion']);
 
         return $miembros->count() > 1 || ($miembros->count() === 1 && $raiz !== (int) $pedido->id)
             ? $miembros
             : collect();
+    }
+
+    /**
+     * Por qué SEPED separó esta parte: SeparadorPedido agrega a la observación del pedido
+     * "SEPARADO (<criterio>)" o "SEPARADO (límite de N renglones)". Una parte separada de otra
+     * parte hereda la marca de esa, así que la suya es la última. Null en el original.
+     */
+    public static function motivo(?string $observacion): ?string
+    {
+        preg_match_all('/SEPARADO \(([^()]*)\)/u', (string) $observacion, $marcas);
+
+        $motivo = trim((string) end($marcas[1]));
+
+        return $motivo === '' ? null : $motivo;
     }
 
     /** @return Collection<int, Collection<int, int>> ids de cada familia, por raíz */
@@ -87,7 +102,8 @@ class PartesPedido
     private static function ubicar(int $id, Collection $ids, int $raiz): ?array
     {
         // Si el original ya no está (depurado), igual se cuenta como la parte 1.
-        if (! $ids->contains($raiz)) {
+        $raizExiste = $ids->contains($raiz);
+        if (! $raizExiste) {
             $ids = $ids->prepend($raiz);
         }
 
@@ -95,6 +111,6 @@ class PartesPedido
             return null;
         }
 
-        return ['raiz' => $raiz, 'parte' => $ids->search($id) + 1, 'total' => $ids->count()];
+        return ['raiz' => $raiz, 'parte' => $ids->search($id) + 1, 'total' => $ids->count(), 'raizExiste' => $raizExiste];
     }
 }
