@@ -127,6 +127,7 @@ class PickingController extends Controller
             'parte' => PartesPedido::deLista($usuario->codisb, [$operacion])[(int) $operacion->id] ?? null,
             'renglones' => $renglones,
             'cfg' => $cfg,
+            'planoAlmacen' => MenuSides::puede($usuario, $cfg, 'almacen') ? route('almacen.plano') : null,
         ]);
     }
 

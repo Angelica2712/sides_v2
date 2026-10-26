@@ -1,7 +1,9 @@
 <?php
 
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\AdminAlmacenController;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\AlmacenController;
 use App\Http\Controllers\AuditoriaController;
 use App\Http\Controllers\BatchPickingController;
 use App\Http\Controllers\ConfiguracionController;
@@ -64,6 +66,14 @@ Route::middleware('auth')->group(function () {
             Route::post('{pedido}/liberar', 'liberar')->name('liberar');
         });
 
+    Route::prefix('almacen')->name('almacen.')->middleware('permiso:almacen')
+        ->controller(AlmacenController::class)
+        ->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('plano', 'plano')->name('plano');
+            Route::get('buscar', 'buscar')->name('buscar');
+        });
+
     Route::prefix('admin')->name('admin.')->middleware('permiso:admin')
         ->controller(AdminController::class)
         ->group(function () {
@@ -88,6 +98,14 @@ Route::middleware('auth')->group(function () {
             Route::post('webhooks/{webhook}/secreto', 'secreto')->name('secreto');
             Route::post('webhooks/{webhook}/probar', 'probar')->middleware('throttle:10,1')->name('probar');
             Route::post('webhooks/entregas/{entrega}/reintentar', 'reintentar')->middleware('throttle:10,1')->name('reintentar');
+        });
+
+    Route::prefix('admin/droguerias/{codisb}/almacen')->name('admin.almacen.')->middleware('permiso:admin')
+        ->controller(AdminAlmacenController::class)
+        ->group(function () {
+            Route::get('/', 'edit')->name('edit');
+            Route::put('/', 'update')->name('update');
+            Route::delete('/', 'restablecer')->name('restablecer');
         });
 
     Route::prefix('batch-picking')->name('batch.')->middleware('permiso:batch')
@@ -240,7 +258,7 @@ Route::middleware('auth')->group(function () {
 
     // Módulos aún no portados: al portar uno, se registra arriba con su controlador real
     // (mismo nombre "{clave}.index" y middleware permiso:{clave}) y se agrega a $portados.
-    $portados = ['monitor', 'picking', 'packing', 'batch', 'admin', 'etiquetas', 'pedidos', 'configuracion', 'usuarios', 'rutas', 'guias', 'despacho', 'resumen', 'filtromonitor', 'informes', 'auditoria'];
+    $portados = ['monitor', 'picking', 'packing', 'batch', 'admin', 'etiquetas', 'pedidos', 'configuracion', 'usuarios', 'rutas', 'guias', 'despacho', 'resumen', 'filtromonitor', 'informes', 'auditoria', 'almacen'];
     foreach (MenuSides::MODULOS as $clave => [, $uri]) {
         if (in_array($clave, $portados, true)) {
             continue;

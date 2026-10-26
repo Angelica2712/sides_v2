@@ -109,6 +109,13 @@ trait TablasSides
             $table->unique(['codisb', 'modulo']);
         });
 
+        Schema::create('sides_almacen_cfg', function (Blueprint $table) {
+            $table->string('codisb', 20)->primary();
+            $table->json('config');
+            $table->string('actualizado_por', 100)->nullable();
+            $table->timestamps();
+        });
+
         Schema::create('sides_monitor', function (Blueprint $table) {
             $table->increments('id');
             $table->string('descrip', 100);
@@ -290,6 +297,8 @@ trait TablasSides
             $table->string('codprod', 50);
             $table->string('codisb', 100);
             $table->string('desprod', 250)->default('');
+            $table->string('barra', 50)->default('');
+            $table->string('ubicacion', 100)->default('');
             $table->decimal('cantidad', 24, 2)->default(0);
             $table->integer('cantreal')->default(0);
             $table->primary(['codprod', 'codisb']);

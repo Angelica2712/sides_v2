@@ -2,6 +2,8 @@ import './bootstrap';
 import './echo';
 
 import Alpine from 'alpinejs';
+import almacenVista from './almacen';
+import almacenConfig from './almacen-config';
 import batchPicking from './batch-picking';
 import despachoGuia from './despacho';
 import monitorEnVivo from './monitor';
@@ -14,6 +16,8 @@ window.Alpine = Alpine;
 textoCortado();
 
 Alpine.data('pickingPedido', pickingPedido);
+Alpine.data('almacenVista', almacenVista);
+Alpine.data('almacenConfig', almacenConfig);
 Alpine.data('tablaDesplazable', tablaDesplazable);
 Alpine.data('packingPedido', packingPedido);
 Alpine.data('batchPicking', batchPicking);

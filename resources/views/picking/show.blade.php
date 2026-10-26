@@ -4,6 +4,7 @@
         'urls' => [
             'cantidad' => route('picking.cantidad', $pedido->id),
             'alerta' => route('picking.alerta', $pedido->id),
+            'plano' => $planoAlmacen,
         ],
         'requiereClave' => (bool) $cfg?->activarValPicking,
         'ordenLibre' => (bool) $cfg?->pickingOrdenLibre,
@@ -119,6 +120,11 @@
                         <div class="text-right">
                             <p class="font-black leading-none tracking-tight text-slate-900 text-4xl sm:text-5xl" x-text="(actual.ubicacion || '').split('/').pop() || 'Sin ubicación'"></p>
                             <p x-show="actual.ubicacion.includes('/')" class="mt-1 text-xs text-slate-400" x-text="actual.ubicacion"></p>
+                            <button type="button" x-show="enAlmacen(actual)" x-cloak @click="abrirAlmacen()"
+                                    class="mt-2 inline-flex items-center gap-1.5 rounded-xl bg-orange-500 px-3 py-2 text-sm font-bold text-white hover:bg-orange-600">
+                                <svg class="size-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{!! \App\Support\IconosSvg::path('warehouse') !!}</svg>
+                                Ver en el almacén
+                            </button>
                         </div>
                         <p class="text-right text-sm text-slate-500">Solicitado <span class="block text-3xl font-black text-slate-900 tabular-nums" x-text="actual.cantidad"></span></p>
                     </div>
@@ -204,6 +210,30 @@
                 </ul>
             </section>
         </div>
+
+        {{-- Almacén 3D: la ubicación del producto en curso y, en celeste, las de los siguientes. --}}
+        <dialog x-ref="almacen"
+                class="m-auto h-[min(48rem,calc(100%-1rem))] w-[min(72rem,calc(100%-1rem))] overflow-hidden rounded-2xl p-0 shadow-xl backdrop:bg-slate-900/60">
+            <div class="flex h-full flex-col">
+                <div class="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 p-4">
+                    <div class="min-w-0">
+                        <p class="truncate text-sm font-semibold text-slate-600" x-text="actual?.desprod"></p>
+                        <p class="font-mono text-3xl font-black text-orange-600" x-text="ubicacionAlmacen?.codigo"></p>
+                        <div class="mt-1 flex flex-wrap gap-1.5">
+                            <template x-for="[nombre, valor] in detalleAlmacen" :key="nombre">
+                                <span class="rounded-lg bg-slate-100 px-2 py-1 text-xs text-slate-600"><span x-text="nombre"></span> <span class="font-bold text-slate-900" x-text="valor"></span></span>
+                            </template>
+                        </div>
+                    </div>
+                    <button type="button" @click="$refs.almacen.close()" class="rounded-xl bg-slate-800 px-4 py-2.5 text-sm font-bold text-white hover:bg-slate-900">Cerrar</button>
+                </div>
+                <div class="relative min-h-0 flex-1">
+                    <div x-ref="visorAlmacen" class="absolute inset-0"></div>
+                    <p x-show="mensajeAlmacen" class="absolute inset-x-0 top-0 m-3 rounded-xl bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900 ring-1 ring-amber-200" x-text="mensajeAlmacen"></p>
+                    <p class="pointer-events-none absolute bottom-2 left-3 text-xs text-slate-500">Naranja: este producto · celeste: los siguientes</p>
+                </div>
+            </div>
+        </dialog>
 
         {{-- Clave de supervisor (sides_cfg.activarValPicking) --}}
         <dialog x-ref="clave" class="m-auto w-[min(24rem,calc(100%-2rem))] rounded-2xl p-0 shadow-xl backdrop:bg-slate-900/60">

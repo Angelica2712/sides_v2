@@ -24,6 +24,7 @@ class MenuSides
         'picking' => ['Picking', 'picking', 'picking', 'Recolección de productos por pedido.'],
         'batch' => ['Batch Picking', 'batch-picking', 'layers', 'Picking de varios pedidos agrupados en un lote.'],
         'packing' => ['Packing', 'packing', 'packing', 'Verificación y embalaje de pedidos.'],
+        'almacen' => ['Almacén 3D', 'almacen', 'warehouse', 'Los anaqueles del almacén y dónde está cada producto.'],
         'etiquetas' => ['Etiquetas', 'etiquetas', 'tag', 'Impresión de etiquetas de bultos.'],
         'pedidos' => ['Pedidos', 'pedidos', 'cart', 'Consulta de pedidos.'],
         'filtromonitor' => ['Filtro monitor', 'filtro-monitor', 'filter', 'Criterios que usa el monitor.'],
@@ -40,7 +41,7 @@ class MenuSides
 
     /** Agrupación del menú lateral y del inicio, en el orden en que se muestran. */
     public const SECCIONES = [
-        'Operación' => ['monitor', 'picking', 'batch', 'packing', 'etiquetas'],
+        'Operación' => ['monitor', 'picking', 'batch', 'packing', 'etiquetas', 'almacen'],
         'Despacho' => ['guias', 'despacho', 'rutas'],
         'Consultas' => ['pedidos', 'resumen', 'informes'],
         'Ajustes' => ['filtromonitor', 'configuracion', 'usuarios', 'admin', 'auditoria'],
@@ -54,7 +55,7 @@ class MenuSides
      * con activo = 0 en sides_modulo_sucursal). Sin fila siguen encendidos, así las droguerías
      * que ya existían no pierden nada.
      */
-    public const BASICOS = ['monitor', 'picking', 'pedidos', 'filtromonitor', 'resumen', 'usuarios', 'informes', 'configuracion'];
+    public const BASICOS = ['monitor', 'picking', 'pedidos', 'filtromonitor', 'resumen', 'usuarios', 'informes', 'configuracion', 'almacen'];
 
     /**
      * Todos los módulos con interruptor por droguería en Administración. Packing tiene el suyo en
@@ -83,6 +84,8 @@ class MenuSides
         return match ($clave) {
             'monitor' => (bool) $usuario->activarMonitor,
             'picking', 'batch' => (bool) $usuario->activarPicking,
+            // El almacén lo usan quienes recogen y quienes verifican.
+            'almacen' => $usuario->activarPicking || $usuario->activarPacking,
             'packing' => $usuario->activarPacking && $cfg?->activarPacking,
             // El interruptor de la droguería (legacy activarEtiPacking) es ahora el módulo opcional.
             'etiquetas' => ! $usuario->activarGuiaCarga && ! $usuario->activarGuiaDescarga && ! $soloPicking,

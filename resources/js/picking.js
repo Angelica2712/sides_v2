@@ -9,9 +9,14 @@
  * se toque en la lista de siguientes) pasa a ser el producto en curso. Sirve para recoger de una
  * vez todos los de una misma marca aunque en la lista queden separados.
  */
+import { crearVisor } from './almacen-3d';
 import { lector, sonido } from './lector';
+import { describir, todas } from './ubicacion';
 
 export default function pickingPedido({ renglones, urls, requiereClave, ordenLibre = false }) {
+    // Visor 3D del almacén (fuera del estado de Alpine: three.js no soporta sus proxies).
+    let visor = null;
+
     return {
         ...lector(),
         renglones,
@@ -26,6 +31,8 @@ export default function pickingPedido({ renglones, urls, requiereClave, ordenLib
         mensaje: '',
         tipoMensaje: 'error',
         guardando: false,
+        mensajeAlmacen: '',
+        planoAlmacen: null,
 
         get pendientes() {
             return this.renglones.filter((renglon) => renglon.cantdesp < 0);
@@ -47,6 +54,12 @@ export default function pickingPedido({ renglones, urls, requiereClave, ordenLib
         },
         get unidadesFaltantes() {
             return this.pendientes.reduce((total, renglon) => total + renglon.cantidad, 0);
+        },
+        get ubicacionAlmacen() {
+            return todas(this.actual?.ubicacion)[0] ?? null;
+        },
+        get detalleAlmacen() {
+            return describir(this.ubicacionAlmacen, this.planoAlmacen);
         },
         get progreso() {
             return this.renglones.length ? Math.round((this.revisados.length / this.renglones.length) * 100) : 0;
@@ -178,6 +191,30 @@ export default function pickingPedido({ renglones, urls, requiereClave, ordenLib
             } catch (error) {
                 renglon.alertalote = anterior;
                 this.avisar(error.response?.data?.mensaje ?? 'No se pudo cambiar la alerta de lote.');
+            }
+        },
+
+        /** El botón del almacén sale si el módulo está activo y la ubicación sigue el formato. */
+        enAlmacen(renglon) {
+            return Boolean(urls.plano) && todas(renglon?.ubicacion).length > 0;
+        },
+
+        async abrirAlmacen() {
+            this.mensajeAlmacen = '';
+            this.$refs.almacen.showModal();
+            try {
+                if (!visor) {
+                    const { data } = await window.axios.get(urls.plano);
+                    this.planoAlmacen = data;
+                    visor = await crearVisor(this.$refs.visorAlmacen, data);
+                }
+            } catch (error) {
+                this.mensajeAlmacen = 'No se pudo cargar el almacén. Revisa la conexión.';
+                return;
+            }
+            const siguientes = this.siguientes.map((renglon) => todas(renglon.ubicacion)[0]).filter(Boolean);
+            if (!visor.resaltar(this.ubicacionAlmacen, siguientes)) {
+                this.mensajeAlmacen = `La ubicación ${this.ubicacionAlmacen.codigo} no está en el plano del almacén.`;
             }
         },
 

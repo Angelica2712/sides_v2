@@ -38,6 +38,7 @@
                         </div>
                         </div>
                         <div class="flex shrink-0 gap-2">
+                            <a href="{{ route('admin.almacen.edit', $drogueria->codisb) }}" class="rounded-xl bg-white px-3 py-2 text-sm font-semibold text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50">Almacén</a>
                             <a href="{{ route('admin.webhooks.index', $drogueria->codisb) }}" class="rounded-xl bg-white px-3 py-2 text-sm font-semibold text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50">Webhooks</a>
                             <a href="{{ route('admin.edit', $drogueria->codisb) }}" class="rounded-xl bg-white px-3 py-2 text-sm font-semibold text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50">Configurar</a>
                         </div>
