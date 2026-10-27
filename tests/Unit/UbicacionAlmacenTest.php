@@ -99,8 +99,32 @@ class UbicacionAlmacenTest extends TestCase
             'posiciones' => 1,
             // Solo se guardan los nombres que cambian el de SIDES.
             'zonas' => ['PK' => 'Despacho rápido'],
+            'pasillos' => [],
+            'quitados' => [],
             'disposicion' => [],
+            'entradas' => [],
         ], $config);
+    }
+
+    public function test_los_pasillos_guardan_solo_los_validos(): void
+    {
+        $config = ConfigAlmacen::normalizar(['pasillos' => [
+            'PK-03' => ['izquierda' => 6, 'derecha' => 0, 'estantes' => 99, 'posiciones' => '5'],
+            // Formato anterior: N anaqueles de 1 a N.
+            'MY-01' => '5',
+            'PK-00' => 3,
+            'pk-02' => 5,
+            'FR-01' => 0,
+            'FR-02' => ['izquierda' => 50, 'derecha' => 1],
+            'FR-03' => ['izquierda' => 0, 'derecha' => 0],
+        ]]);
+
+        $this->assertSame([
+            'MY-01' => ['izquierda' => 3, 'derecha' => 2, 'estantes' => null, 'posiciones' => null],
+            'PK-03' => ['izquierda' => 6, 'derecha' => 0, 'estantes' => 12, 'posiciones' => 5],
+        ], $config['pasillos']);
+        $this->assertSame([1, 3, 5, 2, 4], ConfigAlmacen::anaquelesDe($config['pasillos']['MY-01']));
+        $this->assertSame([1, 3, 5, 7, 9, 11], ConfigAlmacen::anaquelesDe($config['pasillos']['PK-03']));
     }
 
     public function test_la_disposicion_guarda_solo_anaqueles_validos(): void

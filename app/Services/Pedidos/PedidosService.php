@@ -15,6 +15,7 @@ use App\Models\Sides\SidesLogpicking;
 use App\Models\Sides\SidesPedidoOperacion;
 use App\Models\Sides\SidesPedrenOperacion;
 use App\Models\Sides\SidesUsers;
+use App\Services\Almacen\UbicacionesRegistradas;
 use App\Support\FechaSeped;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
@@ -143,7 +144,7 @@ class PedidosService
     /** Renglones con lo despachado: mientras SIDES trabaja el pedido vive en sides_pedren_operacion (-1 = sin revisar). */
     public function renglones(int $pedidoId): Collection
     {
-        return DB::table('pedren')
+        return UbicacionesRegistradas::unir(DB::table('pedren'), 'pedren')
             ->leftJoin('sides_pedren_operacion as op', function ($join) {
                 $join->on('op.id_pedido', '=', 'pedren.id')->on('op.item', '=', 'pedren.item');
             })
@@ -151,7 +152,8 @@ class PedidosService
             ->orderBy('pedren.item')
             ->get([
                 'pedren.item', 'pedren.codprod', 'pedren.desprod', 'pedren.barra', 'pedren.cantidad', 'pedren.estado_desp', 'op.despachador',
-                DB::raw("COALESCE(NULLIF(op.ubicacion, ''), pedren.ubicacion) as ubicacion"),
+                // La de op es donde se recogió; sin picking, la registrada en SIDES y luego la del ERP.
+                DB::raw("COALESCE(NULLIF(op.ubicacion, ''), NULLIF(su.ubicacion, ''), pedren.ubicacion) as ubicacion"),
                 DB::raw("COALESCE(NULLIF(op.lote, ''), pedren.lote) as lote"),
                 DB::raw("COALESCE(NULLIF(op.feclote, ''), pedren.feclote) as feclote"),
                 DB::raw('CASE WHEN op.cantdesp >= 0 THEN op.cantdesp ELSE pedren.cantdesp END as cantdesp'),

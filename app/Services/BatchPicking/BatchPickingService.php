@@ -9,6 +9,7 @@ use App\Models\Sides\SidesAlcabalaPedidoLiberado;
 use App\Models\Sides\SidesCfg;
 use App\Models\Sides\SidesPedrenOperacion;
 use App\Models\Sides\SidesUsers;
+use App\Services\Almacen\UbicacionesRegistradas;
 use App\Services\Despacho\AsignacionPicking;
 use App\Services\Despacho\RenglonesPedido;
 use App\Services\Picking\PickingService;
@@ -79,10 +80,10 @@ class BatchPickingService
             return [];
         }
 
-        return DB::table('pedren')
-            ->whereIn('id', $pedidoIds)
-            ->orderBy('item')
-            ->get(['id', 'codprod', 'desprod', 'ubicacion', 'cantidad'])
+        return UbicacionesRegistradas::unir(DB::table('pedren'), 'pedren')
+            ->whereIn('pedren.id', $pedidoIds)
+            ->orderBy('pedren.item')
+            ->get(['pedren.id', 'pedren.codprod', 'pedren.desprod', DB::raw(UbicacionesRegistradas::sql('pedren.ubicacion').' as ubicacion'), 'pedren.cantidad'])
             ->groupBy('id')
             ->all();
     }
@@ -430,7 +431,7 @@ class BatchPickingService
     /** Renglones de todos los pedidos del lote, del pedido más antiguo al más nuevo. */
     private function renglonesDelLote(int $loteId): Collection
     {
-        return DB::table('pedren')
+        return UbicacionesRegistradas::unir(DB::table('pedren'), 'pedren')
             ->join('sides_pedren_operacion as op', function ($join) {
                 $join->on('op.id_pedido', '=', 'pedren.id')->on('op.item', '=', 'pedren.item');
             })
@@ -443,7 +444,7 @@ class BatchPickingService
             ->get([
                 'pedren.id as numped', 'pedren.item', 'pedren.codprod', 'pedren.desprod', 'pedren.barra',
                 'pedren.cantidad', 'pedren.marcamodelo', 'pedren.refrigerado', 'op.cantdesp', 'pedido.nomcli',
-                DB::raw("COALESCE(NULLIF(op.ubicacion, ''), pedren.ubicacion) as ubicacion"),
+                DB::raw(UbicacionesRegistradas::sql('op.ubicacion', 'pedren.ubicacion').' as ubicacion'),
                 DB::raw("COALESCE(NULLIF(op.lote, ''), pedren.lote) as lote"),
                 DB::raw("COALESCE(NULLIF(op.feclote, ''), pedren.feclote) as feclote"),
             ]);

@@ -231,6 +231,7 @@
                     <div x-ref="visorAlmacen" class="absolute inset-0"></div>
                     <p x-show="mensajeAlmacen" class="absolute inset-x-0 top-0 m-3 rounded-xl bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900 ring-1 ring-amber-200" x-text="mensajeAlmacen"></p>
                     <p class="pointer-events-none absolute bottom-2 left-3 text-xs text-slate-500">Naranja: este producto · celeste: los siguientes</p>
+                    @include('almacen.partials.controles-3d')
                 </div>
             </div>
         </dialog>

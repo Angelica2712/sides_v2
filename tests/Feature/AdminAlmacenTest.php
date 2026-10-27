@@ -65,7 +65,10 @@ class AdminAlmacenTest extends TestCase
             'estantes' => 6,
             'posiciones' => 5,
             'zonas' => ['PK' => 'Despacho', 'QX' => 'Quirúrgicos'],
+            'pasillos' => [],
+            'quitados' => [],
             'disposicion' => [],
+            'entradas' => [],
         ], SidesAlmacenCfg::query()->find('DROMARKO')->config);
         $this->assertSame('admin@example.com', SidesAlmacenCfg::query()->find('DROMARKO')->actualizado_por);
         $this->assertSame(ConfigAlmacen::POR_DEFECTO, ConfigAlmacen::de('SIDES'));
@@ -113,7 +116,7 @@ class AdminAlmacenTest extends TestCase
         $this->assertSame(ConfigAlmacen::POR_DEFECTO, ConfigAlmacen::de('DROMARKO'));
     }
 
-    public function test_solo_el_administrador_configura_el_almacen(): void
+    public function test_la_drogueria_no_entra_al_almacen_de_otra_desde_administracion(): void
     {
         $encargado = $this->crearUsuario(['email' => 'enc@example.com', 'codisb' => 'DROMARKO', 'activarConfig' => 1, 'activarUsuario' => 1, 'activarPicking' => 1]);
 

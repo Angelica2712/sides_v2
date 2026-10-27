@@ -3,9 +3,12 @@
  * con cada anaquel donde lo pone ./almacen-plano.js (acomodo automático o movido a mano en
  * Administración), y resalta ubicaciones en el formato de ./ubicacion.js.
  *
+ * Con permitirMover() la caja naranja (la ubicación resaltada) se puede agarrar y soltar en otro
+ * hueco de cualquier anaquel; el visor dice a qué ubicación cayó y quien lo usa decide si la guarda.
+ *
  * three.js se carga recién al abrir el visor, para no pesar en las demás pantallas.
  */
-import { cajaDe, disponer, enPlano, ESTANTE_ALTO, FONDO, limitesDe, PASILLO_ANCHO } from './almacen-plano';
+import { cajaDe, claveAnaquel, disponer, enPlano, ESTANTE_ALTO, FONDO, limitesDe, PASILLO_ANCHO } from './almacen-plano';
 import { configDe, interpretar, nombreZona } from './ubicacion';
 
 export { planoEjemplo } from './almacen-plano';
@@ -18,6 +21,8 @@ const COLORES = {
     caja: 0xcbd5e1,
     principal: 0xf97316,
     otros: 0x0ea5e9,
+    destino: 0x16a34a,
+    entrada: 0x15803d,
 };
 
 /** Número pseudoaleatorio estable, para que las cajas de relleno no cambien entre visitas. */
@@ -30,9 +35,9 @@ function azar(...semillas) {
 }
 
 export async function crearVisor(contenedor, plano) {
-    const [THREE, { OrbitControls }] = await Promise.all([
+    const [THREE, { MapControls }] = await Promise.all([
         import('three'),
-        import('three/examples/jsm/controls/OrbitControls.js'),
+        import('three/examples/jsm/controls/MapControls.js'),
     ]);
 
     const config = configDe(plano);
@@ -47,11 +52,19 @@ export async function crearVisor(contenedor, plano) {
     render.domElement.style.display = 'block';
     render.domElement.style.touchAction = 'none';
 
-    const controles = new OrbitControls(camara, render.domElement);
+    // Como un mapa: arrastrar (un dedo o clic izquierdo) desplaza sobre el piso; clic derecho o dos
+    // dedos giran; la rueda o pellizcar acercan. Con el visor enfocado, las flechas también desplazan.
+    const controles = new MapControls(camara, render.domElement);
     controles.enableDamping = true;
     controles.maxPolarAngle = Math.PI / 2 - 0.05;
     controles.minDistance = 0.8;
     controles.maxDistance = 120;
+    controles.zoomToCursor = true;
+    controles.keyPanSpeed = 25;
+    render.domElement.tabIndex = 0;
+    render.domElement.style.outline = 'none';
+    render.domElement.addEventListener('contextmenu', (evento) => evento.preventDefault());
+    controles.listenToKeyEvents(render.domElement);
 
     escena.add(new THREE.HemisphereLight(0xffffff, 0x94a3b8, 1.6));
     const sol = new THREE.DirectionalLight(0xffffff, 1.2);
@@ -158,6 +171,43 @@ export async function crearVisor(contenedor, plano) {
         limites.expandByPoint(new THREE.Vector3(x2, 3, z2));
     }
 
+    // Entradas del almacén (config.entradas): marco verde de la puerta, una alfombra hacia adentro y su nombre.
+    const materialEntrada = material(COLORES.entrada);
+    const materialAlfombra = material(COLORES.entrada, { transparent: true, opacity: 0.35 });
+    desechables.push(materialEntrada, materialAlfombra);
+    for (const e of config.entradas ?? []) {
+        const pieza = (mat, [lx, y, lz], escala) => {
+            const [x, z] = enPlano(e, lx, lz);
+            const malla = new THREE.Mesh(cubo, mat);
+            malla.position.set(x, y, z);
+            malla.quaternion.copy(giroY(e.giro));
+            malla.scale.set(...escala);
+            escena.add(malla);
+        };
+        pieza(materialEntrada, [-0.65, 1.05, 0], [0.1, 2.1, 0.15]);
+        pieza(materialEntrada, [0.65, 1.05, 0], [0.1, 2.1, 0.15]);
+        pieza(materialEntrada, [0, 2.15, 0], [1.4, 0.12, 0.15]);
+        pieza(materialAlfombra, [0, 0.02, 0.6], [1.2, 0.02, 1.2]);
+        rotular(e.nombre || 'Entrada', [e.x, 2.6, e.z], { tamano: 0.4, color: '#ffffff', fondo: 'rgba(21,128,61,0.9)' });
+        limites.expandByPoint(new THREE.Vector3(e.x - 2.5, 0, e.z - 2.5));
+        limites.expandByPoint(new THREE.Vector3(e.x + 2.5, 3, e.z + 2.5));
+    }
+
+    // Volumen de cada anaquel, sin dibujarse: sirve para saber qué hueco hay bajo el puntero.
+    const volumenes = new THREE.InstancedMesh(
+        cubo,
+        new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false }),
+        Math.max(disposicion.anaqueles.length, 1),
+    );
+    volumenes.count = disposicion.anaqueles.length;
+    disposicion.anaqueles.forEach((a, i) => {
+        const alto = a.estantes * ESTANTE_ALTO;
+        volumenes.setMatrixAt(i, new THREE.Matrix4().compose(new THREE.Vector3(a.x, alto / 2, a.z), giroY(a.giro), new THREE.Vector3(a.ancho, alto, FONDO)));
+    });
+    volumenes.computeBoundingSphere();
+    desechables.push(volumenes.material);
+    escena.add(volumenes);
+
     const colores = { estructura: COLORES.estructura, tabla: COLORES.tabla, caja: COLORES.caja, pasillo: COLORES.pasillo };
     for (const [tipo, matrices] of Object.entries(piezas)) {
         if (!matrices.length) {
@@ -195,8 +245,53 @@ export async function crearVisor(contenedor, plano) {
 
     // Vuelo suave de la cámara hacia un punto.
     let vuelo = null;
-    const volar = (posicion, objetivo) => {
-        vuelo = { desde: [camara.position.clone(), controles.target.clone()], hasta: [posicion, objetivo], inicio: performance.now() };
+    const volar = (posicion, objetivo, duracion = 900) => {
+        vuelo = { desde: [camara.position.clone(), controles.target.clone()], hasta: [posicion, objetivo], inicio: performance.now(), duracion };
+    };
+    // Al desplazarse no se puede salir del almacén (con un margen): así nadie se pierde en el vacío.
+    const zonaPermitida = limites.clone().expandByScalar(4);
+    const corrimiento = new THREE.Vector3();
+    const mantenerDentro = () => {
+        const { x, z } = controles.target;
+        corrimiento.set(
+            Math.min(Math.max(x, zonaPermitida.min.x), zonaPermitida.max.x) - x,
+            0,
+            Math.min(Math.max(z, zonaPermitida.min.z), zonaPermitida.max.z) - z,
+        );
+        if (corrimiento.lengthSq()) {
+            controles.target.add(corrimiento);
+            camara.position.add(corrimiento);
+        }
+    };
+
+    /**
+     * Botones de la pantalla: desplazarse sobre el piso según hacia dónde mira la cámara, girar
+     * alrededor del punto que se mira y acercar o alejar.
+     */
+    const navegar = (accion) => {
+        const objetivo = vuelo ? vuelo.hasta[1].clone() : controles.target.clone();
+        const posicion = vuelo ? vuelo.hasta[0].clone() : camara.position.clone();
+        const mirada = objetivo.clone().sub(posicion);
+        const distancia = mirada.length();
+        const adelante = new THREE.Vector3(mirada.x, 0, mirada.z).normalize();
+        const derecha = new THREE.Vector3(-adelante.z, 0, adelante.x);
+        const paso = Math.min(Math.max(distancia * 0.12, 1), 5);
+        const desplazar = (vector) => volar(posicion.add(vector), objetivo.add(vector), 350);
+
+        if (accion === 'izquierda') desplazar(derecha.multiplyScalar(-paso));
+        if (accion === 'derecha') desplazar(derecha.multiplyScalar(paso));
+        if (accion === 'adelante') desplazar(adelante.multiplyScalar(paso));
+        if (accion === 'atras') desplazar(adelante.multiplyScalar(-paso));
+        if (accion === 'girarIzquierda' || accion === 'girarDerecha') {
+            const angulo = (accion === 'girarIzquierda' ? -1 : 1) * (Math.PI / 6);
+            const brazo = posicion.clone().sub(objetivo).applyAxisAngle(ejeY, angulo);
+            volar(objetivo.clone().add(brazo), objetivo, 350);
+        }
+        if (accion === 'acercar' || accion === 'alejar') {
+            const factor = accion === 'acercar' ? 0.65 : 1.5;
+            const nueva = Math.min(Math.max(distancia * factor, controles.minDistance), controles.maxDistance);
+            volar(objetivo.clone().sub(mirada.normalize().multiplyScalar(nueva)), objetivo, 350);
+        }
     };
     const vistaGeneral = (inmediata = false) => {
         const distancia = Math.max(tamano.x, tamano.z, 6) * 0.9;
@@ -232,7 +327,7 @@ export async function crearVisor(contenedor, plano) {
         cuadro = requestAnimationFrame(animar);
         reloj += 0.05;
         if (vuelo) {
-            const t = Math.min((performance.now() - vuelo.inicio) / 900, 1);
+            const t = Math.min((performance.now() - vuelo.inicio) / vuelo.duracion, 1);
             const k = 1 - (1 - t) ** 3;
             camara.position.lerpVectors(vuelo.desde[0], vuelo.hasta[0], k);
             controles.target.lerpVectors(vuelo.desde[1], vuelo.hasta[1], k);
@@ -247,6 +342,9 @@ export async function crearVisor(contenedor, plano) {
             marca.scale.setScalar(1 + 0.25 * Math.sin(reloj * 1.5));
         }
         controles.update();
+        if (!vuelo) {
+            mantenerDentro();
+        }
         render.render(escena, camara);
     };
     animar();
@@ -267,13 +365,124 @@ export async function crearVisor(contenedor, plano) {
         return { grupo, datos };
     };
 
+    // ---- Agarrar la caja naranja y soltarla en otro hueco ----
+
+    const rayo = new THREE.Raycaster();
+    const puntero = new THREE.Vector2();
+    const destino = new THREE.Group();
+    escena.add(destino);
+    const materialDestino = material(COLORES.destino, { emissive: 0x14532d, transparent: true, opacity: 0.85 });
+    desechables.push(materialDestino);
+    let alSoltar = null;
+    let arrastre = null;
+
+    const apuntar = (evento) => {
+        const borde = render.domElement.getBoundingClientRect();
+        puntero.set(((evento.clientX - borde.left) / borde.width) * 2 - 1, -((evento.clientY - borde.top) / borde.height) * 2 + 1);
+        rayo.setFromCamera(puntero, camara);
+    };
+    const tocaPrincipal = (evento) => {
+        apuntar(evento);
+        return Boolean(principal) && rayo.intersectObject(principal, true).length > 0;
+    };
+
+    /** Ubicación completa (con estante y posición) del hueco bajo el puntero, o null. */
+    const huecoBajo = (evento) => {
+        apuntar(evento);
+        const [golpe] = rayo.intersectObject(volumenes, false);
+        if (!golpe) {
+            return null;
+        }
+        const a = disposicion.anaqueles[golpe.instanceId];
+        // Del plano a las coordenadas del anaquel (la inversa de enPlano).
+        const t = (a.giro * Math.PI) / 180;
+        const lx = (golpe.point.x - a.x) * Math.cos(t) - (golpe.point.z - a.z) * Math.sin(t);
+        const limitar = (valor, maximo) => Math.min(Math.max(valor, 0), maximo);
+        const nivel = limitar(Math.floor((golpe.point.y - 0.04) / ESTANTE_ALTO), a.estantes - 1);
+        const letra = config.estanteA === 'arriba' ? a.estantes - 1 - nivel : nivel;
+        const lado = config.posicion1 === 'izquierda' ? -1 : 1;
+        const posicion = limitar(Math.floor((a.ancho / 2 - lado * lx) / (a.ancho / a.posiciones)), a.posiciones - 1) + 1;
+
+        return `${claveAnaquel(a.zona, a.pasillo, a.anaquel)}-${String.fromCharCode(65 + letra)}-${String(posicion).padStart(2, '0')}`;
+    };
+
+    const marcarDestino = (codigo) => {
+        destino.clear();
+        const datos = codigo && cajaDe(disposicion, interpretar(codigo), config);
+        if (!datos) {
+            return;
+        }
+        const malla = new THREE.Mesh(cubo, materialDestino);
+        malla.position.set(...datos.centro);
+        malla.quaternion.copy(giroY(datos.giro));
+        malla.scale.set(...datos.tamano);
+        destino.add(malla);
+    };
+
+    // Se escucha en el contenedor, en captura: llega antes que a OrbitControls, que gira la cámara
+    // con cualquier arrastre. Si el dedo cae sobre la caja naranja, la cámara se queda quieta.
+    const presionar = (evento) => {
+        if (!alSoltar || evento.button > 0 || !tocaPrincipal(evento)) {
+            return;
+        }
+        evento.stopPropagation();
+        controles.enabled = false;
+        arrastre = { codigo: null };
+        contenedor.setPointerCapture(evento.pointerId);
+        render.domElement.style.cursor = 'grabbing';
+    };
+    const mover = (evento) => {
+        if (!arrastre) {
+            if (alSoltar && evento.pointerType === 'mouse') {
+                render.domElement.style.cursor = tocaPrincipal(evento) ? 'grab' : '';
+            }
+            return;
+        }
+        const codigo = huecoBajo(evento);
+        if (codigo !== arrastre.codigo) {
+            arrastre.codigo = codigo;
+            marcarDestino(codigo);
+        }
+    };
+    const soltar = () => {
+        if (!arrastre) {
+            return;
+        }
+        const { codigo } = arrastre;
+        arrastre = null;
+        controles.enabled = true;
+        render.domElement.style.cursor = '';
+        if (codigo) {
+            alSoltar(codigo);
+        } else {
+            destino.clear();
+        }
+    };
+    contenedor.addEventListener('pointerdown', presionar, true);
+    contenedor.addEventListener('pointermove', mover, true);
+    contenedor.addEventListener('pointerup', soltar, true);
+    contenedor.addEventListener('pointercancel', soltar, true);
+
     return {
+        /**
+         * Deja agarrar la caja naranja y soltarla en otro hueco: alSoltar recibe la ubicación
+         * completa donde cayó (la caja verde queda marcada hasta limpiarDestino). null lo apaga.
+         */
+        permitirMover(funcion) {
+            alSoltar = funcion;
+            if (!funcion) {
+                destino.clear();
+                render.domElement.style.cursor = '';
+            }
+        },
+        limpiarDestino: () => destino.clear(),
         /**
          * Resalta la ubicación buscada (texto o ya interpretada) y, más tenues, las siguientes.
          * Devuelve false si la ubicación no está en el plano.
          */
         resaltar(buscada, siguientes = []) {
             resaltados.clear();
+            destino.clear();
             rotulos.splice(0).forEach((recurso) => recurso.dispose());
             principal = null;
             marca = null;
@@ -315,9 +524,15 @@ export async function crearVisor(contenedor, plano) {
             return true;
         },
         vistaGeneral: () => vistaGeneral(),
+        /** izquierda, derecha, adelante, atras, girarIzquierda, girarDerecha, acercar o alejar. */
+        navegar,
         destruir() {
             cancelAnimationFrame(cuadro);
             observador.disconnect();
+            contenedor.removeEventListener('pointerdown', presionar, true);
+            contenedor.removeEventListener('pointermove', mover, true);
+            contenedor.removeEventListener('pointerup', soltar, true);
+            contenedor.removeEventListener('pointercancel', soltar, true);
             controles.dispose();
             escena.traverse((objeto) => objeto.isInstancedMesh && objeto.dispose());
             [...desechables, ...rotulos].forEach((recurso) => recurso.dispose());

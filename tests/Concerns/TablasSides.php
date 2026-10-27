@@ -21,7 +21,7 @@ trait TablasSides
     private const FLAGS_USUARIO = [
         'activarMonitor', 'activarPicking', 'activarPacking', 'activarUsuario', 'activarConfig',
         'eliminarPedido', 'activarResetear', 'activarPedido', 'activarResumen', 'activarInformes',
-        'activarGuiaCarga', 'activarGuiaDescarga', 'activarLiberarAlcabala',
+        'activarGuiaCarga', 'activarGuiaDescarga', 'activarLiberarAlcabala', 'activarUbicaciones',
     ];
 
     protected function crearTablasSides(): void
@@ -114,6 +114,17 @@ trait TablasSides
             $table->json('config');
             $table->string('actualizado_por', 100)->nullable();
             $table->timestamps();
+        });
+
+        Schema::create('sides_producto_ubicacion', function (Blueprint $table) {
+            $table->increments('id');
+            $table->string('codisb', 20);
+            $table->string('codprod', 50);
+            $table->string('ubicacion', 255);
+            $table->unsignedInteger('usuario_id')->nullable();
+            $table->string('usuario', 150)->nullable();
+            $table->timestamps();
+            $table->unique(['codisb', 'codprod']);
         });
 
         Schema::create('sides_monitor', function (Blueprint $table) {

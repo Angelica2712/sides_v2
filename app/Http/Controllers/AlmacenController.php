@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\Almacen\PlanoAlmacen;
+use App\Services\Almacen\UbicacionesRegistradas;
 use App\Support\UbicacionAlmacen;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -10,8 +11,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 /**
- * Almacén 3D: los anaqueles de la droguería dibujados con las ubicaciones del ERP, para que el
- * almacenista vea dónde está cada producto. El formato de ubicación está en UbicacionAlmacen.
+ * Almacén 3D: los anaqueles de la droguería dibujados con las ubicaciones del catálogo (la
+ * registrada en SIDES o la del ERP), para que el almacenista vea dónde está cada producto. El
+ * formato de ubicación está en UbicacionAlmacen.
  */
 class AlmacenController extends Controller
 {
@@ -37,16 +39,16 @@ class AlmacenController extends Controller
             return response()->json(['productos' => []]);
         }
 
-        $productos = DB::table('producto')
-            ->where('codisb', $request->user()->codisb)
+        $productos = UbicacionesRegistradas::unir(DB::table('producto'), 'producto')
+            ->where('producto.codisb', $request->user()->codisb)
             ->where(function ($filtro) use ($buscar) {
-                $filtro->where('codprod', $buscar)
-                    ->orWhere('barra', $buscar)
-                    ->orWhere('desprod', 'like', "%{$buscar}%");
+                $filtro->where('producto.codprod', $buscar)
+                    ->orWhere('producto.barra', $buscar)
+                    ->orWhere('producto.desprod', 'like', "%{$buscar}%");
             })
-            ->orderBy('desprod')
+            ->orderBy('producto.desprod')
             ->limit(20)
-            ->get(['codprod', 'desprod', 'ubicacion'])
+            ->get(['producto.codprod', 'producto.desprod', DB::raw(UbicacionesRegistradas::sql('producto.ubicacion').' as ubicacion')])
             ->map(fn ($producto) => [
                 'codprod' => (string) $producto->codprod,
                 'desprod' => (string) $producto->desprod,

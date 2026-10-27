@@ -3,13 +3,14 @@
 namespace App\Services\Despacho;
 
 use App\Models\Sides\SidesCfg;
+use App\Services\Almacen\UbicacionesRegistradas;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
  * Renglones de un pedido para las pantallas de picking y packing: datos del producto de
  * `pedren` (SEPED) + datos de trabajo de sides_pedren_operacion, en el orden de recolección
- * configurado (sides_cfg.ordenPedSides).
+ * configurado (sides_cfg.ordenPedSides). La ubicación registrada en SIDES gana sobre la del ERP.
  */
 class RenglonesPedido
 {
@@ -22,7 +23,7 @@ class RenglonesPedido
             default => 'pedren.item',
         };
 
-        return DB::table('pedren')
+        return UbicacionesRegistradas::unir(DB::table('pedren'), 'pedren')
             ->join('sides_pedren_operacion as op', function ($join) {
                 $join->on('op.id_pedido', '=', 'pedren.id')->on('op.item', '=', 'pedren.item');
             })
@@ -30,7 +31,7 @@ class RenglonesPedido
             ->select([
                 'pedren.item', 'pedren.codprod', 'pedren.desprod', 'pedren.barra', 'pedren.cantidad',
                 'pedren.marcamodelo', 'pedren.refrigerado', 'pedren.psicotropico', 'pedren.listalote',
-                DB::raw("COALESCE(NULLIF(op.ubicacion, ''), pedren.ubicacion) as ubicacion"),
+                DB::raw(UbicacionesRegistradas::sql('op.ubicacion', 'pedren.ubicacion').' as ubicacion'),
                 DB::raw("COALESCE(NULLIF(op.deposito, ''), pedren.deposito) as deposito"),
                 DB::raw("COALESCE(NULLIF(op.lote, ''), pedren.lote) as lote"),
                 DB::raw("COALESCE(NULLIF(op.feclote, ''), pedren.feclote) as feclote"),

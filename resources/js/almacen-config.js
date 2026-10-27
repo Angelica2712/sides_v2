@@ -1,13 +1,14 @@
 /**
- * Administración > Almacén de una droguería (resources/views/admin/almacen.blade.php): el
- * formulario del acomodo, una vista previa 3D que se redibuja con cada cambio (con una ubicación de
- * prueba resaltada) y el plano visto desde arriba, donde se arrastran y giran los anaqueles para
- * dejarlos como están en la droguería (config.disposicion).
+ * Acomodo del almacén (resources/views/almacen/acomodo.blade.php, desde Administración o desde
+ * Almacén 3D > Ajustes avanzados): el formulario, una vista previa 3D que se redibuja con cada
+ * cambio (con una ubicación de prueba resaltada) y el plano visto desde arriba, donde se arrastran,
+ * giran y borran los anaqueles para dejarlos como están en la droguería (config.disposicion y
+ * config.quitados). Un anaquel con productos ubicados (plano.ocupados) no se puede borrar.
  *
  * El visor vive fuera del estado de Alpine: los objetos de three.js no soportan los proxies reactivos.
  */
 import { crearVisor, planoEjemplo } from './almacen-3d';
-import { disponer, enPlano, limitesDe } from './almacen-plano';
+import { claveAnaquel, disponer, enPlano, limitesDe } from './almacen-plano';
 import { describir, interpretar, nombreZona } from './ubicacion';
 
 const dosDigitos = (numero) => String(numero).padStart(2, '0');
@@ -23,36 +24,77 @@ export default function almacenConfig({ plano, config }) {
         const [[x1, y1], [x2, y2]] = [...dedos.values()];
         return Math.hypot(x2 - x1, y2 - y1);
     };
-    // Sin ubicaciones en el formato se muestra el almacén de ejemplo con este acomodo.
+    // Sin ubicaciones en el formato se muestra el almacén de ejemplo con este acomodo. El plano
+    // trae también los anaqueles borrados; se filtran con config.quitados (ver sinQuitados).
     const base = plano.zonas.length ? plano : planoEjemplo();
+    const ocupados = new Set(plano.ocupados ?? []);
     const primera = base.zonas.find((zona) => zona.pasillos.length);
     const pasillo = primera?.pasillos[0];
     const anaquel = pasillo?.anaqueles.find((a) => a.anaquel === 3) ?? pasillo?.anaqueles[0];
     const coloresZona = Object.fromEntries(base.zonas.map(({ zona }, i) => [zona, COLORES_ZONA[i % COLORES_ZONA.length]]));
     // PHP manda [] cuando no hay ninguno; un arreglo perdería las claves al pasarlo a JSON.
     config.disposicion = Array.isArray(config.disposicion) ? {} : config.disposicion;
+    config.quitados = Array.isArray(config.quitados) ? config.quitados : [];
+    config.entradas = Array.isArray(config.entradas) ? config.entradas : [];
+    // Pasillos registrados a mano ("PK-03"); los demás salen de las ubicaciones de los productos.
+    const registrados = new Set(Array.isArray(config.pasillos) ? [] : Object.keys(config.pasillos ?? {}));
 
     return {
         config,
         ejemplo: !plano.zonas.length,
         prueba: primera ? `${primera.zona}-${dosDigitos(pasillo.pasillo)}-${dosDigitos(anaquel.anaquel)}-A-01` : '',
         mensaje: '',
+        // Por qué no se pudo borrar lo elegido en el plano.
+        avisoPlano: '',
         vista: '3d',
 
-        // Plano: anaquel elegido, si se mueve todo su pasillo, arrastre en curso y lo que se ve.
+        // Plano: anaquel elegido (o, en su lugar, la entrada elegida, por su índice en
+        // config.entradas), si se mueve todo su pasillo, arrastre en curso y lo que se ve.
         seleccionado: null,
+        entrada: null,
         moverPasillo: false,
         arrastre: null,
         caja: [0, 0, 10, 10],
 
+        /** El plano sin los anaqueles borrados (los que tienen productos se quedan siempre). */
+        get sinQuitados() {
+            const quitados = new Set(this.config.quitados.filter((clave) => !ocupados.has(clave)));
+            if (!quitados.size) {
+                return base;
+            }
+            return {
+                ...base,
+                zonas: base.zonas.map((zona) => ({
+                    ...zona,
+                    pasillos: zona.pasillos
+                        .map((p) => ({ ...p, anaqueles: p.anaqueles.filter((a) => !quitados.has(claveAnaquel(zona.zona, p.pasillo, a.anaquel))) }))
+                        .filter((p) => p.anaqueles.length),
+                })),
+            };
+        },
         get planoPrevio() {
-            return { ...base, config: JSON.parse(JSON.stringify(this.config)) };
+            return { ...this.sinQuitados, config: JSON.parse(JSON.stringify(this.config)) };
         },
         get detalle() {
             return describir(interpretar(this.prueba), this.planoPrevio);
         },
         get disposicion() {
-            return disponer(base, this.config);
+            return disponer(this.sinQuitados, this.config);
+        },
+        get borrados() {
+            return this.config.quitados.length;
+        },
+        get entradaElegida() {
+            return this.entrada === null ? null : (this.config.entradas[this.entrada] ?? null);
+        },
+        /** Entradas como se ven en el plano, con la que se está arrastrando corrida. */
+        get entradasPlano() {
+            const { tipo, indice, dx = 0, dz = 0 } = this.arrastre ?? {};
+            return this.config.entradas.map((e, i) => (tipo === 'entrada' && indice === i ? { ...e, x: e.x + dx, z: e.z + dz } : e));
+        },
+        /** El anaquel elegido tiene productos ubicados: no se puede borrar. */
+        get elegidoOcupado() {
+            return Boolean(this.elegido && ocupados.has(this.elegido.clave));
         },
         get anaqueles() {
             const { claves = [], dx = 0, dz = 0 } = this.arrastre ?? {};
@@ -89,6 +131,10 @@ export default function almacenConfig({ plano, config }) {
                 return;
             }
             this.resaltar();
+        },
+
+        navegar3d(accion) {
+            visor?.navegar(accion);
         },
 
         resaltar() {
@@ -134,7 +180,26 @@ export default function almacenConfig({ plano, config }) {
                           fill="#0f172a" font-weight="700" pointer-events="none">${this.etiquetaAnaquel(a)}</text>
                 </g>`;
             });
-            return [...zonas, ...anaqueles].join('');
+            // Puertas: el vano verde, la hoja abriendo hacia adentro y el nombre afuera.
+            const entradas = this.entradasPlano.map((e, i) => {
+                const elegida = i === this.entrada;
+                // El nombre va del lado de afuera de la puerta (-z de la puerta, girado como ella).
+                const t = (e.giro * Math.PI) / 180;
+                const [nx, nz] = [e.x - 0.75 * Math.sin(t), e.z - 0.45 * Math.cos(t)];
+                return `
+                <g data-entrada="${i}" style="cursor: grab">
+                    <g transform="translate(${e.x} ${e.z}) rotate(${-e.giro})">
+                        <rect x="-0.8" y="-0.7" width="1.6" height="1.4" fill="transparent"></rect>
+                        <path d="M -0.6 0 A 1.2 1.2 0 0 0 0.6 1.2" fill="none" stroke="#16a34a" stroke-width="0.03" stroke-dasharray="0.08 0.06"></path>
+                        <line x1="0.6" y1="0" x2="0.6" y2="1.2" stroke="#16a34a" stroke-width="0.05"></line>
+                        <rect x="-0.6" y="-0.09" width="1.2" height="0.18" rx="0.04"
+                              fill="${elegida ? '#bbf7d0' : '#dcfce7'}" stroke="${elegida ? '#ea580c' : '#16a34a'}" stroke-width="${elegida ? 0.08 : 0.05}"></rect>
+                    </g>
+                    <text x="${nx}" y="${nz}" font-size="0.28" text-anchor="middle" dominant-baseline="middle"
+                          fill="#14532d" font-weight="800" pointer-events="none">${texto(e.nombre || 'Entrada')}</text>
+                </g>`;
+            });
+            return [...zonas, ...anaqueles, ...entradas].join('');
         },
 
         /** El plano sigue recibiendo el puntero aunque salga del SVG mientras se arrastra. */
@@ -155,6 +220,10 @@ export default function almacenConfig({ plano, config }) {
                 this.arrastre = { tipo: 'pellizco', distancia: distanciaDedos(), caja: [...this.caja] };
                 return;
             }
+            const puerta = evento.target.closest('[data-entrada]')?.dataset.entrada;
+            if (puerta !== undefined) {
+                return this.tomarEntrada(evento, Number(puerta));
+            }
             const clave = evento.target.closest('[data-clave]')?.dataset.clave;
             const a = clave && this.disposicion.anaqueles.find((b) => b.clave === clave);
             return a ? this.tomar(evento, a) : this.tomarFondo(evento);
@@ -169,6 +238,12 @@ export default function almacenConfig({ plano, config }) {
                 limites[1] = Math.min(limites[1], z.z - z.fondo / 2 - 2);
                 limites[2] = Math.max(limites[2], z.x + z.ancho / 2 + 2);
                 limites[3] = Math.max(limites[3], z.z + z.fondo / 2 + 2);
+            }
+            for (const e of this.config.entradas) {
+                limites[0] = Math.min(limites[0], e.x - 2);
+                limites[1] = Math.min(limites[1], e.z - 2);
+                limites[2] = Math.max(limites[2], e.x + 2);
+                limites[3] = Math.max(limites[3], e.z + 2);
             }
             this.caja = [limites[0], limites[1], limites[2] - limites[0], limites[3] - limites[1]];
         },
@@ -196,7 +271,27 @@ export default function almacenConfig({ plano, config }) {
                 : [a];
         },
 
+        tomarEntrada(evento, indice) {
+            this.entrada = indice;
+            this.seleccionado = null;
+            this.capturar(evento);
+            this.arrastre = { tipo: 'entrada', indice, inicio: this.puntoEnPlano(evento), dx: 0, dz: 0 };
+        },
+
+        /** Pone una puerta nueva en el centro de lo que se está viendo y la deja elegida. */
+        agregarEntrada() {
+            if (this.config.entradas.length >= 20) {
+                return;
+            }
+            const [x, y, ancho, alto] = this.caja;
+            this.config.entradas.push({ x: redondear(x + ancho / 2), z: redondear(y + alto / 2), giro: 0, nombre: '' });
+            this.entrada = this.config.entradas.length - 1;
+            this.seleccionado = null;
+        },
+
         tomar(evento, a) {
+            this.entrada = null;
+            this.avisoPlano = '';
             this.seleccionado = a.clave;
             this.prueba = `${a.clave}-A-01`;
             this.resaltar();
@@ -207,6 +302,7 @@ export default function almacenConfig({ plano, config }) {
         /** Arrastrar el fondo desplaza la vista. */
         tomarFondo(evento) {
             this.seleccionado = null;
+            this.entrada = null;
             this.capturar(evento);
             this.arrastre = { tipo: 'vista', inicio: [evento.clientX, evento.clientY], caja: [...this.caja] };
         },
@@ -246,7 +342,13 @@ export default function almacenConfig({ plano, config }) {
             dedos.delete(evento?.pointerId);
             const arrastre = this.arrastre;
             this.arrastre = null;
-            if (arrastre?.tipo !== 'anaquel' || (!arrastre.dx && !arrastre.dz)) {
+            if (!['anaquel', 'entrada'].includes(arrastre?.tipo) || (!arrastre.dx && !arrastre.dz)) {
+                return;
+            }
+            if (arrastre.tipo === 'entrada') {
+                const e = this.config.entradas[arrastre.indice];
+                e.x = redondear(e.x + arrastre.dx);
+                e.z = redondear(e.z + arrastre.dz);
                 return;
             }
             for (const a of this.disposicion.anaqueles.filter((b) => arrastre.claves.includes(b.clave))) {
@@ -260,6 +362,10 @@ export default function almacenConfig({ plano, config }) {
 
         /** Gira 90° el anaquel elegido, o todo su pasillo alrededor de su centro. */
         girar() {
+            if (this.entradaElegida) {
+                this.entradaElegida.giro = (this.entradaElegida.giro + 90) % 360;
+                return;
+            }
             const a = this.elegido;
             if (!a) {
                 return;
@@ -285,6 +391,64 @@ export default function almacenConfig({ plano, config }) {
             }
         },
 
+        /**
+         * Borra el anaquel elegido o, con «Mover el pasillo completo», su pasillo. Un pasillo
+         * registrado sin productos se quita también de la lista de pasillos; los anaqueles con
+         * productos ubicados se quedan y se avisa por qué.
+         */
+        borrar() {
+            this.avisoPlano = '';
+            if (this.entradaElegida) {
+                if (confirm(`¿Quitar la entrada «${this.entradaElegida.nombre || 'Entrada'}»?`)) {
+                    this.config.entradas.splice(this.entrada, 1);
+                    this.entrada = null;
+                }
+                return;
+            }
+            const a = this.elegido;
+            if (!a) {
+                return;
+            }
+            if (this.ejemplo) {
+                this.avisoPlano = 'Este es un almacén de ejemplo: todavía no tienes pasillos registrados. Ármalo en «Armar almacén».';
+                return;
+            }
+            const grupo = this.grupoDe(a).map((b) => b.clave);
+            const claves = grupo.filter((clave) => !ocupados.has(clave));
+            const clavePasillo = `${a.zona}-${dosDigitos(a.pasillo)}`;
+            if (!claves.length) {
+                this.avisoPlano = registrados.has(clavePasillo)
+                    ? 'Tiene productos ubicados: muévelos a otro hueco (en «Ver almacén») o cámbiales la ubicación antes de borrarlo.'
+                    : `El pasillo ${dosDigitos(a.pasillo)} sale de las ubicaciones que tienen los productos. Para quitarlo hay que cambiarles la ubicación a esos productos.`;
+                return;
+            }
+            const pasilloEntero = this.moverPasillo && claves.length === grupo.length && registrados.has(clavePasillo);
+            const que = pasilloEntero
+                ? `el pasillo ${dosDigitos(a.pasillo)} completo`
+                : claves.length === 1 ? `el anaquel ${this.etiquetaAnaquel(a)}` : `${claves.length} anaqueles del pasillo ${dosDigitos(a.pasillo)}`;
+            if (!confirm(`¿Borrar ${que}? Se quita del plano al guardar el acomodo.`)) {
+                return;
+            }
+            for (const clave of claves) {
+                delete this.config.disposicion[clave];
+            }
+            this.config.quitados = [...new Set([...this.config.quitados, ...claves])].sort();
+            if (pasilloEntero) {
+                // La lista de pasillos del formulario tiene su propio estado (x-data del fieldset).
+                window.dispatchEvent(new CustomEvent('quitar-pasillo', { detail: clavePasillo }));
+            } else if (claves.length < grupo.length) {
+                this.avisoPlano = `${grupo.length - claves.length} anaqueles tienen productos ubicados y se quedaron.`;
+            }
+            this.seleccionado = null;
+        },
+
+        devolverBorrados() {
+            if (confirm('¿Volver a poner los anaqueles borrados?')) {
+                this.config.quitados = [];
+                this.$nextTick(() => this.encajar());
+            }
+        },
+
         restaurarTodo() {
             if (confirm('¿Volver todos los anaqueles a su lugar automático?')) {
                 this.config.disposicion = {};
@@ -297,12 +461,23 @@ export default function almacenConfig({ plano, config }) {
         teclado(evento) {
             const a = this.elegido;
             const pasos = { ArrowLeft: [-0.1, 0], ArrowRight: [0.1, 0], ArrowUp: [0, -0.1], ArrowDown: [0, 0.1] };
-            if (!a) {
+            const e = this.entradaElegida;
+            if (e && pasos[evento.key]) {
+                evento.preventDefault();
+                e.x = redondear(e.x + pasos[evento.key][0]);
+                e.z = redondear(e.z + pasos[evento.key][1]);
+                return;
+            }
+            if (!a && !e) {
                 return;
             }
             if (evento.key === 'r' || evento.key === 'R') {
                 evento.preventDefault();
                 return this.girar();
+            }
+            if (evento.key === 'Delete' || evento.key === 'Backspace') {
+                evento.preventDefault();
+                return this.borrar();
             }
             const paso = pasos[evento.key];
             if (paso) {

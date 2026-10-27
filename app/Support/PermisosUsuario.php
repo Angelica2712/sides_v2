@@ -15,6 +15,7 @@ class PermisosUsuario
             'activarPicking' => ['Picking', 'Recolecta pedidos, también en Batch Picking.'],
             'activarLiberarAlcabala' => ['Liberar pedidos en espera', 'En Batch Picking, pasa pedidos en espera al picking normal.'],
             'activarPacking' => ['Packing', 'Verifica y embala pedidos.'],
+            'activarUbicaciones' => ['Registrar ubicaciones', 'Registra desde el teléfono dónde está cada producto y numera los pasillos y anaqueles del almacén.'],
         ],
         'Pedidos' => [
             'activarPedido' => ['Pedidos', 'Consulta y modifica pedidos.'],

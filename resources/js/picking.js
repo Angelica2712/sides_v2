@@ -218,6 +218,10 @@ export default function pickingPedido({ renglones, urls, requiereClave, ordenLib
             }
         },
 
+        navegar3d(accion) {
+            visor?.navegar(accion);
+        },
+
         avisar(texto, tipo = 'error') {
             this.mensaje = texto;
             this.tipoMensaje = tipo;

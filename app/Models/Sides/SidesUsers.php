@@ -19,7 +19,7 @@ class SidesUsers extends Authenticatable
 
     protected $table = 'sides_users';
     protected $primaryKey = 'id';
-    protected $fillable = ['name', 'email', 'password', 'estado', 'clave', 'activarMonitor', 'activarPicking', 'activarPacking', 'activarUsuario', 'activarConfig', 'eliminarPedido', 'activarResetear', 'activarPedido', 'activarResumen', 'codisb', 'activarInformes', 'activarGuiaCarga', 'activarGuiaDescarga', 'activarLiberarAlcabala', 'esAdmin'];
+    protected $fillable = ['name', 'email', 'password', 'estado', 'clave', 'activarMonitor', 'activarPicking', 'activarPacking', 'activarUsuario', 'activarConfig', 'eliminarPedido', 'activarResetear', 'activarPedido', 'activarResumen', 'codisb', 'activarInformes', 'activarGuiaCarga', 'activarGuiaDescarga', 'activarLiberarAlcabala', 'activarUbicaciones', 'esAdmin'];
     protected $hidden = ['password', 'remember_token', 'clave'];
 
     protected function casts(): array

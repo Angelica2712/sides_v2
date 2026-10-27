@@ -4,6 +4,7 @@ use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\AdminAlmacenController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AlmacenController;
+use App\Http\Controllers\ArmarAlmacenController;
 use App\Http\Controllers\AuditoriaController;
 use App\Http\Controllers\BatchPickingController;
 use App\Http\Controllers\ConfiguracionController;
@@ -21,6 +22,7 @@ use App\Http\Controllers\PickingController;
 use App\Http\Controllers\ResumenController;
 use App\Http\Controllers\RutasController;
 use App\Http\Controllers\SsoController;
+use App\Http\Controllers\UbicacionesController;
 use App\Http\Controllers\UsuariosController;
 use App\Http\Controllers\WebhooksController;
 use App\Support\MenuSides;
@@ -72,6 +74,27 @@ Route::middleware('auth')->group(function () {
             Route::get('/', 'index')->name('index');
             Route::get('plano', 'plano')->name('plano');
             Route::get('buscar', 'buscar')->name('buscar');
+        });
+
+    // Pestañas del Almacén 3D para registrar ubicaciones y numerar los anaqueles.
+    Route::prefix('almacen')->name('almacen.')->middleware(['permiso:almacen', 'permiso:ubicaciones'])
+        ->controller(UbicacionesController::class)
+        ->group(function () {
+            Route::get('ubicaciones', 'index')->name('ubicaciones');
+            Route::get('ubicaciones/buscar', 'buscar')->name('ubicaciones.buscar');
+            Route::put('ubicaciones/producto', 'guardar')->name('ubicaciones.guardar');
+            Route::delete('ubicaciones/producto', 'quitar')->name('ubicaciones.quitar');
+            Route::get('acomodo', 'acomodo')->name('acomodo');
+            Route::put('acomodo', 'guardarAcomodo')->name('acomodo.update');
+            Route::delete('acomodo', 'restablecerAcomodo')->name('acomodo.restablecer');
+        });
+
+    Route::prefix('almacen/armar')->name('almacen.armar')->middleware(['permiso:almacen', 'permiso:ubicaciones'])
+        ->controller(ArmarAlmacenController::class)
+        ->group(function () {
+            Route::get('/', 'index')->name('');
+            Route::put('pasillo', 'guardar')->name('.guardar');
+            Route::delete('pasillo', 'quitar')->name('.quitar');
         });
 
     Route::prefix('admin')->name('admin.')->middleware('permiso:admin')

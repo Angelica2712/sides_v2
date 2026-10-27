@@ -64,8 +64,11 @@ class MenuSides
      */
     public const CONTROLABLES = [...self::BASICOS, ...self::OPCIONALES];
 
-    /** Módulos que dependen de otro con otra clave. */
-    private const DEPENDE_DE = ['despacho' => 'guias'];
+    /**
+     * Módulos que dependen de otro con otra clave. "ubicaciones" no sale en el menú: son las
+     * pestañas del Almacén 3D para registrar ubicaciones y numerar los anaqueles.
+     */
+    private const DEPENDE_DE = ['despacho' => 'guias', 'ubicaciones' => 'almacen'];
 
     public static function puede(SidesUsers $usuario, ?SidesCfg $cfg, string $clave): bool
     {
@@ -84,8 +87,10 @@ class MenuSides
         return match ($clave) {
             'monitor' => (bool) $usuario->activarMonitor,
             'picking', 'batch' => (bool) $usuario->activarPicking,
-            // El almacén lo usan quienes recogen y quienes verifican.
-            'almacen' => $usuario->activarPicking || $usuario->activarPacking,
+            // El almacén lo usan quienes recogen, quienes verifican y quienes lo numeran.
+            'almacen' => $usuario->activarPicking || $usuario->activarPacking || $usuario->activarUbicaciones || $usuario->activarConfig,
+            // Registran ubicaciones y numeran el almacén quienes tienen el permiso y quien administra la droguería.
+            'ubicaciones' => $usuario->activarUbicaciones || $usuario->activarConfig,
             'packing' => $usuario->activarPacking && $cfg?->activarPacking,
             // El interruptor de la droguería (legacy activarEtiPacking) es ahora el módulo opcional.
             'etiquetas' => ! $usuario->activarGuiaCarga && ! $usuario->activarGuiaDescarga && ! $soloPicking,

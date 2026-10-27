@@ -6,6 +6,7 @@ use App\Models\Seped\Pedido;
 use App\Models\Sides\SidesPedidoOperacion;
 use App\Models\Sides\SidesPedrenOperacion;
 use App\Models\Sides\SidesUsers;
+use App\Services\Almacen\UbicacionesRegistradas;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -37,16 +38,20 @@ class AsignacionPicking
 
     /**
      * Crea en sides_pedren_operacion los renglones que falten (pedidos nuevos que llegan de
-     * SEPED) con cantdesp/chequeado = -1 ("sin revisar"), y les asigna el recipiente.
+     * SEPED) con cantdesp/chequeado = -1 ("sin revisar"), y les asigna el recipiente. La ubicación
+     * es la registrada en SIDES si hay una, si no la del ERP.
      */
     private function prepararRenglones(Pedido $pedido, string $recipiente): void
     {
         $existentes = SidesPedrenOperacion::query()->where('id_pedido', $pedido->id)->pluck('item')->all();
 
-        $nuevos = DB::table('pedren')
-            ->where('id', $pedido->id)
-            ->whereNotIn('item', $existentes)
-            ->get(['item', 'ubicacion', 'deposito', 'lote', 'feclote'])
+        $nuevos = UbicacionesRegistradas::unir(DB::table('pedren'), 'pedren')
+            ->where('pedren.id', $pedido->id)
+            ->whereNotIn('pedren.item', $existentes)
+            ->get([
+                'pedren.item', 'pedren.deposito', 'pedren.lote', 'pedren.feclote',
+                DB::raw(UbicacionesRegistradas::sql('pedren.ubicacion').' as ubicacion'),
+            ])
             ->map(fn ($renglon) => [
                 'id_pedido' => $pedido->id,
                 'item' => $renglon->item,
