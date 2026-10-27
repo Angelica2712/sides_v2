@@ -249,15 +249,16 @@ export async function crearVisor(contenedor, plano) {
         vuelo = { desde: [camara.position.clone(), controles.target.clone()], hasta: [posicion, objetivo], inicio: performance.now(), duracion };
     };
     // Al desplazarse no se puede salir del almacén (con un margen): así nadie se pierde en el vacío.
-    const zonaPermitida = limites.clone().expandByScalar(4);
-    const corrimiento = new THREE.Vector3();
+    const zonaPermitida = limites.clone().expandByScalar(8);
+    /** Lo que hay que correr un punto del piso para que quede dentro de la zona permitida. */
+    const corrimientoPara = ({ x, z }) => new THREE.Vector3(
+        Math.min(Math.max(x, zonaPermitida.min.x), zonaPermitida.max.x) - x,
+        0,
+        Math.min(Math.max(z, zonaPermitida.min.z), zonaPermitida.max.z) - z,
+    );
+    // Arrastrando: el borde frena el desplazamiento.
     const mantenerDentro = () => {
-        const { x, z } = controles.target;
-        corrimiento.set(
-            Math.min(Math.max(x, zonaPermitida.min.x), zonaPermitida.max.x) - x,
-            0,
-            Math.min(Math.max(z, zonaPermitida.min.z), zonaPermitida.max.z) - z,
-        );
+        const corrimiento = corrimientoPara(controles.target);
         if (corrimiento.lengthSq()) {
             controles.target.add(corrimiento);
             camara.position.add(corrimiento);
@@ -276,7 +277,17 @@ export async function crearVisor(contenedor, plano) {
         const adelante = new THREE.Vector3(mirada.x, 0, mirada.z).normalize();
         const derecha = new THREE.Vector3(-adelante.z, 0, adelante.x);
         const paso = Math.min(Math.max(distancia * 0.12, 1), 5);
-        const desplazar = (vector) => volar(posicion.add(vector), objetivo.add(vector), 350);
+        // El destino se recorta al borde antes de volar: si se volara más allá, al llegar
+        // mantenerDentro lo devolvería de golpe.
+        const desplazar = (vector) => {
+            objetivo.add(vector);
+            const corrimiento = corrimientoPara(objetivo);
+            vector.add(corrimiento);
+            if (vector.lengthSq() < 1e-6) {
+                return;
+            }
+            volar(posicion.add(vector), objetivo.add(corrimiento), 350);
+        };
 
         if (accion === 'izquierda') desplazar(derecha.multiplyScalar(-paso));
         if (accion === 'derecha') desplazar(derecha.multiplyScalar(paso));
