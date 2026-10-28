@@ -78,7 +78,7 @@ class AdminAlmacenTest extends TestCase
     public function test_el_plano_de_la_drogueria_lleva_su_acomodo(): void
     {
         $this->guardar();
-        $operario = $this->crearUsuario(['email' => 'op@example.com', 'codisb' => 'DROMARKO', 'activarPicking' => 1]);
+        $operario = $this->crearUsuario(['activarAlmacen' => 1, 'email' => 'op@example.com', 'codisb' => 'DROMARKO', 'activarPicking' => 1]);
 
         $plano = $this->actingAs($operario)->getJson('/almacen/plano')->assertOk()->json();
 
@@ -93,7 +93,7 @@ class AdminAlmacenTest extends TestCase
         $this->assertSame(['QX-01-02' => ['x' => 4.5, 'z' => -2.0, 'giro' => 90]], ConfigAlmacen::de('DROMARKO')['disposicion']);
 
         // El plano que usan el Almacén 3D y el picking lleva la disposición.
-        $operario = $this->crearUsuario(['email' => 'op2@example.com', 'codisb' => 'DROMARKO', 'activarPicking' => 1]);
+        $operario = $this->crearUsuario(['activarAlmacen' => 1, 'email' => 'op2@example.com', 'codisb' => 'DROMARKO', 'activarPicking' => 1]);
         $plano = $this->actingAs($operario)->getJson('/almacen/plano')->json();
         $this->assertSame(['x' => 4.5, 'z' => -2, 'giro' => 90], $plano['config']['disposicion']['QX-01-02']);
 
@@ -119,7 +119,7 @@ class AdminAlmacenTest extends TestCase
 
     public function test_la_drogueria_no_entra_al_almacen_de_otra_desde_administracion(): void
     {
-        $encargado = $this->crearUsuario(['email' => 'enc@example.com', 'codisb' => 'DROMARKO', 'activarConfig' => 1, 'activarUsuario' => 1, 'activarPicking' => 1]);
+        $encargado = $this->crearUsuario(['activarAlmacen' => 1, 'email' => 'enc@example.com', 'codisb' => 'DROMARKO', 'activarConfig' => 1, 'activarUsuario' => 1, 'activarPicking' => 1]);
 
         $this->actingAs($encargado)->get('/admin/droguerias/DROMARKO/almacen')->assertForbidden();
         $this->actingAs($encargado)->put('/admin/droguerias/DROMARKO/almacen', ['numeracion' => 'u'])->assertForbidden();

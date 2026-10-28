@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Sides\SidesUsers;
+use App\Support\MenuSides;
 use Illuminate\Support\Facades\DB;
 use Tests\Concerns\TablasSides;
 use Tests\TestCase;
@@ -20,7 +21,7 @@ class AlmacenTest extends TestCase
         $this->crearTablasSides();
         $this->crearTablasPedidos();
         $this->crearCfg();
-        $this->operario = $this->crearUsuario(['name' => 'Ana', 'email' => 'ana@example.com', 'activarPicking' => 1]);
+        $this->operario = $this->crearUsuario(['activarAlmacen' => 1, 'name' => 'Ana', 'email' => 'ana@example.com', 'activarPicking' => 1]);
 
         DB::table('producto')->insert([
             ['codprod' => 'A1', 'codisb' => '505094939', 'desprod' => 'ACETAMINOFEN 500', 'barra' => '7701', 'ubicacion' => 'PK-01-02-C-04'],
@@ -72,11 +73,20 @@ class AlmacenTest extends TestCase
         $this->assertSame([], $viejo[0]['ubicaciones']);
     }
 
-    public function test_sin_permiso_de_picking_ni_packing_no_entra(): void
+    public function test_sin_el_permiso_almacen_no_entra_aunque_haga_picking(): void
     {
-        $otro = $this->crearUsuario(['name' => 'Rosa', 'email' => 'rosa@example.com', 'activarPicking' => 0, 'activarPacking' => 0, 'activarPedido' => 1]);
+        $otro = $this->crearUsuario(['name' => 'Rosa', 'email' => 'rosa@example.com', 'activarPicking' => 1, 'activarConfig' => 1]);
 
         $this->actingAs($otro)->get('/almacen')->assertForbidden();
+        $this->actingAs($otro)->getJson('/almacen/plano')->assertForbidden();
+        $this->assertNotContains('almacen', array_column(MenuSides::visibles($otro, $otro->cfg), 'clave'));
+    }
+
+    public function test_el_permiso_almacen_sale_en_el_formulario_de_usuarios(): void
+    {
+        $admin = $this->crearUsuario(['email' => 'adm@example.com', 'activarUsuario' => 1]);
+
+        $this->actingAs($admin)->get('/usuarios/nuevo')->assertOk()->assertSee('Almacén 3D')->assertSee('activarAlmacen');
     }
 
     public function test_el_picking_ofrece_el_almacen_con_el_modulo_activo(): void

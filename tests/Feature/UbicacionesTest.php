@@ -25,7 +25,7 @@ class UbicacionesTest extends TestCase
         $this->crearTablasSides();
         $this->crearTablasPedidos();
         $this->crearCfg();
-        $this->registrador = $this->crearUsuario(['name' => 'Luis', 'email' => 'luis@example.com', 'activarUbicaciones' => 1]);
+        $this->registrador = $this->crearUsuario(['activarAlmacen' => 1, 'name' => 'Luis', 'email' => 'luis@example.com', 'activarUbicaciones' => 1]);
 
         DB::table('producto')->insert([
             ['codprod' => 'A1', 'codisb' => '505094939', 'desprod' => 'ACETAMINOFEN 500', 'barra' => '7701', 'ubicacion' => 'A01PICK24'],
@@ -47,10 +47,10 @@ class UbicacionesTest extends TestCase
             ->assertSee('Ubicaciones')
             ->assertSee(route('almacen.acomodo'));
 
-        $encargado = $this->crearUsuario(['email' => 'enc@example.com', 'activarConfig' => 1]);
+        $encargado = $this->crearUsuario(['activarAlmacen' => 1, 'email' => 'enc@example.com', 'activarConfig' => 1]);
         $this->actingAs($encargado)->get('/almacen/ubicaciones')->assertOk();
 
-        $operario = $this->crearUsuario(['email' => 'op@example.com', 'activarPicking' => 1]);
+        $operario = $this->crearUsuario(['activarAlmacen' => 1, 'email' => 'op@example.com', 'activarPicking' => 1]);
         $this->actingAs($operario)->get('/almacen/ubicaciones')->assertForbidden();
         $this->actingAs($operario)->putJson('/almacen/ubicaciones/producto', ['codprod' => 'A1', 'ubicacion' => 'PK-01-01'])->assertForbidden();
     }
@@ -70,7 +70,7 @@ class UbicacionesTest extends TestCase
             ->assertSee('agarra la caja naranja');
 
         // Quien solo recoge ve el almacén, sin pestañas ni arrastre.
-        $operario = $this->crearUsuario(['email' => 'op@example.com', 'activarPicking' => 1]);
+        $operario = $this->crearUsuario(['activarAlmacen' => 1, 'email' => 'op@example.com', 'activarPicking' => 1]);
         $this->actingAs($operario)->get('/almacen')
             ->assertOk()
             ->assertDontSee(route('almacen.ubicaciones'))
@@ -163,7 +163,7 @@ class UbicacionesTest extends TestCase
     {
         $this->guardar('A1', 'FR-01-02-A-01');
         $this->guardar('L5', 'FR-01-02-A-02');
-        $operario = $this->crearUsuario(['email' => 'op@example.com', 'activarPicking' => 1]);
+        $operario = $this->crearUsuario(['activarAlmacen' => 1, 'email' => 'op@example.com', 'activarPicking' => 1]);
 
         $plano = $this->actingAs($operario)->getJson('/almacen/plano')->json();
         $this->assertSame(['FR'], array_column($plano['zonas'], 'zona'));
@@ -180,7 +180,7 @@ class UbicacionesTest extends TestCase
         $this->crearRenglon(700, 2, ['codprod' => 'L5', 'ubicacion' => 'PK-02-01-A-01']);
         $this->guardar('A1', 'PK-01-01-A-01');
 
-        $operario = $this->crearUsuario(['email' => 'op@example.com', 'activarPicking' => 1]);
+        $operario = $this->crearUsuario(['activarAlmacen' => 1, 'email' => 'op@example.com', 'activarPicking' => 1]);
         $this->actingAs($operario)->post('/picking/700/tomar', ['recipiente' => 'C1']);
 
         // Al tomar el pedido se copia la de SIDES en la operación.
@@ -224,7 +224,7 @@ class UbicacionesTest extends TestCase
         $this->assertSame('luis@example.com', SidesAlmacenCfg::query()->find('505094939')->actualizado_por);
 
         // El plano dibuja los anaqueles registrados aunque no tengan productos.
-        $operario = $this->crearUsuario(['email' => 'op@example.com', 'activarPicking' => 1]);
+        $operario = $this->crearUsuario(['activarAlmacen' => 1, 'email' => 'op@example.com', 'activarPicking' => 1]);
         $plano = $this->actingAs($operario)->getJson('/almacen/plano')->json();
         $pk = collect($plano['zonas'])->firstWhere('zona', 'PK');
         $this->assertSame([1, 2], array_column($pk['pasillos'], 'pasillo'));
@@ -379,7 +379,7 @@ class UbicacionesTest extends TestCase
 
         $this->assertNull(SidesAlmacenCfg::query()->find('505094939'));
 
-        $operario = $this->crearUsuario(['email' => 'op@example.com', 'activarPicking' => 1]);
+        $operario = $this->crearUsuario(['activarAlmacen' => 1, 'email' => 'op@example.com', 'activarPicking' => 1]);
         $this->actingAs($operario)->get('/almacen/armar')->assertForbidden();
     }
 

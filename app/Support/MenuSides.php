@@ -87,8 +87,9 @@ class MenuSides
         return match ($clave) {
             'monitor' => (bool) $usuario->activarMonitor,
             'picking', 'batch' => (bool) $usuario->activarPicking,
-            // El almacén lo usan quienes recogen, quienes verifican y quienes lo numeran.
-            'almacen' => $usuario->activarPicking || $usuario->activarPacking || $usuario->activarUbicaciones || $usuario->activarConfig,
+            // Permiso propio desde 2026-10-28; la migración se lo dio a quienes ya lo veían
+            // (Picking, Packing, Registrar ubicaciones o Configuración). También es el mapa del picking.
+            'almacen' => (bool) $usuario->activarAlmacen,
             // Registran ubicaciones y numeran el almacén quienes tienen el permiso y quien administra la droguería.
             'ubicaciones' => $usuario->activarUbicaciones || $usuario->activarConfig,
             'packing' => $usuario->activarPacking && $cfg?->activarPacking,
