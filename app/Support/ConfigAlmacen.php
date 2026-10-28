@@ -39,6 +39,7 @@ class ConfigAlmacen
         'zonas' => [],
         'pasillos' => [],
         'quitados' => [],
+        'extras' => [],
         'disposicion' => [],
         'entradas' => [],
     ];
@@ -67,6 +68,9 @@ class ConfigAlmacen
      * quitados: anaqueles de los pasillos registrados que se borraron en el plano ("PK-03-05"),
      * porque ahí no hay anaquel. Uno con productos ubicados se sigue dibujando igual.
      *
+     * extras: anaqueles sueltos con el número que se les puso a mano en el 3D ("PK-03-15"), por
+     * ejemplo al cambiarle el número a uno de un pasillo registrado (el viejo pasa a quitados).
+     *
      * disposicion: anaqueles movidos a mano en el plano, por "ZONA-PASILLO-ANAQUEL"
      * (PK-03-12) => centro en metros del plano (x, z) y giro (0, 90, 180 o 270; 0 = el frente mira
      * hacia +z). Los que no están ahí se acomodan solos según la numeración.
@@ -74,7 +78,7 @@ class ConfigAlmacen
      * entradas: puertas del almacén puestas en el plano, con su centro (x, z), su giro (0 = se
      * entra caminando hacia +z) y un nombre opcional ("Carga", "Principal").
      *
-     * @return array{numeracion: string, estanteA: string, posicion1: string, estantes: int, posiciones: int, zonas: array<string, string>, pasillos: array<string, array{izquierda: int, derecha: int, estantes: ?int, posiciones: ?int}>, quitados: list<string>, disposicion: array<string, array{x: float, z: float, giro: int}>, entradas: list<array{x: float, z: float, giro: int, nombre: string}>}
+     * @return array{numeracion: string, estanteA: string, posicion1: string, estantes: int, posiciones: int, zonas: array<string, string>, pasillos: array<string, array{izquierda: int, derecha: int, estantes: ?int, posiciones: ?int}>, quitados: list<string>, extras: list<string>, disposicion: array<string, array{x: float, z: float, giro: int}>, entradas: list<array{x: float, z: float, giro: int, nombre: string}>}
      */
     public static function de(string $codisb): array
     {
@@ -121,6 +125,14 @@ class ConfigAlmacen
         sort($quitados);
         $quitados = array_slice($quitados, 0, self::MAXIMO_MOVIDOS);
 
+        // Anaquel 00 o pasillo 00 no existen en el formato.
+        $extras = array_values(array_unique(array_filter(
+            array_map(fn ($clave) => (string) $clave, (array) ($config['extras'] ?? [])),
+            fn (string $clave) => preg_match('/^[A-Z]{2}-(\d{2})-(\d{2})$/', $clave, $partes) === 1 && (int) $partes[1] > 0 && (int) $partes[2] > 0,
+        )));
+        sort($extras);
+        $extras = array_slice($extras, 0, self::MAXIMO_MOVIDOS);
+
         $esLugar = fn ($lugar) => is_array($lugar) && is_numeric($lugar['x'] ?? null) && is_numeric($lugar['z'] ?? null);
         $giro = fn ($lugar) => (((int) round(((float) ($lugar['giro'] ?? 0)) / 90)) * 90 % 360 + 360) % 360;
         $metros = fn ($valor) => round(min(max((float) $valor, -1000), 1000), 2);
@@ -161,6 +173,7 @@ class ConfigAlmacen
             'zonas' => $zonas,
             'pasillos' => $pasillos,
             'quitados' => $quitados,
+            'extras' => $extras,
             'disposicion' => $disposicion,
             'entradas' => $entradas,
         ];

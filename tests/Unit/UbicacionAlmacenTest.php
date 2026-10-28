@@ -101,6 +101,7 @@ class UbicacionAlmacenTest extends TestCase
             'zonas' => ['PK' => 'Despacho rápido'],
             'pasillos' => [],
             'quitados' => [],
+            'extras' => [],
             'disposicion' => [],
             'entradas' => [],
         ], $config);

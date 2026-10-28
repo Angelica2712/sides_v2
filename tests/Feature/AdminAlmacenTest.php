@@ -67,6 +67,7 @@ class AdminAlmacenTest extends TestCase
             'zonas' => ['PK' => 'Despacho', 'QX' => 'Quirúrgicos'],
             'pasillos' => [],
             'quitados' => [],
+            'extras' => [],
             'disposicion' => [],
             'entradas' => [],
         ], SidesAlmacenCfg::query()->find('DROMARKO')->config);

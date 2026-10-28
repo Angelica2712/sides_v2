@@ -34,7 +34,8 @@ function azar(...semillas) {
     return ((h >>> 0) % 1000) / 1000;
 }
 
-export async function crearVisor(contenedor, plano) {
+/** opciones.vista: { posicion, objetivo } de una vista anterior (ver vista()), para no mover la cámara al redibujar. */
+export async function crearVisor(contenedor, plano, { vista: vistaInicial = null } = {}) {
     const [THREE, { MapControls }] = await Promise.all([
         import('three'),
         import('three/examples/jsm/controls/MapControls.js'),
@@ -137,7 +138,8 @@ export async function crearVisor(contenedor, plano) {
                 agregar('caja', punto(-a.ancho / 2 + (p + 0.5) * hueco, e * ESTANTE_ALTO + 0.04 + h / 2, 0), [hueco * 0.8, h, FONDO * 0.75], a.giro);
             }
         }
-        rotular(String(a.anaquel).padStart(2, '0'), punto(0, alto + 0.45, 0), { tamano: 0.24 });
+        // Pasillo y anaquel encima de cada uno, para ver cómo quedó numerado.
+        rotular(`P${String(a.pasillo).padStart(2, '0')}·${String(a.anaquel).padStart(2, '0')}`, punto(0, alto + 0.45, 0), { tamano: 0.24 });
     }
 
     // Pasillos: el piso claro solo si ninguno de sus anaqueles se movió a mano; el cartel en la
@@ -331,6 +333,10 @@ export async function crearVisor(contenedor, plano) {
     observador.observe(contenedor);
     ajustar();
     vistaGeneral(true);
+    if (vistaInicial) {
+        camara.position.fromArray(vistaInicial.posicion);
+        controles.target.fromArray(vistaInicial.objetivo);
+    }
 
     let cuadro = 0;
     let reloj = 0;
@@ -469,12 +475,109 @@ export async function crearVisor(contenedor, plano) {
             destino.clear();
         }
     };
-    contenedor.addEventListener('pointerdown', presionar, true);
-    contenedor.addEventListener('pointermove', mover, true);
-    contenedor.addEventListener('pointerup', soltar, true);
-    contenedor.addEventListener('pointercancel', soltar, true);
+    // ---- Editor del acomodo: tocar un anaquel lo elige; los elegidos se arrastran por el piso ----
+
+    let edicion = null;
+    let marcadas = new Set();
+    const marcados = new THREE.Group();
+    escena.add(marcados);
+    const materialMarcado = material(COLORES.principal, { transparent: true, opacity: 0.4, depthWrite: false });
+    desechables.push(materialMarcado);
+    const piso0 = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+    let toque = null;
+
+    const anaquelBajo = (evento) => {
+        apuntar(evento);
+        const [golpe] = rayo.intersectObject(volumenes, false);
+        return golpe ? disposicion.anaqueles[golpe.instanceId] : null;
+    };
+    const puntoEnPiso = (evento) => {
+        apuntar(evento);
+        return rayo.ray.intersectPlane(piso0, new THREE.Vector3());
+    };
+    const marcar = (claves) => {
+        marcados.clear();
+        marcados.position.set(0, 0, 0);
+        marcadas = new Set(claves);
+        for (const a of disposicion.anaqueles.filter((b) => marcadas.has(b.clave))) {
+            const alto = a.estantes * ESTANTE_ALTO;
+            const malla = new THREE.Mesh(cubo, materialMarcado);
+            malla.position.set(a.x, alto / 2, a.z);
+            malla.quaternion.copy(giroY(a.giro));
+            malla.scale.set(a.ancho + 0.1, alto + 0.1, FONDO + 0.1);
+            marcados.add(malla);
+        }
+    };
+
+    const presionarEdicion = (evento) => {
+        if (!edicion || evento.button > 0) {
+            return;
+        }
+        const a = anaquelBajo(evento);
+        toque = { x: evento.clientX, y: evento.clientY, clave: a?.clave ?? null, inicio: null, arrastro: false };
+        // Sobre lo elegido se agarra para moverlo (la cámara se queda quieta); si no, la vista se
+        // desplaza como siempre y, si el dedo no se movió, al soltar se elige lo tocado.
+        if (a && marcadas.has(a.clave)) {
+            toque.inicio = puntoEnPiso(evento);
+            evento.stopPropagation();
+            controles.enabled = false;
+            contenedor.setPointerCapture(evento.pointerId);
+            render.domElement.style.cursor = 'grabbing';
+        }
+    };
+    const moverEdicion = (evento) => {
+        if (!toque?.inicio) {
+            return;
+        }
+        const punto = puntoEnPiso(evento);
+        if (punto) {
+            toque.arrastro = true;
+            marcados.position.set(punto.x - toque.inicio.x, 0, punto.z - toque.inicio.z);
+        }
+    };
+    const soltarEdicion = (evento) => {
+        if (!toque) {
+            return;
+        }
+        const { x, y, clave, inicio, arrastro } = toque;
+        toque = null;
+        controles.enabled = true;
+        render.domElement.style.cursor = '';
+        const movio = Math.hypot(evento.clientX - x, evento.clientY - y) > 6;
+        if (inicio && arrastro && movio) {
+            const { x: dx, z: dz } = marcados.position;
+            edicion.alMover(Math.round(dx * 100) / 100, Math.round(dz * 100) / 100);
+            return;
+        }
+        marcados.position.set(0, 0, 0);
+        if (!movio) {
+            edicion.alElegir(clave);
+        }
+    };
+
+    const escuchas = [
+        ['pointerdown', presionar], ['pointermove', mover], ['pointerup', soltar], ['pointercancel', soltar],
+        ['pointerdown', presionarEdicion], ['pointermove', moverEdicion], ['pointerup', soltarEdicion], ['pointercancel', soltarEdicion],
+    ];
+    for (const [evento, funcion] of escuchas) {
+        contenedor.addEventListener(evento, funcion, true);
+    }
 
     return {
+        /**
+         * Modo edición del acomodo: alElegir(clave o null) al tocar un anaquel o el piso, y
+         * alMover(dx, dz) al soltar los anaqueles marcados después de arrastrarlos.
+         */
+        editar(opciones) {
+            edicion = opciones;
+        },
+        /** Marca (en naranja translúcido) los anaqueles elegidos en el editor. */
+        marcar,
+        /** Dónde está la cámara, para dejarla igual al volver a dibujar. */
+        vista: () => ({
+            posicion: (vuelo ? vuelo.hasta[0] : camara.position).toArray(),
+            objetivo: (vuelo ? vuelo.hasta[1] : controles.target).toArray(),
+        }),
         /**
          * Deja agarrar la caja naranja y soltarla en otro hueco: alSoltar recibe la ubicación
          * completa donde cayó (la caja verde queda marcada hasta limpiarDestino). null lo apaga.
@@ -488,10 +591,12 @@ export async function crearVisor(contenedor, plano) {
         },
         limpiarDestino: () => destino.clear(),
         /**
-         * Resalta la ubicación buscada (texto o ya interpretada) y, más tenues, las siguientes.
-         * Devuelve false si la ubicación no está en el plano.
+         * Resalta la ubicación buscada (texto o ya interpretada) y, más tenues, las siguientes, y
+         * lleva la cámara hasta ella (salvo con { volar: false }). Devuelve false si la ubicación
+         * no está en el plano.
          */
-        resaltar(buscada, siguientes = []) {
+        resaltar(buscada, siguientes = [], { volar: conVuelo = true } = {}) {
+            const llevar = conVuelo ? volar : () => {};
             resaltados.clear();
             destino.clear();
             rotulos.splice(0).forEach((recurso) => recurso.dispose());
@@ -508,7 +613,9 @@ export async function crearVisor(contenedor, plano) {
             const ubicacion = typeof buscada === 'string' ? interpretar(buscada) : buscada;
             const encontrada = ubicacion ? caja(ubicacion, materialPrincipal) : null;
             if (!encontrada) {
-                vistaGeneral();
+                if (conVuelo) {
+                    vistaGeneral();
+                }
                 return false;
             }
 
@@ -526,11 +633,11 @@ export async function crearVisor(contenedor, plano) {
                     rotulo.position.set(...posicion);
                     resaltados.add(rotulo);
                 }
-                volar(new THREE.Vector3(...datos.camara), objetivo);
+                llevar(new THREE.Vector3(...datos.camara), objetivo);
             } else {
                 const [x, , z] = datos.centro;
                 const distancia = Math.max(...datos.tamano, 4);
-                volar(new THREE.Vector3(x - distancia * 0.3, distancia * 0.9, z + distancia * 1.1), objetivo);
+                llevar(new THREE.Vector3(x - distancia * 0.3, distancia * 0.9, z + distancia * 1.1), objetivo);
             }
             return true;
         },
@@ -540,10 +647,9 @@ export async function crearVisor(contenedor, plano) {
         destruir() {
             cancelAnimationFrame(cuadro);
             observador.disconnect();
-            contenedor.removeEventListener('pointerdown', presionar, true);
-            contenedor.removeEventListener('pointermove', mover, true);
-            contenedor.removeEventListener('pointerup', soltar, true);
-            contenedor.removeEventListener('pointercancel', soltar, true);
+            for (const [evento, funcion] of escuchas) {
+                contenedor.removeEventListener(evento, funcion, true);
+            }
             controles.dispose();
             escena.traverse((objeto) => objeto.isInstancedMesh && objeto.dispose());
             [...desechables, ...rotulos].forEach((recurso) => recurso.dispose());

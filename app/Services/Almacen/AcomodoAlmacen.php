@@ -47,36 +47,29 @@ class AcomodoAlmacen
             'posiciones' => ['required', 'integer', 'min:1', 'max:30'],
             'zonas' => ['array'],
             'zonas.*' => ['nullable', 'string', 'max:40'],
-            'pasillos' => ['array', 'max:'.ConfigAlmacen::MAXIMO_PASILLOS],
-            'pasillos.*.zona' => ['required', 'string', 'regex:/^[A-Za-z]{2}$/'],
-            'pasillos.*.pasillo' => ['required', 'integer', 'min:1', 'max:99'],
-            ...self::REGLAS_PASILLO,
-            // Lo arma el editor del plano: {"PK-03-12": {"x": 1.5, "z": 4, "giro": 90}, ...}
+            // Todo lo arma el editor (lista de pasillos, plano y 3D) y ConfigAlmacen::normalizar
+            // descarta lo que no sea válido.
+            // Pasillos registrados: {"PK-03": {"izquierda": 6, "derecha": 6, "estantes": 4, "posiciones": 4}, ...}
+            'pasillos' => ['nullable', 'json', 'max:100000'],
+            // Anaqueles movidos: {"PK-03-12": {"x": 1.5, "z": 4, "giro": 90}, ...}
             'disposicion' => ['nullable', 'json', 'max:500000'],
-            // Anaqueles borrados en el plano: ["PK-03-05", ...]
+            // Anaqueles borrados en el plano y anaqueles sueltos numerados a mano: ["PK-03-05", ...]
             'quitados' => ['nullable', 'json', 'max:100000'],
+            'extras' => ['nullable', 'json', 'max:100000'],
             // Puertas del almacén: [{"x": 0, "z": 5, "giro": 0, "nombre": "Carga"}, ...]
             'entradas' => ['nullable', 'json', 'max:10000'],
-        ], [
-            'pasillos.*.zona.regex' => 'La zona de un pasillo debe tener 2 letras (por ejemplo PK).',
-        ], [
+        ], [], [
             'numeracion' => 'numeración de anaqueles',
             'estanteA' => 'estante A',
             'posicion1' => 'posición 1',
             'estantes' => 'estantes por anaquel',
             'posiciones' => 'posiciones por estante',
-            'pasillos.*.zona' => 'zona del pasillo',
-            'pasillos.*.pasillo' => 'número de pasillo',
-            'pasillos.*.izquierda' => 'anaqueles a la izquierda',
-            'pasillos.*.derecha' => 'anaqueles a la derecha',
+            'pasillos' => 'pasillos',
             'disposicion' => 'ubicación de los anaqueles',
         ]);
-        $datos['disposicion'] = json_decode($datos['disposicion'] ?? '{}', true) ?: [];
-        $datos['quitados'] = json_decode($datos['quitados'] ?? '[]', true) ?: [];
-        $datos['entradas'] = json_decode($datos['entradas'] ?? '[]', true) ?: [];
-        $datos['pasillos'] = collect($datos['pasillos'] ?? [])
-            ->mapWithKeys(fn (array $fila) => [self::clave($fila['zona'], $fila['pasillo']) => $fila])
-            ->all();
+        foreach (['pasillos' => '{}', 'disposicion' => '{}', 'quitados' => '[]', 'extras' => '[]', 'entradas' => '[]'] as $campo => $vacio) {
+            $datos[$campo] = json_decode($datos[$campo] ?? $vacio, true) ?: [];
+        }
 
         $this->escribir($codisb, $datos, $request->user()->email);
     }
@@ -126,11 +119,11 @@ class AcomodoAlmacen
         $zona = strtoupper($datos['zona']);
         $clave = self::clave($zona, $datos['pasillo']);
         $config['pasillos'][$clave] = $datos;
-        // Recién contado: vuelve completo, sin los anaqueles que se habían borrado en el plano.
-        $config['quitados'] = array_values(array_filter(
-            $config['quitados'],
-            fn (string $anaquel) => ! str_starts_with($anaquel, "{$clave}-") && ! str_starts_with($anaquel, ($datos['antes'] ?? '-').'-'),
-        ));
+        // Recién contado: queda exactamente como se contó, sin anaqueles borrados ni sueltos de antes.
+        $deEstePasillo = fn (string $anaquel) => str_starts_with($anaquel, "{$clave}-") || str_starts_with($anaquel, ($datos['antes'] ?? '-').'-');
+        foreach (['quitados', 'extras'] as $lista) {
+            $config[$lista] = array_values(array_filter($config[$lista], fn (string $anaquel) => ! $deEstePasillo($anaquel)));
+        }
         if (filled($datos['nombreZona'] ?? null)) {
             $config['zonas'][$zona] = $datos['nombreZona'];
         }
@@ -144,17 +137,10 @@ class AcomodoAlmacen
         $datos = $request->validate(['clave' => ['required', 'string', 'regex:/^[A-Z]{2}-\d{2}$/']]);
         $config = ConfigAlmacen::de($codisb);
         unset($config['pasillos'][$datos['clave']]);
+        $config['extras'] = array_values(array_filter($config['extras'], fn (string $anaquel) => ! str_starts_with($anaquel, "{$datos['clave']}-")));
 
         return $this->escribir($codisb, $config, $request->user()->email);
     }
-
-    /** Validación del tamaño de cada fila de pasillos del formulario avanzado. */
-    private const REGLAS_PASILLO = [
-        'pasillos.*.izquierda' => ['required', 'integer', 'min:0', 'max:'.ConfigAlmacen::MAXIMO_POR_LADO],
-        'pasillos.*.derecha' => ['required', 'integer', 'min:0', 'max:'.ConfigAlmacen::MAXIMO_POR_LADO],
-        'pasillos.*.estantes' => ['nullable', 'integer', 'min:1', 'max:12'],
-        'pasillos.*.posiciones' => ['nullable', 'integer', 'min:1', 'max:30'],
-    ];
 
     private static function clave(string $zona, int|string $pasillo): string
     {

@@ -27,6 +27,82 @@ const dosDigitos = (numero) => String(numero).padStart(2, '0');
 /** Clave de un anaquel en config.disposicion: "PK-03-12". */
 export const claveAnaquel = (zona, pasillo, anaquel) => `${zona}-${dosDigitos(pasillo)}-${dosDigitos(anaquel)}`;
 
+/** Números de los anaqueles de un pasillo registrado: impares a la izquierda, pares a la derecha. */
+export function anaquelesDe({ izquierda = 0, derecha = 0 }) {
+    return [
+        ...Array.from({ length: izquierda }, (_, i) => 2 * i + 1),
+        ...Array.from({ length: derecha }, (_, i) => 2 * i + 2),
+    ];
+}
+
+/**
+ * Plano armado con la configuración que se está editando, igual que lo arma
+ * app/Services/Almacen/PlanoAlmacen.php: lo que sale de las ubicaciones de los productos
+ * (`productos`, que manda el servidor), los pasillos registrados sin sus anaqueles borrados y los
+ * anaqueles sueltos numerados a mano (config.extras). Así el editor dibuja cada cambio al momento.
+ */
+export function armarPlano(productos, config) {
+    const zonas = new Map();
+    const pasilloDe = (zona, pasillo) => {
+        if (!zonas.has(zona)) zonas.set(zona, new Map());
+        if (!zonas.get(zona).has(pasillo)) zonas.get(zona).set(pasillo, new Map());
+        return zonas.get(zona).get(pasillo);
+    };
+    for (const { zona, pasillos } of productos ?? []) {
+        if (!zonas.has(zona)) zonas.set(zona, new Map());
+        for (const { pasillo, anaqueles } of pasillos) {
+            const lista = pasilloDe(zona, pasillo);
+            for (const { anaquel, estantes, posiciones } of anaqueles) {
+                lista.set(anaquel, { estantes, posiciones });
+            }
+        }
+    }
+
+    const registrados = config.pasillos ?? {};
+    const base = (clave) => ({
+        estantes: registrados[clave]?.estantes ?? config.estantes,
+        posiciones: registrados[clave]?.posiciones ?? config.posiciones,
+    });
+    const agregar = (zona, pasillo, anaquel, medidas) => {
+        const lista = pasilloDe(zona, pasillo);
+        lista.set(anaquel, { ...(lista.get(anaquel) ?? { estantes: 0, posiciones: 0 }), base: medidas });
+    };
+    const quitados = new Set(config.quitados ?? []);
+    for (const [clave, pasillo] of Object.entries(registrados)) {
+        const [zona, numero] = clave.split('-');
+        for (const anaquel of anaquelesDe(pasillo)) {
+            if (!quitados.has(`${clave}-${dosDigitos(anaquel)}`)) {
+                agregar(zona, Number(numero), anaquel, base(clave));
+            }
+        }
+    }
+    for (const clave of config.extras ?? []) {
+        const [zona, numero, anaquel] = clave.split('-');
+        agregar(zona, Number(numero), Number(anaquel), base(`${zona}-${numero}`));
+    }
+
+    const ordenadas = (mapa) => [...mapa.keys()].sort((a, b) => (typeof a === 'number' ? a - b : a.localeCompare(b)));
+    return {
+        zonas: ordenadas(zonas).map((zona) => ({
+            zona,
+            pasillos: ordenadas(zonas.get(zona)).map((pasillo) => {
+                const anaqueles = zonas.get(zona).get(pasillo);
+                return {
+                    pasillo,
+                    anaqueles: ordenadas(anaqueles).map((anaquel) => {
+                        const a = anaqueles.get(anaquel);
+                        return {
+                            anaquel,
+                            estantes: Math.max(a.estantes, a.base?.estantes ?? config.estantes),
+                            posiciones: Math.max(a.posiciones, a.base?.posiciones ?? config.posiciones),
+                        };
+                    }),
+                };
+            }),
+        })),
+    };
+}
+
 /**
  * Pasa un punto del anaquel a coordenadas del plano. lx va hacia la derecha de quien mira el
  * anaquel de frente y lz hacia el frente (el pasillo).

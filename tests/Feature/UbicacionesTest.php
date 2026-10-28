@@ -206,10 +206,13 @@ class UbicacionesTest extends TestCase
             'posicion1' => 'izquierda',
             'estantes' => 5,
             'posiciones' => 4,
-            'pasillos' => [
-                ['zona' => 'pk', 'pasillo' => 1, 'izquierda' => 2, 'derecha' => 1, 'estantes' => '', 'posiciones' => ''],
-                ['zona' => 'MY', 'pasillo' => 2, 'izquierda' => 1, 'derecha' => 1, 'estantes' => 3, 'posiciones' => 6],
-            ],
+            // El editor manda la lista de pasillos entera; lo que no sea válido se descarta.
+            'pasillos' => json_encode([
+                'PK-01' => ['izquierda' => 2, 'derecha' => 1, 'estantes' => null, 'posiciones' => null],
+                'MY-02' => ['izquierda' => 1, 'derecha' => 1, 'estantes' => 3, 'posiciones' => 6],
+                'pk-03' => ['izquierda' => 1, 'derecha' => 1],
+                'FR-00' => ['izquierda' => 1, 'derecha' => 1],
+            ]),
         ])->assertRedirect('/almacen/acomodo')->assertSessionHasNoErrors();
 
         $config = ConfigAlmacen::de('505094939');
@@ -239,7 +242,7 @@ class UbicacionesTest extends TestCase
         $this->guardar('A1', 'PK-01-03-A-01');
         $acomodo = fn (array $quitados) => $this->actingAs($this->registrador)->put('/almacen/acomodo', [
             'numeracion' => 'alternada', 'estanteA' => 'abajo', 'posicion1' => 'izquierda', 'estantes' => 4, 'posiciones' => 4,
-            'pasillos' => [['zona' => 'PK', 'pasillo' => 1, 'izquierda' => 3, 'derecha' => 2]],
+            'pasillos' => json_encode(['PK-01' => ['izquierda' => 3, 'derecha' => 2]]),
             'disposicion' => json_encode(['PK-01-04' => ['x' => 1, 'z' => 1, 'giro' => 0]]),
             'quitados' => json_encode($quitados),
         ]);
@@ -265,6 +268,41 @@ class UbicacionesTest extends TestCase
             'zona' => 'PK', 'pasillo' => 1, 'izquierda' => 3, 'derecha' => 2, 'estantes' => 4, 'posiciones' => 4,
         ])->assertOk();
         $this->assertSame([], ConfigAlmacen::de('505094939')['quitados']);
+    }
+
+    public function test_anaqueles_numerados_a_mano_en_el_3d(): void
+    {
+        // PK-01 registrado (01, 03, 02); en el 3D el 03 pasó a ser el 15 y se agregó PK-04-02 suelto.
+        $this->actingAs($this->registrador)->put('/almacen/acomodo', [
+            'numeracion' => 'alternada', 'estanteA' => 'abajo', 'posicion1' => 'izquierda', 'estantes' => 4, 'posiciones' => 4,
+            'pasillos' => json_encode(['PK-01' => ['izquierda' => 2, 'derecha' => 1, 'estantes' => 6, 'posiciones' => 5]]),
+            'quitados' => json_encode(['PK-01-03']),
+            'extras' => json_encode(['PK-01-15', 'PK-04-02', 'PK-00-01', 'malo']),
+            'disposicion' => json_encode(['PK-01-15' => ['x' => 3, 'z' => 1, 'giro' => 0]]),
+        ])->assertSessionHasNoErrors();
+
+        $config = ConfigAlmacen::de('505094939');
+        $this->assertSame(['PK-01-15', 'PK-04-02'], $config['extras']);
+
+        $plano = $this->actingAs($this->registrador)->getJson('/almacen/plano')->json();
+        $pk = collect($plano['zonas'])->firstWhere('zona', 'PK')['pasillos'];
+        $this->assertSame([1, 2, 4], array_column($pk, 'pasillo'));
+        // El 15 suelto toma las medidas de su pasillo registrado; el de PK-04, las generales.
+        $this->assertSame([1, 2, 15], array_column($pk[0]['anaqueles'], 'anaquel'));
+        $this->assertSame([6, 5], [$pk[0]['anaqueles'][2]['estantes'], $pk[0]['anaqueles'][2]['posiciones']]);
+        $this->assertSame([2], array_column($pk[2]['anaqueles'], 'anaquel'));
+
+        // El editor recibe aparte lo que sale de los productos, para armar el plano al momento.
+        $this->actingAs($this->registrador)->get('/almacen/acomodo')
+            ->assertOk()
+            ->assertViewHas('plano', fn (array $plano) => array_column($plano['productos'], 'zona') === ['PK']
+                && array_column($plano['productos'][0]['pasillos'], 'pasillo') === [2]);
+
+        // Volver a contar el pasillo en el asistente lo deja como se contó, sin sueltos de antes.
+        $this->actingAs($this->registrador)->putJson('/almacen/armar/pasillo', [
+            'zona' => 'PK', 'pasillo' => 1, 'izquierda' => 2, 'derecha' => 1, 'estantes' => 4, 'posiciones' => 4,
+        ])->assertOk();
+        $this->assertSame(['PK-04-02'], ConfigAlmacen::de('505094939')['extras']);
     }
 
     public function test_guarda_las_entradas_del_almacen(): void
@@ -349,8 +387,9 @@ class UbicacionesTest extends TestCase
     {
         $this->actingAs($this->registrador)->put('/almacen/acomodo', [
             'numeracion' => 'alternada', 'estanteA' => 'abajo', 'posicion1' => 'izquierda', 'estantes' => 4, 'posiciones' => 4,
-            'pasillos' => [['zona' => 'P1', 'pasillo' => 0, 'izquierda' => 500, 'derecha' => -1]],
-        ])->assertSessionHasErrors(['pasillos.0.zona', 'pasillos.0.pasillo', 'pasillos.0.izquierda', 'pasillos.0.derecha']);
+            'pasillos' => 'esto no es json',
+            'extras' => '[1,',
+        ])->assertSessionHasErrors(['pasillos', 'extras']);
         $this->assertNull(SidesAlmacenCfg::query()->find('505094939'));
 
         $this->crearCfg(['codisb' => '999']);

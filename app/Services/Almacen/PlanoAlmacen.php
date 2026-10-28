@@ -28,8 +28,9 @@ class PlanoAlmacen
      *     config: array,
      * }
      *
-     * @param  bool  $conQuitados  también los anaqueles borrados en el plano (el editor los filtra
-     *                             él mismo, para poder volver a ponerlos)
+     * @param  bool  $conQuitados  para el editor del acomodo: también los anaqueles borrados en el
+     *                             plano (para poder volver a ponerlos) y, en `productos`, lo que sale
+     *                             solo de las ubicaciones, con lo que arma el plano al momento
      */
     public function de(string $codisb, bool $conQuitados = false): array
     {
@@ -80,6 +81,10 @@ class PlanoAlmacen
             }
         }
 
+        // Lo que sale solo de los productos; el editor del acomodo arma el resto con la configuración
+        // que se está editando, para dibujarla al momento.
+        $productos = $conQuitados ? $this->zonasComoLista($zonas) : null;
+
         // Anaqueles con productos ubicados: existen aunque se hayan borrado en el plano.
         $ocupados = [];
         foreach ($zonas as $zona => $pasillos) {
@@ -91,20 +96,27 @@ class PlanoAlmacen
         }
         $quitados = $conQuitados ? [] : array_flip($config['quitados'] ?? []);
 
+        // Lo registrado manda sobre el tamaño general del almacén.
+        $base = fn (string $clave) => [
+            'estantes' => $config['pasillos'][$clave]['estantes'] ?? $config['estantes'],
+            'posiciones' => $config['pasillos'][$clave]['posiciones'] ?? $config['posiciones'],
+        ];
+        $agregar = function (string $zona, int $numero, int $anaquel, array $base) use (&$zonas) {
+            $zonas[$zona][$numero][$anaquel] = [...($zonas[$zona][$numero][$anaquel] ?? ['estantes' => 0, 'posiciones' => 0]), 'base' => $base];
+        };
+
         foreach ($config['pasillos'] ?? [] as $clave => $pasillo) {
             [$zona, $numero] = explode('-', $clave);
-            $numero = (int) $numero;
-            // Lo registrado manda sobre el tamaño general del almacén.
-            $base = [
-                'estantes' => $pasillo['estantes'] ?? $config['estantes'],
-                'posiciones' => $pasillo['posiciones'] ?? $config['posiciones'],
-            ];
             foreach (ConfigAlmacen::anaquelesDe($pasillo) as $anaquel) {
-                if (isset($quitados[sprintf('%s-%02d', $clave, $anaquel)])) {
-                    continue;
+                if (! isset($quitados[sprintf('%s-%02d', $clave, $anaquel)])) {
+                    $agregar($zona, (int) $numero, $anaquel, $base($clave));
                 }
-                $zonas[$zona][$numero][$anaquel] = [...($zonas[$zona][$numero][$anaquel] ?? ['estantes' => 0, 'posiciones' => 0]), 'base' => $base];
             }
+        }
+        // Anaqueles sueltos numerados a mano en el 3D.
+        foreach ($config['extras'] ?? [] as $clave) {
+            [$zona, $numero, $anaquel] = explode('-', $clave);
+            $agregar($zona, (int) $numero, (int) $anaquel, $base("{$zona}-{$numero}"));
         }
 
         ksort($zonas);
@@ -117,8 +129,33 @@ class PlanoAlmacen
             'ubicaciones' => $ubicaciones,
             'reconocidas' => $reconocidas,
             'ocupados' => array_keys($ocupados),
+            ...($productos === null ? [] : ['productos' => $productos]),
             'config' => $config,
         ];
+    }
+
+    /** Zonas de los productos tal cual (sin medidas por defecto), para el editor del acomodo. */
+    private function zonasComoLista(array $zonas): array
+    {
+        ksort($zonas);
+
+        return array_map(function (string $zona) use ($zonas) {
+            $pasillos = $zonas[$zona];
+            ksort($pasillos);
+
+            return [
+                'zona' => $zona,
+                'pasillos' => array_map(function (int $numero) use ($pasillos) {
+                    $anaqueles = $pasillos[$numero];
+                    ksort($anaqueles);
+
+                    return [
+                        'pasillo' => $numero,
+                        'anaqueles' => array_map(fn (int $anaquel) => ['anaquel' => $anaquel, ...$anaqueles[$anaquel]], array_keys($anaqueles)),
+                    ];
+                }, array_keys($pasillos)),
+            ];
+        }, array_keys($zonas));
     }
 
     private function pasillos(array $pasillos, array $config): array
