@@ -114,16 +114,21 @@
                                 Alerta de lote
                             </label>
                         </div>
+                        <p x-show="proximo" class="pt-1 text-sm text-slate-500">
+                            Después: <span class="font-bold text-violet-700" x-text="(proximo?.ubicacion || 'sin ubicación').split('/').pop()"></span>
+                            · <span x-text="proximo?.desprod"></span>
+                        </p>
                     </div>
                     <div class="flex flex-row items-center justify-between gap-4 sm:flex-col sm:items-end sm:justify-start">
                         {{-- Ubicaciones tipo "A01/Existencias/Picking/Area A/A01PICKPAE05A" (mastranto): el código final va en grande. --}}
                         <div class="text-right">
                             <p class="font-black leading-none tracking-tight text-slate-900 text-4xl sm:text-5xl" x-text="(actual.ubicacion || '').split('/').pop() || 'Sin ubicación'"></p>
                             <p x-show="actual.ubicacion.includes('/')" class="mt-1 text-xs text-slate-400" x-text="actual.ubicacion"></p>
-                            <button type="button" x-show="enAlmacen(actual)" x-cloak @click="abrirAlmacen()"
-                                    class="mt-2 inline-flex items-center gap-1.5 rounded-xl bg-orange-500 px-3 py-2 text-sm font-bold text-white hover:bg-orange-600">
+                            <button type="button" x-show="conMapa" x-cloak @click="alternarMapa()"
+                                    :class="mapaVisible ? 'bg-white text-orange-700 ring-1 ring-orange-300 hover:bg-orange-50' : 'bg-orange-500 text-white hover:bg-orange-600'"
+                                    class="mt-2 inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-bold">
                                 <svg class="size-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{!! \App\Support\IconosSvg::path('warehouse') !!}</svg>
-                                Ver en el almacén
+                                <span x-text="mapaVisible ? 'Ocultar el mapa' : 'Ver en el almacén'"></span>
                             </button>
                         </div>
                         <p class="text-right text-sm text-slate-500">Solicitado <span class="block text-3xl font-black text-slate-900 tabular-nums" x-text="actual.cantidad"></span></p>
@@ -159,6 +164,46 @@
                 </div>
             </section>
         </template>
+
+        {{-- Mapa del almacén: la cámara va sola a cada producto (naranja) y la flecha lleva al que sigue (morado). --}}
+        <section x-ref="mapa" x-show="conMapa && mapaVisible && actual" x-cloak class="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
+            <div class="relative h-[45vh] min-h-64">
+                <div x-ref="visorAlmacen" class="absolute inset-0"></div>
+                <p x-show="cargandoMapa" class="absolute inset-0 flex items-center justify-center text-sm font-semibold text-slate-500">Cargando el almacén…</p>
+                <p x-show="mensajeAlmacen" class="absolute inset-x-0 top-12 m-3 rounded-xl bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900 ring-1 ring-amber-200" x-text="mensajeAlmacen"></p>
+                <p class="pointer-events-none absolute bottom-2 left-3 right-44 text-xs text-slate-500">Naranja: este producto · morado: el siguiente · celeste: los demás</p>
+                <button type="button" x-show="ubicacionAlmacen && ubicacionProxima" @click="alternarRecorrido()"
+                        class="absolute left-3 top-3 rounded-xl bg-violet-600 px-3 py-2 text-sm font-bold text-white shadow hover:bg-violet-700"
+                        x-text="viendoRecorrido ? 'Volver a este producto' : 'Ver el camino al siguiente'"></button>
+                @include('almacen.partials.controles-3d')
+            </div>
+            <div class="grid gap-px border-t border-slate-200 bg-slate-200 sm:grid-cols-2">
+                <div class="bg-white p-3">
+                    <p class="text-xs font-bold uppercase tracking-wide text-orange-600">Ahora</p>
+                    <p class="font-mono text-xl font-black text-slate-900" x-text="ubicacionAlmacen?.codigo ?? 'Sin ubicación'"></p>
+                    <div class="mt-1 flex flex-wrap gap-1.5">
+                        <template x-for="[nombre, valor] in detalleAlmacen" :key="nombre">
+                            <span class="rounded-lg bg-orange-50 px-2 py-1 text-xs text-orange-900"><span x-text="nombre"></span> <span class="font-bold" x-text="valor"></span></span>
+                        </template>
+                    </div>
+                </div>
+                <div class="bg-white p-3">
+                    <p class="text-xs font-bold uppercase tracking-wide text-violet-700">Después</p>
+                    <template x-if="proximo">
+                        <div>
+                            <p class="truncate text-sm font-semibold text-slate-700" x-text="proximo.desprod"></p>
+                            <p class="font-mono text-xl font-black text-slate-900" x-text="ubicacionProxima?.codigo ?? ((proximo.ubicacion || 'Sin ubicación').split('/').pop())"></p>
+                            <div class="mt-1 flex flex-wrap gap-1.5">
+                                <template x-for="[nombre, valor] in detalleProximo" :key="nombre">
+                                    <span class="rounded-lg bg-violet-50 px-2 py-1 text-xs text-violet-900"><span x-text="nombre"></span> <span class="font-bold" x-text="valor"></span></span>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                    <p x-show="!proximo" class="text-sm font-semibold text-slate-500">Es el último producto del pedido.</p>
+                </div>
+            </div>
+        </section>
 
         {{-- Todo revisado --}}
         <section x-show="!actual" x-cloak class="rounded-2xl bg-emerald-50 p-6 text-center ring-1 ring-emerald-200">
@@ -210,31 +255,6 @@
                 </ul>
             </section>
         </div>
-
-        {{-- Almacén 3D: la ubicación del producto en curso y, en celeste, las de los siguientes. --}}
-        <dialog x-ref="almacen"
-                class="m-auto h-[min(48rem,calc(100%-1rem))] w-[min(72rem,calc(100%-1rem))] overflow-hidden rounded-2xl p-0 shadow-xl backdrop:bg-slate-900/60">
-            <div class="flex h-full flex-col">
-                <div class="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 p-4">
-                    <div class="min-w-0">
-                        <p class="truncate text-sm font-semibold text-slate-600" x-text="actual?.desprod"></p>
-                        <p class="font-mono text-3xl font-black text-orange-600" x-text="ubicacionAlmacen?.codigo"></p>
-                        <div class="mt-1 flex flex-wrap gap-1.5">
-                            <template x-for="[nombre, valor] in detalleAlmacen" :key="nombre">
-                                <span class="rounded-lg bg-slate-100 px-2 py-1 text-xs text-slate-600"><span x-text="nombre"></span> <span class="font-bold text-slate-900" x-text="valor"></span></span>
-                            </template>
-                        </div>
-                    </div>
-                    <button type="button" @click="$refs.almacen.close()" class="rounded-xl bg-slate-800 px-4 py-2.5 text-sm font-bold text-white hover:bg-slate-900">Cerrar</button>
-                </div>
-                <div class="relative min-h-0 flex-1">
-                    <div x-ref="visorAlmacen" class="absolute inset-0"></div>
-                    <p x-show="mensajeAlmacen" class="absolute inset-x-0 top-0 m-3 rounded-xl bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900 ring-1 ring-amber-200" x-text="mensajeAlmacen"></p>
-                    <p class="pointer-events-none absolute bottom-2 left-3 text-xs text-slate-500">Naranja: este producto · celeste: los siguientes</p>
-                    @include('almacen.partials.controles-3d')
-                </div>
-            </div>
-        </dialog>
 
         {{-- Clave de supervisor (sides_cfg.activarValPicking) --}}
         <dialog x-ref="clave" class="m-auto w-[min(24rem,calc(100%-2rem))] rounded-2xl p-0 shadow-xl backdrop:bg-slate-900/60">

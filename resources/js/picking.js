@@ -8,10 +8,15 @@
  * Con sides_cfg.pickingOrdenLibre se acepta cualquier producto pendiente: el escaneado (o el que
  * se toque en la lista de siguientes) pasa a ser el producto en curso. Sirve para recoger de una
  * vez todos los de una misma marca aunque en la lista queden separados.
+ *
+ * Con el Almacén 3D activo, el mapa va dentro de la pantalla: a cada producto la cámara va a su
+ * ubicación (naranja) y una flecha lleva a la del producto que sigue (morado).
  */
 import { crearVisor } from './almacen-3d';
 import { lector, sonido } from './lector';
 import { describir, todas } from './ubicacion';
+
+const CLAVE_MAPA = 'sidesPickingMapa';
 
 export default function pickingPedido({ renglones, urls, requiereClave, ordenLibre = false }) {
     // Visor 3D del almacén (fuera del estado de Alpine: three.js no soporta sus proxies).
@@ -33,6 +38,17 @@ export default function pickingPedido({ renglones, urls, requiereClave, ordenLib
         guardando: false,
         mensajeAlmacen: '',
         planoAlmacen: null,
+        cargandoMapa: false,
+        // En el mapa se está viendo el recorrido hasta el siguiente en vez del producto en curso.
+        viendoRecorrido: false,
+        // El mapa se ve salvo que el operario lo haya ocultado en este equipo.
+        mapaVisible: (() => {
+            try {
+                return localStorage.getItem(CLAVE_MAPA) !== 'off';
+            } catch {
+                return true;
+            }
+        })(),
 
         get pendientes() {
             return this.renglones.filter((renglon) => renglon.cantdesp < 0);
@@ -61,12 +77,30 @@ export default function pickingPedido({ renglones, urls, requiereClave, ordenLib
         get detalleAlmacen() {
             return describir(this.ubicacionAlmacen, this.planoAlmacen);
         },
+        /** El producto que toca después del actual. */
+        get proximo() {
+            return this.siguientes[0] ?? null;
+        },
+        get ubicacionProxima() {
+            return todas(this.proximo?.ubicacion)[0] ?? null;
+        },
+        get detalleProximo() {
+            return describir(this.ubicacionProxima, this.planoAlmacen);
+        },
+        /** El mapa tiene sentido si el módulo está activo y algún producto trae ubicación del almacén. */
+        get conMapa() {
+            return Boolean(urls.plano) && this.renglones.some((renglon) => todas(renglon.ubicacion).length > 0);
+        },
         get progreso() {
             return this.renglones.length ? Math.round((this.revisados.length / this.renglones.length) * 100) : 0;
         },
 
         init() {
             this.iniciarLector();
+            this.$watch('actual?.item', () => this.mostrarEnMapa());
+            this.$watch('proximo?.item', () => this.mostrarEnMapa());
+            this.$el.addEventListener('alpine:destroy', () => visor?.destruir());
+            this.$nextTick(() => this.mostrarEnMapa());
         },
 
         normalizar(codigo) {
@@ -194,28 +228,64 @@ export default function pickingPedido({ renglones, urls, requiereClave, ordenLib
             }
         },
 
-        /** El botón del almacén sale si el módulo está activo y la ubicación sigue el formato. */
-        enAlmacen(renglon) {
-            return Boolean(urls.plano) && todas(renglon?.ubicacion).length > 0;
+        alternarMapa() {
+            this.mapaVisible = !this.mapaVisible;
+            try {
+                localStorage.setItem(CLAVE_MAPA, this.mapaVisible ? 'on' : 'off');
+            } catch {
+                // La preferencia dura solo mientras la página esté abierta.
+            }
+            if (this.mapaVisible) {
+                this.$nextTick(() => {
+                    this.$refs.mapa?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    this.mostrarEnMapa();
+                });
+            }
         },
 
-        async abrirAlmacen() {
+        /** Lleva el mapa al producto en curso y marca el que sigue; el visor se crea la primera vez. */
+        async mostrarEnMapa() {
+            if (!this.mapaVisible || !this.conMapa || this.cargandoMapa) {
+                return;
+            }
             this.mensajeAlmacen = '';
-            this.$refs.almacen.showModal();
-            try {
-                if (!visor) {
+            this.viendoRecorrido = false;
+            if (!visor) {
+                this.cargandoMapa = true;
+                try {
                     const { data } = await window.axios.get(urls.plano);
                     this.planoAlmacen = data;
                     visor = await crearVisor(this.$refs.visorAlmacen, data);
+                } catch (error) {
+                    this.mensajeAlmacen = 'No se pudo cargar el almacén. Revisa la conexión.';
+                    return;
+                } finally {
+                    this.cargandoMapa = false;
                 }
-            } catch (error) {
-                this.mensajeAlmacen = 'No se pudo cargar el almacén. Revisa la conexión.';
+            }
+            if (!this.actual) {
+                visor.resaltar(null);
+                return;
+            }
+            if (!this.ubicacionAlmacen) {
+                visor.resaltar(null, [], { siguiente: this.ubicacionProxima });
+                this.mensajeAlmacen = 'Este producto no tiene una ubicación del almacén registrada.';
                 return;
             }
             const siguientes = this.siguientes.map((renglon) => todas(renglon.ubicacion)[0]).filter(Boolean);
-            if (!visor.resaltar(this.ubicacionAlmacen, siguientes)) {
+            if (!visor.resaltar(this.ubicacionAlmacen, siguientes, { siguiente: this.ubicacionProxima })) {
                 this.mensajeAlmacen = `La ubicación ${this.ubicacionAlmacen.codigo} no está en el plano del almacén.`;
             }
+        },
+
+        /** Alterna entre la ubicación del producto en curso y la vista de las dos, la actual y la siguiente. */
+        alternarRecorrido() {
+            if (this.viendoRecorrido) {
+                visor?.verAhora();
+                this.viendoRecorrido = false;
+                return;
+            }
+            this.viendoRecorrido = Boolean(visor?.verRecorrido());
         },
 
         navegar3d(accion) {

@@ -324,6 +324,8 @@ class BatchPickingService
             })
             ->sortBy([
                 fn (array $a, array $b) => $a['tocado'] <=> $b['tocado'],
+                // Sin ubicación al final cuando se recoge por ubicación.
+                fn (array $a, array $b) => $campoOrden === 'ubicacion' ? ($a['ubicacion'] === '') <=> ($b['ubicacion'] === '') : 0,
                 fn (array $a, array $b) => strcmp($a[$campoOrden], $b[$campoOrden]),
                 fn (array $a, array $b) => strcmp($a['vence'] ?: '9999', $b['vence'] ?: '9999'),
             ])

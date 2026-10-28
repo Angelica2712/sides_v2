@@ -23,7 +23,8 @@ class RenglonesPedido
             default => 'pedren.item',
         };
 
-        return UbicacionesRegistradas::unir(DB::table('pedren'), 'pedren')
+        $ubicacion = UbicacionesRegistradas::sql('op.ubicacion', 'pedren.ubicacion');
+        $consulta = UbicacionesRegistradas::unir(DB::table('pedren'), 'pedren')
             ->join('sides_pedren_operacion as op', function ($join) {
                 $join->on('op.id_pedido', '=', 'pedren.id')->on('op.item', '=', 'pedren.item');
             })
@@ -31,15 +32,20 @@ class RenglonesPedido
             ->select([
                 'pedren.item', 'pedren.codprod', 'pedren.desprod', 'pedren.barra', 'pedren.cantidad',
                 'pedren.marcamodelo', 'pedren.refrigerado', 'pedren.psicotropico', 'pedren.listalote',
-                DB::raw(UbicacionesRegistradas::sql('op.ubicacion', 'pedren.ubicacion').' as ubicacion'),
+                DB::raw("{$ubicacion} as ubicacion"),
                 DB::raw("COALESCE(NULLIF(op.deposito, ''), pedren.deposito) as deposito"),
                 DB::raw("COALESCE(NULLIF(op.lote, ''), pedren.lote) as lote"),
                 DB::raw("COALESCE(NULLIF(op.feclote, ''), pedren.feclote) as feclote"),
                 'op.cantdesp', 'op.chequeado', 'op.packing', 'op.alertalote', 'op.ExiRealPick',
-            ])
-            ->orderBy($orden)
-            ->orderBy('pedren.item')
-            ->get();
+            ]);
+
+        // Por ubicación: el código ZONA-PASILLO-ANAQUEL-ESTANTE-POSICIÓN ordenado como texto ya es
+        // el recorrido (cada parte tiene ancho fijo); los productos sin ubicación van al final.
+        if ($orden === 'ubicacion') {
+            $consulta->orderByRaw("{$ubicacion} = ''");
+        }
+
+        return $consulta->orderBy($orden)->orderBy('pedren.item')->get();
     }
 
     /**

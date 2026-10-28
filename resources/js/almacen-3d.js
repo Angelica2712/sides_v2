@@ -21,6 +21,7 @@ const COLORES = {
     caja: 0xcbd5e1,
     principal: 0xf97316,
     otros: 0x0ea5e9,
+    siguiente: 0x7c3aed,
     destino: 0x16a34a,
     entrada: 0x15803d,
 };
@@ -232,14 +233,22 @@ export async function crearVisor(contenedor, plano, { vista: vistaInicial = null
     desechables.push(piso.geometry, piso.material);
     escena.add(piso);
 
-    // Resaltados: la caja naranja es la ubicación buscada, las celestes las que siguen.
+    // Resaltados: la caja naranja es la ubicación buscada, las celestes las que siguen y la morada,
+    // con la flecha que llega desde la naranja, la que va justo después (picking).
     const resaltados = new THREE.Group();
     escena.add(resaltados);
     const materialPrincipal = material(COLORES.principal, { emissive: 0x9a3412, transparent: true, opacity: 0.9 });
     const materialOtros = material(COLORES.otros, { emissive: 0x075985, transparent: true, opacity: 0.55 });
+    const materialSiguiente = material(COLORES.siguiente, { emissive: 0x4c1d95, transparent: true, opacity: 0.85 });
+    const materialFlecha = new THREE.MeshBasicMaterial({ color: COLORES.siguiente });
     const materialMarca = new THREE.MeshBasicMaterial({ color: COLORES.principal, side: THREE.DoubleSide });
     const aro = new THREE.RingGeometry(0.22, 0.3, 40);
-    desechables.push(materialPrincipal, materialOtros, materialMarca, aro);
+    const punta = new THREE.ConeGeometry(0.16, 0.4, 16);
+    desechables.push(materialPrincipal, materialOtros, materialSiguiente, materialFlecha, materialMarca, aro, punta);
+    let proxima = null;
+    // Vistas de la última ubicación resaltada y del recorrido hasta la siguiente (verAhora, verRecorrido).
+    let vistaAhora = null;
+    let vistaRecorrido = null;
     let principal = null;
     let marca = null;
     // Texturas de los rótulos del anaquel resaltado; se liberan al resaltar otro.
@@ -358,6 +367,9 @@ export async function crearVisor(contenedor, plano, { vista: vistaInicial = null
         if (marca) {
             marca.scale.setScalar(1 + 0.25 * Math.sin(reloj * 1.5));
         }
+        if (proxima) {
+            proxima.scale.setScalar(1 + 0.04 * Math.sin(reloj * 2 + Math.PI));
+        }
         controles.update();
         if (!vuelo) {
             mantenerDentro();
@@ -380,6 +392,26 @@ export async function crearVisor(contenedor, plano, { vista: vistaInicial = null
         grupo.add(malla);
         resaltados.add(grupo);
         return { grupo, datos };
+    };
+
+    /** Arco morado por encima de los anaqueles, de la ubicación actual a la siguiente, con su punta. */
+    const flecha = (desde, hasta) => {
+        const a = new THREE.Vector3(...desde);
+        const b = new THREE.Vector3(...hasta);
+        const largo = a.distanceTo(b);
+        if (largo < 0.3) {
+            return;
+        }
+        const alto = Math.max(a.y, b.y) + Math.min(Math.max(largo * 0.35, 1.2), 4);
+        const medio = a.clone().lerp(b, 0.5).setY(alto);
+        const curva = new THREE.QuadraticBezierCurve3(a, medio, b.clone().setY(b.y + 0.35));
+        const tubo = new THREE.TubeGeometry(curva, 48, 0.05, 8, false);
+        rotulos.push(tubo);
+        resaltados.add(new THREE.Mesh(tubo, materialFlecha));
+        const cono = new THREE.Mesh(punta, materialFlecha);
+        cono.position.copy(curva.getPoint(1));
+        cono.quaternion.setFromUnitVectors(ejeY, curva.getTangent(1).normalize());
+        resaltados.add(cono);
     };
 
     // ---- Agarrar la caja naranja y soltarla en otro hueco ----
@@ -592,26 +624,49 @@ export async function crearVisor(contenedor, plano, { vista: vistaInicial = null
         limpiarDestino: () => destino.clear(),
         /**
          * Resalta la ubicación buscada (texto o ya interpretada) y, más tenues, las siguientes, y
-         * lleva la cámara hasta ella (salvo con { volar: false }). Devuelve false si la ubicación
-         * no está en el plano.
+         * lleva la cámara hasta ella (salvo con { volar: false }). Con { siguiente } esa ubicación
+         * sale en morado con una flecha desde la buscada. Devuelve false si la ubicación no está
+         * en el plano.
          */
-        resaltar(buscada, siguientes = [], { volar: conVuelo = true } = {}) {
+        resaltar(buscada, siguientes = [], { volar: conVuelo = true, siguiente = null } = {}) {
             const llevar = conVuelo ? volar : () => {};
             resaltados.clear();
             destino.clear();
             rotulos.splice(0).forEach((recurso) => recurso.dispose());
             principal = null;
             marca = null;
+            proxima = null;
+            vistaAhora = null;
+            vistaRecorrido = null;
+            const comoUbicacion = (texto) => (typeof texto === 'string' ? interpretar(texto) : texto);
 
+            const despues = comoUbicacion(siguiente);
             for (const texto of siguientes) {
-                const ubicacion = typeof texto === 'string' ? interpretar(texto) : texto;
-                if (ubicacion) {
+                const ubicacion = comoUbicacion(texto);
+                if (ubicacion && ubicacion.codigo !== despues?.codigo) {
                     caja(ubicacion, materialOtros);
                 }
             }
 
-            const ubicacion = typeof buscada === 'string' ? interpretar(buscada) : buscada;
+            const ubicacion = comoUbicacion(buscada);
             const encontrada = ubicacion ? caja(ubicacion, materialPrincipal) : null;
+            const deDespues = despues && despues.codigo !== ubicacion?.codigo ? caja(despues, materialSiguiente) : null;
+            if (deDespues) {
+                proxima = deDespues.grupo;
+                const [x, y, z] = deDespues.datos.centro;
+                const cartel = etiqueta('Siguiente', { tamano: 0.3, color: '#ffffff', fondo: 'rgba(109,40,217,0.95)', lista: rotulos });
+                cartel.position.set(x, y + Math.max(deDespues.datos.tamano[1] / 2, 0.2) + 0.35, z);
+                resaltados.add(cartel);
+                if (encontrada) {
+                    flecha(encontrada.datos.centro, deDespues.datos.centro);
+                    // Desde arriba y un poco atrás, con las dos ubicaciones a la vista.
+                    const a = new THREE.Vector3(...encontrada.datos.centro);
+                    const b = new THREE.Vector3(...deDespues.datos.centro);
+                    const medio = a.clone().lerp(b, 0.5).setY(0);
+                    const distancia = Math.max(a.distanceTo(b), 4);
+                    vistaRecorrido = [new THREE.Vector3(medio.x - distancia * 0.2, distancia * 1.1, medio.z + distancia * 0.8), medio];
+                }
+            }
             if (!encontrada) {
                 if (conVuelo) {
                     vistaGeneral();
@@ -633,15 +688,26 @@ export async function crearVisor(contenedor, plano, { vista: vistaInicial = null
                     rotulo.position.set(...posicion);
                     resaltados.add(rotulo);
                 }
-                llevar(new THREE.Vector3(...datos.camara), objetivo);
+                vistaAhora = [new THREE.Vector3(...datos.camara), objetivo];
             } else {
                 const [x, , z] = datos.centro;
                 const distancia = Math.max(...datos.tamano, 4);
-                llevar(new THREE.Vector3(x - distancia * 0.3, distancia * 0.9, z + distancia * 1.1), objetivo);
+                vistaAhora = [new THREE.Vector3(x - distancia * 0.3, distancia * 0.9, z + distancia * 1.1), objetivo];
             }
+            llevar(...vistaAhora.map((v) => v.clone()));
             return true;
         },
         vistaGeneral: () => vistaGeneral(),
+        /** Vuelve la cámara a la ubicación resaltada. */
+        verAhora: () => vistaAhora && volar(...vistaAhora.map((v) => v.clone())),
+        /** Aleja la cámara para ver juntas la ubicación resaltada y la siguiente; false si no hay siguiente. */
+        verRecorrido() {
+            if (!vistaRecorrido) {
+                return false;
+            }
+            volar(...vistaRecorrido.map((v) => v.clone()));
+            return true;
+        },
         /** izquierda, derecha, adelante, atras, girarIzquierda, girarDerecha, acercar o alejar. */
         navegar,
         destruir() {

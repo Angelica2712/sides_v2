@@ -136,6 +136,24 @@ class PickingTest extends TestCase
         $this->assertSame('2026-09-15 10:00:00', (string) SidesPedidoOperacion::query()->find(500)->fecpicking2);
     }
 
+    public function test_por_ubicacion_junta_cada_anaquel_y_deja_al_final_los_sin_ubicacion(): void
+    {
+        $this->crearPedido(['id' => 501, 'estado' => 'RECIBIDO', 'nomcli' => 'CLIENTE 501']);
+        $this->crearRenglon(501, 1, ['ubicacion' => 'PK-01-05-A-01']);
+        $this->crearRenglon(501, 2, ['ubicacion' => '']);
+        $this->crearRenglon(501, 3, ['ubicacion' => 'PK-01-01-C-02']);
+        $this->crearRenglon(501, 4, ['ubicacion' => 'PK-02-01-A-01']);
+        $this->crearRenglon(501, 5, ['ubicacion' => 'PK-01-01-A-04']);
+        $this->crearRenglon(501, 6, ['ubicacion' => 'PK-01-05-B-03']);
+        $this->actingAs($this->operario)->post('/picking/501/tomar', ['recipiente' => 'CESTA 5']);
+
+        $this->actingAs($this->operario)->get('/picking/501')
+            ->assertOk()
+            ->assertViewHas('renglones', fn (array $renglones) => array_column($renglones, 'ubicacion') === [
+                'PK-01-01-A-04', 'PK-01-01-C-02', 'PK-01-05-A-01', 'PK-01-05-B-03', 'PK-02-01-A-01', '',
+            ]);
+    }
+
     public function test_escanear_en_cualquier_orden_llega_a_la_pantalla_y_el_servidor_acepta_otro_producto(): void
     {
         $this->tomado(500);
