@@ -153,6 +153,8 @@ class PickingController extends Controller
             return response()->json(['mensaje' => $e->getMessage()], 422);
         }
 
+        NotificarMonitor::picking($request->user()->codisb, $request->user()->name, $pedido, (int) $datos['item'], $cantdesp);
+
         return response()->json(['cantdesp' => $cantdesp]);
     }
 

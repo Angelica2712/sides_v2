@@ -52,6 +52,15 @@
                     </div>
                 @endif
 
+                {{-- Picking en vivo: solo quien administra la droguería (permiso de Configuración). --}}
+                @if (\App\Support\MenuSides::puede(auth()->user(), $cfg, 'configuracion'))
+                    <a href="{{ route('monitor.picking') }}"
+                       class="flex items-center gap-1.5 rounded-xl bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50">
+                        <svg class="size-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{!! \App\Support\IconosSvg::path('warehouse') !!}</svg>
+                        Picking en vivo
+                    </a>
+                @endif
+
                 {{-- Estado de la conexión en vivo. Mismo chip que usa la cola de alcabala en seped_v2. --}}
                 <div class="flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm font-semibold shadow-sm ring-1"
                      :class="conectado ? 'text-emerald-700 ring-emerald-200' : 'text-amber-700 ring-amber-200'"

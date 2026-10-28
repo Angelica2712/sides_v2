@@ -10,6 +10,7 @@ import despachoGuia from './despacho';
 import monitorEnVivo from './monitor';
 import packingPedido from './packing';
 import pickingPedido from './picking';
+import pickingVivo from './picking-vivo';
 import tablaDesplazable from './tabla-desplazable';
 import textoCortado from './texto-cortado';
 import registroUbicaciones from './ubicaciones';
@@ -26,6 +27,7 @@ Alpine.data('packingPedido', packingPedido);
 Alpine.data('batchPicking', batchPicking);
 Alpine.data('despachoGuia', despachoGuia);
 Alpine.data('monitorEnVivo', monitorEnVivo);
+Alpine.data('pickingVivo', pickingVivo);
 Alpine.data('registroUbicaciones', registroUbicaciones);
 
 Alpine.start();

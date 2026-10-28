@@ -16,6 +16,7 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\InformesController;
 use App\Http\Controllers\ModuloPendienteController;
 use App\Http\Controllers\MonitorController;
+use App\Http\Controllers\PickingVivoController;
 use App\Http\Controllers\PackingController;
 use App\Http\Controllers\PedidosController;
 use App\Http\Controllers\PickingController;
@@ -54,6 +55,12 @@ Route::middleware('auth')->group(function () {
         Route::get('monitor/contenido', [MonitorController::class, 'contenido'])->name('monitor.contenido');
         // Letra de la vista Tabla: la cambia desde el propio monitor quien administra la droguería (permiso de Configuración).
         Route::put('monitor/letra', [MonitorController::class, 'letra'])->middleware('permiso:configuracion')->name('monitor.letra');
+        // Picking en vivo: cada despachador con su avance y su lugar en el Almacén 3D. Solo quien
+        // administra la droguería (permiso de Configuración); los demás usuarios del monitor no lo ven.
+        Route::middleware('permiso:configuracion')->group(function () {
+            Route::get('monitor/picking', [PickingVivoController::class, 'index'])->name('monitor.picking');
+            Route::get('monitor/picking/datos', [PickingVivoController::class, 'datos'])->name('monitor.picking.datos');
+        });
     });
 
     Route::prefix('picking')->name('picking.')->middleware('permiso:picking')

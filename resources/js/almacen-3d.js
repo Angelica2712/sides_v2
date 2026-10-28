@@ -254,6 +254,49 @@ export async function crearVisor(contenedor, plano, { vista: vistaInicial = null
     // Texturas de los rótulos del anaquel resaltado; se liberan al resaltar otro.
     const rotulos = [];
 
+    // Despachadores (Picking en vivo): en la ubicación que busca cada uno, una caja de su color y
+    // un cartel con su nombre; si dos coinciden en el mismo hueco, los carteles se apilan.
+    const equipo = new THREE.Group();
+    escena.add(equipo);
+    const materialesEquipo = new Map();
+    const rotulosEquipo = [];
+    const materialDe = (color) => {
+        if (!materialesEquipo.has(color)) {
+            const nuevo = material(color, { emissive: new THREE.Color(color).multiplyScalar(0.35), transparent: true, opacity: 0.9 });
+            materialesEquipo.set(color, nuevo);
+            desechables.push(nuevo);
+        }
+        return materialesEquipo.get(color);
+    };
+    const marcarEquipo = (lista) => {
+        equipo.clear();
+        rotulosEquipo.splice(0).forEach((recurso) => recurso.dispose());
+        const apilados = new Map();
+        for (const { ubicacion, nombre, color, soloNombre = false } of lista) {
+            const buscada = typeof ubicacion === 'string' ? interpretar(ubicacion) : ubicacion;
+            const datos = buscada && cajaDe(disposicion, buscada, config);
+            if (!datos) {
+                continue;
+            }
+            // soloNombre: la caja ya la pone resaltar() (el despachador que se está siguiendo).
+            if (!soloNombre) {
+                const malla = new THREE.Mesh(cubo, materialDe(color));
+                malla.position.set(...datos.centro);
+                malla.quaternion.copy(giroY(datos.giro));
+                malla.scale.set(...datos.tamano.map((medida) => medida * 1.08));
+                equipo.add(malla);
+            }
+
+            const lugar = datos.centro.map((valor) => valor.toFixed(1)).join();
+            const piso = apilados.get(lugar) ?? 0;
+            apilados.set(lugar, piso + 1);
+            const cartel = etiqueta(nombre, { tamano: 0.32, color: '#ffffff', fondo: color, lista: rotulosEquipo });
+            const [x, y, z] = datos.centro;
+            cartel.position.set(x, y + datos.tamano[1] / 2 + 0.45 + piso * 0.4, z);
+            equipo.add(cartel);
+        }
+    };
+
     // Vuelo suave de la cámara hacia un punto.
     let vuelo = null;
     const volar = (posicion, objetivo, duracion = 900) => {
@@ -698,6 +741,8 @@ export async function crearVisor(contenedor, plano, { vista: vistaInicial = null
             return true;
         },
         vistaGeneral: () => vistaGeneral(),
+        /** Marca a cada despachador en su ubicación: [{ ubicacion, nombre, color, soloNombre? }]. Reemplaza la marca anterior. */
+        equipo: marcarEquipo,
         /** Vuelve la cámara a la ubicación resaltada. */
         verAhora: () => vistaAhora && volar(...vistaAhora.map((v) => v.clone())),
         /** Aleja la cámara para ver juntas la ubicación resaltada y la siguiente; false si no hay siguiente. */
@@ -718,7 +763,7 @@ export async function crearVisor(contenedor, plano, { vista: vistaInicial = null
             }
             controles.dispose();
             escena.traverse((objeto) => objeto.isInstancedMesh && objeto.dispose());
-            [...desechables, ...rotulos].forEach((recurso) => recurso.dispose());
+            [...desechables, ...rotulos, ...rotulosEquipo].forEach((recurso) => recurso.dispose());
             render.dispose();
             render.domElement.remove();
         },
