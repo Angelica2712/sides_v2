@@ -8,8 +8,8 @@
  *
  * three.js se carga recién al abrir el visor, para no pesar en las demás pantallas.
  */
-import { cajaDe, claveAnaquel, disponer, enPlano, ESTANTE_ALTO, FONDO, limitesDe, PASILLO_ANCHO } from './almacen-plano';
-import { configDe, interpretar, nombreZona } from './ubicacion';
+import { cajaDe, disponer, enPlano, ESTANTE_ALTO, FONDO, limitesDe, PASILLO_ANCHO } from './almacen-plano';
+import { configDe, formatear, interpretar, nombreZona } from './ubicacion';
 
 export { planoEjemplo } from './almacen-plano';
 
@@ -495,7 +495,7 @@ export async function crearVisor(contenedor, plano, { vista: vistaInicial = null
         const lado = config.posicion1 === 'izquierda' ? -1 : 1;
         const posicion = limitar(Math.floor((a.ancho / 2 - lado * lx) / (a.ancho / a.posiciones)), a.posiciones - 1) + 1;
 
-        return `${claveAnaquel(a.zona, a.pasillo, a.anaquel)}-${String.fromCharCode(65 + letra)}-${String(posicion).padStart(2, '0')}`;
+        return formatear({ zona: a.zona, pasillo: a.pasillo, anaquel: a.anaquel, estante: String.fromCharCode(65 + letra), posicion });
     };
 
     const marcarDestino = (codigo) => {

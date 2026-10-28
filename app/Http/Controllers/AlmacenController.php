@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Services\Almacen\PlanoAlmacen;
 use App\Services\Almacen\UbicacionesRegistradas;
+use App\Support\ConfigAlmacen;
 use App\Support\UbicacionAlmacen;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -39,6 +40,7 @@ class AlmacenController extends Controller
             return response()->json(['productos' => []]);
         }
 
+        $formato = ConfigAlmacen::formatoDe($request->user()->codisb);
         $productos = UbicacionesRegistradas::unir(DB::table('producto'), 'producto')
             ->where('producto.codisb', $request->user()->codisb)
             ->where(function ($filtro) use ($buscar) {
@@ -53,7 +55,7 @@ class AlmacenController extends Controller
                 'codprod' => (string) $producto->codprod,
                 'desprod' => (string) $producto->desprod,
                 'ubicacion' => (string) $producto->ubicacion,
-                'ubicaciones' => array_column(UbicacionAlmacen::todas($producto->ubicacion), 'codigo'),
+                'ubicaciones' => array_column(UbicacionAlmacen::todas($producto->ubicacion, $formato), 'codigo'),
             ]);
 
         return response()->json(['productos' => $productos]);

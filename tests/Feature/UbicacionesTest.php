@@ -8,6 +8,7 @@ use App\Models\Sides\SidesProductoUbicacion;
 use App\Models\Sides\SidesUsers;
 use App\Support\ConfigAlmacen;
 use App\Support\MenuSides;
+use App\Support\UbicacionAlmacen;
 use Illuminate\Support\Facades\DB;
 use Tests\Concerns\TablasSides;
 use Tests\TestCase;
@@ -121,6 +122,52 @@ class UbicacionesTest extends TestCase
         $this->guardar('A1', ';')->assertUnprocessable()->assertJsonValidationErrors('ubicacion');
 
         $this->assertSame(0, SidesProductoUbicacion::query()->count());
+    }
+
+    public function test_quien_administra_la_drogueria_arma_su_formato_y_se_registra_con_el(): void
+    {
+        $formato = ['separador' => '.', 'partes' => [
+            ['rol' => 'pasillo', 'nombre' => 'Pasillo', 'tipo' => 'numeros', 'largo' => 2],
+            ['rol' => 'anaquel', 'nombre' => 'Rack', 'tipo' => 'numeros', 'largo' => 2],
+            ['rol' => 'estante', 'nombre' => 'Nivel', 'tipo' => 'numeros', 'largo' => 1],
+        ]];
+
+        // Quien solo registra ubicaciones no lo cambia: vale para toda la droguería.
+        $this->actingAs($this->registrador)->putJson('/almacen/ubicaciones/formato', $formato)->assertForbidden();
+        $this->actingAs($this->registrador)->get('/almacen/ubicaciones')->assertOk()->assertDontSee('Cambiar el formato');
+
+        $encargado = $this->crearUsuario(['activarAlmacen' => 1, 'email' => 'enc@example.com', 'activarConfig' => 1]);
+        $this->actingAs($encargado)->get('/almacen/ubicaciones')->assertOk()->assertSee('Cambiar el formato');
+        $this->actingAs($encargado)->putJson('/almacen/ubicaciones/formato', $formato)
+            ->assertOk()
+            ->assertJsonPath('mensaje', 'Formato guardado: PASILLO.RACK.NIVEL, por ejemplo 03.12.2.');
+        $this->assertSame($formato, ConfigAlmacen::formatoDe('505094939'));
+
+        // Desde ahora se registra con ese formato y el de SIDES se rechaza.
+        $this->guardar('A1', '03.12.2')->assertOk()->assertJsonPath('producto.sides', '03.12.2');
+        $this->guardar('L5', 'PK-03-12-B-04')->assertUnprocessable()
+            ->assertJsonPath('errors.ubicacion.0', 'La ubicación «PK-03-12-B-04» no sigue el formato PASILLO.RACK.NIVEL (por ejemplo 03.12.2).');
+        $this->assertSame(['03.12.2'], $this->actingAs($this->registrador)->getJson('/almacen/buscar?q=7701')->json('productos.0.ubicaciones'));
+
+        // Guardar o restablecer el acomodo no lo pierde.
+        $this->actingAs($encargado)->put('/almacen/acomodo', ['numeracion' => 'u', 'estanteA' => 'abajo', 'posicion1' => 'izquierda', 'estantes' => 4, 'posiciones' => 4]);
+        $this->assertSame('u', ConfigAlmacen::de('505094939')['numeracion']);
+        $this->assertSame($formato, ConfigAlmacen::formatoDe('505094939'));
+        $this->actingAs($encargado)->delete('/almacen/acomodo');
+        $this->assertSame('alternada', ConfigAlmacen::de('505094939')['numeracion']);
+        $this->assertSame($formato, ConfigAlmacen::formatoDe('505094939'));
+    }
+
+    public function test_rechaza_un_formato_que_no_sirve(): void
+    {
+        $encargado = $this->crearUsuario(['activarAlmacen' => 1, 'email' => 'enc@example.com', 'activarConfig' => 1]);
+
+        $this->actingAs($encargado)->putJson('/almacen/ubicaciones/formato', ['separador' => '-', 'partes' => [
+            ['rol' => 'pasillo', 'nombre' => 'Pasillo', 'tipo' => 'numeros', 'largo' => 2],
+            ['rol' => 'estante', 'nombre' => 'Nivel', 'tipo' => 'letras', 'largo' => 1],
+        ]])->assertUnprocessable()->assertJsonValidationErrors('formato');
+
+        $this->assertSame(UbicacionAlmacen::FORMATO_SIDES, ConfigAlmacen::formatoDe('505094939'));
     }
 
     public function test_solo_productos_de_su_drogueria(): void

@@ -80,6 +80,60 @@ class UbicacionAlmacenTest extends TestCase
         $this->assertSame([['anaquel' => 1, 'estantes' => 6, 'posiciones' => 8]], $plano['zonas'][0]['pasillos'][0]['anaqueles']);
     }
 
+    public function test_lee_el_formato_que_armo_la_drogueria(): void
+    {
+        // PASILLO.RACK.NIVEL.HUECO, sin zona y con el nivel en números.
+        $formato = UbicacionAlmacen::formato([
+            'separador' => '.',
+            'partes' => [
+                ['rol' => 'pasillo', 'nombre' => 'Pasillo', 'tipo' => 'numeros', 'largo' => 2],
+                ['rol' => 'anaquel', 'nombre' => 'Rack', 'tipo' => 'numeros', 'largo' => 2],
+                ['rol' => 'estante', 'nombre' => 'Nivel', 'tipo' => 'numeros', 'largo' => 1],
+                ['rol' => 'posicion', 'nombre' => 'Hueco', 'tipo' => 'numeros', 'largo' => 2],
+            ],
+        ]);
+
+        $this->assertSame('PASILLO.RACK.NIVEL.HUECO', UbicacionAlmacen::nombre($formato));
+        $this->assertSame('03.12.2.04', UbicacionAlmacen::ejemplo($formato));
+        $this->assertSame(
+            ['codigo' => '03.12.2.04', 'zona' => 'PK', 'pasillo' => 3, 'anaquel' => 12, 'estante' => 'B', 'posicion' => 4],
+            UbicacionAlmacen::interpretar('03.12.2.04', $formato),
+        );
+        // Se corta por la derecha, igual que el de SIDES.
+        $this->assertSame(['pasillo' => 3, 'anaquel' => null], array_intersect_key(UbicacionAlmacen::interpretar('03', $formato), ['pasillo' => 0, 'anaquel' => 0]));
+        $this->assertNull(UbicacionAlmacen::interpretar('PK-03-12-B-04', $formato));
+        $this->assertNull(UbicacionAlmacen::interpretar('3.12.2.04', $formato));
+        $this->assertNull(UbicacionAlmacen::interpretar('03.12.0.04', $formato), 'el nivel 0 no existe');
+
+        // Sin separador y con el pasillo en letra: A12C = pasillo A (1), anaquel 12, estante C.
+        $pegado = UbicacionAlmacen::formato(['separador' => '', 'partes' => [
+            ['rol' => 'pasillo', 'tipo' => 'letras', 'largo' => 1],
+            ['rol' => 'anaquel', 'tipo' => 'numeros', 'largo' => 2],
+            ['rol' => 'estante', 'tipo' => 'letras', 'largo' => 1],
+        ]]);
+        $this->assertSame(['pasillo' => 1, 'anaquel' => 12, 'estante' => 'C'], array_intersect_key(UbicacionAlmacen::interpretar('a12c', $pegado), ['pasillo' => 0, 'anaquel' => 0, 'estante' => 0]));
+
+        $plano = (new PlanoAlmacen)->armar(['03.12.2.04', 'PK-01-01'], [...ConfigAlmacen::POR_DEFECTO, 'formato' => $formato]);
+        $this->assertSame(1, $plano['reconocidas']);
+        $this->assertSame([['anaquel' => 12, 'estantes' => 4, 'posiciones' => 4]], $plano['zonas'][0]['pasillos'][0]['anaqueles']);
+    }
+
+    public function test_un_formato_que_no_sirve_vuelve_al_de_sides(): void
+    {
+        $parte = fn (string $rol, string $tipo = 'numeros', int $largo = 2) => ['rol' => $rol, 'nombre' => $rol, 'tipo' => $tipo, 'largo' => $largo];
+        $error = fn (array $formato) => UbicacionAlmacen::errorDeFormato(UbicacionAlmacen::limpiar($formato));
+
+        $this->assertNull($error(['separador' => '-', 'partes' => [$parte('pasillo'), $parte('anaquel')]]));
+        $this->assertStringContainsString('pasillo y el anaquel', $error(['separador' => '-', 'partes' => [$parte('pasillo'), $parte('posicion')]]));
+        $this->assertStringContainsString('dos partes', $error(['separador' => '-', 'partes' => [$parte('pasillo'), $parte('anaquel'), $parte('anaquel')]]));
+        $this->assertStringContainsString('no puede ser así', $error(['separador' => '-', 'partes' => [$parte('pasillo', 'numeros', 3), $parte('anaquel')]]));
+        $this->assertStringContainsString('no puede ser así', $error(['separador' => '-', 'partes' => [$parte('zona', 'letras', 3), $parte('pasillo'), $parte('anaquel')]]));
+        $this->assertStringContainsString('separador', $error(['separador' => '*', 'partes' => [$parte('pasillo'), $parte('anaquel')]]));
+
+        $this->assertSame(UbicacionAlmacen::FORMATO_SIDES, UbicacionAlmacen::formato(['separador' => '-', 'partes' => [$parte('pasillo')]]));
+        $this->assertSame(UbicacionAlmacen::FORMATO_SIDES, UbicacionAlmacen::formato('cualquier cosa'));
+    }
+
     public function test_la_configuracion_descarta_valores_invalidos(): void
     {
         $config = ConfigAlmacen::normalizar([
@@ -104,6 +158,7 @@ class UbicacionAlmacenTest extends TestCase
             'extras' => [],
             'disposicion' => [],
             'entradas' => [],
+            'formato' => UbicacionAlmacen::FORMATO_SIDES,
         ], $config);
     }
 

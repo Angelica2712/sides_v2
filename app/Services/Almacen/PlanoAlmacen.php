@@ -55,7 +55,7 @@ class PlanoAlmacen
 
         foreach ($textos as $texto) {
             $ubicaciones++;
-            $todas = UbicacionAlmacen::todas($texto);
+            $todas = UbicacionAlmacen::todas($texto, $config['formato'] ?? null);
             if ($todas) {
                 $reconocidas++;
             }

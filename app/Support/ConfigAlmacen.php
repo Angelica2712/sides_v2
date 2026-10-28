@@ -5,9 +5,9 @@ namespace App\Support;
 use App\Models\Sides\SidesAlmacenCfg;
 
 /**
- * Cómo está acomodado el almacén de una droguería. El código de ubicación es siempre
- * ZONA-PASILLO-ANAQUEL-ESTANTE-POSICION (UbicacionAlmacen); esto dice dónde queda físicamente
- * cada número. Sin configuración se usa el acomodo recomendado (POR_DEFECTO).
+ * Cómo está acomodado el almacén de una droguería y en qué formato escribe sus ubicaciones (por
+ * defecto ZONA-PASILLO-ANAQUEL-ESTANTE-POSICION, ver UbicacionAlmacen); esto dice dónde queda
+ * físicamente cada número. Sin configuración se usa el acomodo recomendado (POR_DEFECTO).
  * resources/js/ubicacion.js aplica las mismas reglas en el visor.
  */
 class ConfigAlmacen
@@ -42,6 +42,7 @@ class ConfigAlmacen
         'extras' => [],
         'disposicion' => [],
         'entradas' => [],
+        'formato' => UbicacionAlmacen::FORMATO_SIDES,
     ];
 
     /** La numeración que recomienda SIDES; la deja puesta el asistente «Armar almacén». */
@@ -78,11 +79,20 @@ class ConfigAlmacen
      * entradas: puertas del almacén puestas en el plano, con su centro (x, z), su giro (0 = se
      * entra caminando hacia +z) y un nombre opcional ("Carga", "Principal").
      *
-     * @return array{numeracion: string, estanteA: string, posicion1: string, estantes: int, posiciones: int, zonas: array<string, string>, pasillos: array<string, array{izquierda: int, derecha: int, estantes: ?int, posiciones: ?int}>, quitados: list<string>, extras: list<string>, disposicion: array<string, array{x: float, z: float, giro: int}>, entradas: list<array{x: float, z: float, giro: int, nombre: string}>}
+     * formato: cómo escribe la droguería sus ubicaciones (UbicacionAlmacen::FORMATO_SIDES si no
+     * armó uno propio en «Registrar ubicaciones»).
+     *
+     * @return array{numeracion: string, estanteA: string, posicion1: string, estantes: int, posiciones: int, zonas: array<string, string>, pasillos: array<string, array{izquierda: int, derecha: int, estantes: ?int, posiciones: ?int}>, quitados: list<string>, extras: list<string>, disposicion: array<string, array{x: float, z: float, giro: int}>, entradas: list<array{x: float, z: float, giro: int, nombre: string}>, formato: array{separador: string, partes: list<array{rol: string, nombre: string, tipo: string, largo: int}>}}
      */
     public static function de(string $codisb): array
     {
         return self::normalizar(SidesAlmacenCfg::query()->find($codisb)?->config ?? []);
+    }
+
+    /** Formato de las ubicaciones de la droguería. */
+    public static function formatoDe(?string $codisb): array
+    {
+        return $codisb ? self::de($codisb)['formato'] : UbicacionAlmacen::FORMATO_SIDES;
     }
 
     /** Completa con los valores por defecto y descarta lo que no sea válido. */
@@ -176,6 +186,7 @@ class ConfigAlmacen
             'extras' => $extras,
             'disposicion' => $disposicion,
             'entradas' => $entradas,
+            'formato' => UbicacionAlmacen::formato($config['formato'] ?? null),
         ];
     }
 

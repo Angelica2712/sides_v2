@@ -1,6 +1,7 @@
 @php
     $usuario = auth()->user();
     $puedeUbicar = \App\Support\MenuSides::puede($usuario, $usuario->cfg, 'ubicaciones');
+    $formatoUbicacion = $plano['config']['formato'];
     $datos = [
         'plano' => $plano,
         'urls' => array_filter([
@@ -39,9 +40,9 @@
             <p class="mt-1 max-w-2xl text-sm text-slate-600">
                 El almacén se arma solo con las ubicaciones que manda el ERP en el catálogo, cuando siguen este formato:
             </p>
-            <p class="mt-3 inline-block rounded-xl bg-slate-900 px-4 py-2 font-mono text-lg font-bold tracking-wide text-white">ZONA-PASILLO-ANAQUEL-ESTANTE-POSICIÓN</p>
+            <p class="mt-3 inline-block rounded-xl bg-slate-900 px-4 py-2 font-mono text-lg font-bold tracking-wide text-white">{{ \App\Support\UbicacionAlmacen::nombre($formatoUbicacion) }}</p>
             <ul class="mt-3 space-y-1 text-sm text-slate-600">
-                <li><span class="font-mono font-bold text-slate-800">PK-03-12-B-04</span> · zona Picking, pasillo 3, anaquel 12, estante B, posición 4.</li>
+                <li><span class="font-mono font-bold text-slate-800">{{ \App\Support\UbicacionAlmacen::ejemplo($formatoUbicacion) }}</span> · en Picking, pasillo 3, anaquel 12, segundo estante, posición 4.</li>
                 <li>Anaqueles impares a la izquierda del pasillo y pares a la derecha. El estante A es el de abajo.</li>
                 <li>Se puede cortar por la derecha (<span class="font-mono">FR</span>, <span class="font-mono">MY-02</span>) y varias ubicaciones van separadas con <span class="font-mono">;</span>.</li>
             </ul>

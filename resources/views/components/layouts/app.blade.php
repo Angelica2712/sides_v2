@@ -36,6 +36,8 @@
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700,800&display=swap" rel="stylesheet" />
 
+        {{-- Formato de las ubicaciones de la droguería, para resources/js/ubicacion.js. --}}
+        <script>window.sidesFormatoUbicacion = @js(\App\Support\ConfigAlmacen::formatoDe($usuario->codisb));</script>
         @vite(['resources/css/app.css', 'resources/js/app.js'])
         @if ($temaDrogueria = \App\Support\TemaSides::estilo($usuario->codisb))
             <style>{!! $temaDrogueria !!}</style>

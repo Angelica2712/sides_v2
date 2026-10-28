@@ -91,6 +91,7 @@ Route::middleware('auth')->group(function () {
             Route::get('ubicaciones/buscar', 'buscar')->name('ubicaciones.buscar');
             Route::put('ubicaciones/producto', 'guardar')->name('ubicaciones.guardar');
             Route::delete('ubicaciones/producto', 'quitar')->name('ubicaciones.quitar');
+            Route::put('ubicaciones/formato', 'guardarFormato')->name('ubicaciones.formato');
             Route::get('acomodo', 'acomodo')->name('acomodo');
             Route::put('acomodo', 'guardarAcomodo')->name('acomodo.update');
             Route::delete('acomodo', 'restablecerAcomodo')->name('acomodo.restablecer');

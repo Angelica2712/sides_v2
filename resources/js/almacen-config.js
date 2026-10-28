@@ -4,15 +4,15 @@
  *
  * El plano se arma aquí mismo (armarPlano) con lo que sale de los productos y la configuración que
  * se está editando, así que todo cambio se ve al momento. En el 3D y en el plano se eligen anaqueles
- * (uno o todo su pasillo) para arrastrarlos, girarlos, borrarlos o cambiarles el número, se crean
+ * (uno o su fila) para arrastrarlos, girarlos, borrarlos o cambiarles el número, se crean
  * pasillos y se ponen entradas: config.pasillos, disposicion, quitados, extras y entradas. Un
  * anaquel con productos ubicados (plano.ocupados) no se puede borrar ni renumerar.
  *
  * El visor vive fuera del estado de Alpine: los objetos de three.js no soportan los proxies reactivos.
  */
 import { crearVisor, planoEjemplo } from './almacen-3d';
-import { anaquelesDe, armarPlano, claveAnaquel, disponer, enPlano, limitesDe } from './almacen-plano';
-import { describir, interpretar, nombreZona } from './ubicacion';
+import { FONDO, anaquelesDe, armarPlano, claveAnaquel, disponer, enPlano, limitesDe } from './almacen-plano';
+import { describir, formatear, interpretar, nombreZona, usarFormato } from './ubicacion';
 
 const dosDigitos = (numero) => String(numero).padStart(2, '0');
 const redondear = (metros) => Math.round(metros * 10) / 10;
@@ -38,6 +38,8 @@ export default function almacenConfig({ plano, config }) {
     config.quitados = Array.isArray(config.quitados) ? config.quitados : [];
     config.extras = Array.isArray(config.extras) ? config.extras : [];
     config.entradas = Array.isArray(config.entradas) ? config.entradas : [];
+    // Desde Administración se edita el almacén de otra droguería, con su propio formato.
+    usarFormato(config.formato);
 
     const inicial = armarPlano(productos, config);
     const muestra = inicial.zonas.length ? inicial : planoEjemplo();
@@ -47,7 +49,7 @@ export default function almacenConfig({ plano, config }) {
 
     return {
         config,
-        prueba: primera ? `${primera.zona}-${dosDigitos(pasillo.pasillo)}-${dosDigitos(anaquel.anaquel)}-A-01` : '',
+        prueba: primera ? formatear({ zona: primera.zona, pasillo: pasillo.pasillo, anaquel: anaquel.anaquel, estante: 'A', posicion: 1 }) : '',
         mensaje: '',
         // Por qué no se pudo hacer lo pedido con lo elegido.
         avisoPlano: '',
@@ -305,11 +307,25 @@ export default function almacenConfig({ plano, config }) {
             return [x, y];
         },
 
-        /** Anaqueles que se mueven, giran o borran juntos: el elegido, o todo su pasillo. */
+        /** Anaqueles que se mueven, giran, borran o renumeran juntos: el elegido, o su fila. */
         grupoDe(a) {
-            return this.moverPasillo
-                ? this.disposicion.anaqueles.filter((otro) => otro.zona === a.zona && otro.pasillo === a.pasillo)
-                : [a];
+            return this.moverPasillo ? this.filaDe(a) : [a];
+        },
+
+        /**
+         * La fila del anaquel tocado: los de su pasillo alineados con él (mismo eje de giro y a menos
+         * de un fondo de distancia), no la fila de enfrente aunque tenga el mismo número de pasillo.
+         */
+        filaDe(a) {
+            const acostado = (b) => b.giro % 180 === 0;
+            return this.disposicion.anaqueles.filter((b) => b.zona === a.zona && b.pasillo === a.pasillo
+                && acostado(b) === acostado(a)
+                && Math.abs(acostado(a) ? b.z - a.z : b.x - a.x) < FONDO);
+        },
+
+        /** El anaquel y todo su pasillo (las dos filas). */
+        pasilloDe(a) {
+            return this.disposicion.anaqueles.filter((b) => b.zona === a.zona && b.pasillo === a.pasillo);
         },
 
         tomarEntrada(evento, indice) {
@@ -335,7 +351,7 @@ export default function almacenConfig({ plano, config }) {
             this.avisoPlano = '';
             this.seleccionado = a.clave;
             this.abrirRenumerar();
-            this.prueba = `${a.clave}-A-01`;
+            this.prueba = formatear({ zona: a.zona, pasillo: a.pasillo, anaquel: a.anaquel, estante: 'A', posicion: 1 });
             this.resaltar();
             this.capturar(evento);
             this.arrastre = { tipo: 'anaquel', claves: this.grupoDe(a).map((b) => b.clave), inicio: this.puntoEnPlano(evento), dx: 0, dz: 0 };
@@ -385,6 +401,10 @@ export default function almacenConfig({ plano, config }) {
             dedos.delete(evento?.pointerId);
             const arrastre = this.arrastre;
             this.arrastre = null;
+            if (arrastre?.tipo === 'anaquel' && this.renumero) {
+                // El cuadro de números va debajo del plano: se trae a la vista ya soltado el anaquel.
+                this.$nextTick(() => this.$refs.renumero?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
+            }
             if (!['anaquel', 'entrada'].includes(arrastre?.tipo) || (!arrastre.dx && !arrastre.dz)) {
                 return;
             }
@@ -403,7 +423,7 @@ export default function almacenConfig({ plano, config }) {
             this.config.disposicion[a.clave] = { x: Math.round(x * 100) / 100, z: Math.round(z * 100) / 100, giro: ((giro % 360) + 360) % 360 };
         },
 
-        /** Gira 90° el anaquel elegido, o todo su pasillo alrededor de su centro. */
+        /** Gira 90° el anaquel elegido, o su fila alrededor de su centro. */
         girar() {
             if (this.entradaElegida) {
                 this.entradaElegida.giro = (this.entradaElegida.giro + 90) % 360;
@@ -423,7 +443,7 @@ export default function almacenConfig({ plano, config }) {
             }
         },
 
-        /** Devuelve el anaquel elegido (o su pasillo) a su lugar automático. */
+        /** Devuelve el anaquel elegido (o su fila) a su lugar automático. */
         restaurar() {
             const a = this.elegido;
             if (!a) {
@@ -446,7 +466,7 @@ export default function almacenConfig({ plano, config }) {
         },
 
         /**
-         * Borra el anaquel elegido o, con «Todo el pasillo», su pasillo. Un pasillo registrado sin
+         * Borra el anaquel elegido o, con «Toda la fila», su fila. Si la fila es el pasillo entero, el pasillo registrado sin
          * productos se quita también de la lista de pasillos; los anaqueles con productos ubicados
          * se quedan y se avisa por qué.
          */
@@ -477,10 +497,10 @@ export default function almacenConfig({ plano, config }) {
                     : `El pasillo ${dosDigitos(a.pasillo)} sale de las ubicaciones que tienen los productos. Para quitarlo hay que cambiarles la ubicación a esos productos.`;
                 return;
             }
-            const pasilloEntero = this.moverPasillo && claves.length === grupo.length && registrado;
+            const pasilloEntero = this.moverPasillo && claves.length === this.pasilloDe(a).length && registrado;
             const que = pasilloEntero
                 ? `el pasillo ${dosDigitos(a.pasillo)} completo`
-                : claves.length === 1 ? `el anaquel ${this.etiquetaAnaquel(a)}` : `${claves.length} anaqueles del pasillo ${dosDigitos(a.pasillo)}`;
+                : claves.length === 1 ? `el anaquel ${this.etiquetaAnaquel(a)}` : `${claves.length} anaqueles de la fila del pasillo ${dosDigitos(a.pasillo)}`;
             if (!confirm(`¿Borrar ${que}? Se quita del plano al guardar el acomodo.`)) {
                 return;
             }
@@ -621,11 +641,12 @@ export default function almacenConfig({ plano, config }) {
             }
             this.nuevo = null;
             this.avisoPlano = '';
-            this.renumero = { zona: a.zona, pasillo: a.pasillo, anaquel: a.anaquel };
+            // Los números empiezan vacíos para escribirlos; el actual se ve en el título del cuadro.
+            this.renumero = { zona: a.zona, pasillo: '', anaquel: '' };
         },
 
         /**
-         * Asigna el número del cuadro: modo 'pasillo' cambia la zona y el número de todo el pasillo del
+         * Asigna el número del cuadro: modo 'pasillo' cambia la zona y el número de la fila del
          * anaquel elegido; modo 'anaquel' pasa solo ese anaquel al pasillo y número del cuadro.
          */
         renumerar(modo = this.moverPasillo ? 'pasillo' : 'anaquel') {
@@ -638,22 +659,41 @@ export default function almacenConfig({ plano, config }) {
                 return;
             }
             const zona = String(this.renumero.zona).trim().toUpperCase();
-            const numero = Number(this.renumero.pasillo);
-            const nuevoAnaquel = Number(this.renumero.anaquel);
             const todoElPasillo = modo === 'pasillo';
+            // «Solo este anaquel» sin pasillo escrito: el anaquel se queda en su pasillo.
+            const numero = this.renumero.pasillo === '' && !todoElPasillo ? a.pasillo : Number(this.renumero.pasillo);
+            const nuevoAnaquel = Number(this.renumero.anaquel);
+            if (todoElPasillo ? this.renumero.pasillo === '' : this.renumero.anaquel === '') {
+                this.avisoPlano = todoElPasillo ? 'Escribe el número de pasillo.' : 'Escribe el número de anaquel.';
+                return;
+            }
             if (!/^[A-Z]{2}$/.test(zona) || !(numero >= 1 && numero <= 99) || (!todoElPasillo && !(nuevoAnaquel >= 1 && nuevoAnaquel <= 99))) {
                 this.avisoPlano = 'La zona son 2 letras (por ejemplo PK) y el pasillo y el anaquel, números del 1 al 99.';
                 return;
             }
-            const grupo = todoElPasillo
-                ? this.disposicion.anaqueles.filter((b) => b.zona === a.zona && b.pasillo === a.pasillo)
-                : [a];
+            const grupo = todoElPasillo ? this.filaDe(a) : [a];
             if (grupo.some((b) => ocupados.has(b.clave))) {
                 this.avisoPlano = 'Tiene productos ubicados: su número sale de las ubicaciones de esos productos. Cámbiales la ubicación primero.';
                 return;
             }
 
-            if (todoElPasillo) {
+            if (todoElPasillo && grupo.length < this.pasilloDe(a).length) {
+                // Solo la fila tocada: cada anaquel pasa al pasillo nuevo con su mismo número.
+                const nuevas = new Map(grupo.map((b) => [b, claveAnaquel(zona, numero, b.anaquel)]));
+                if ([...nuevas].every(([b, nueva]) => b.clave === nueva)) {
+                    this.renumero = null;
+                    return;
+                }
+                const choque = [...nuevas.values()].find((nueva) => this.disposicion.anaqueles.some((b) => b.clave === nueva && !nuevas.has(b)));
+                if (choque) {
+                    this.avisoPlano = `Ya hay un anaquel ${choque}: cámbiale el número a ese anaquel o a los de esta fila primero.`;
+                    return;
+                }
+                for (const [b, nueva] of nuevas) {
+                    this.cambiarClave(b, nueva);
+                }
+                this.seleccionado = nuevas.get(a);
+            } else if (todoElPasillo) {
                 const anterior = `${a.zona}-${dosDigitos(a.pasillo)}`;
                 const nueva = `${zona}-${dosDigitos(numero)}`;
                 if (nueva === anterior) {
@@ -715,7 +755,7 @@ export default function almacenConfig({ plano, config }) {
             }
         },
 
-        /** Flechas del teclado: mueven 10 cm el anaquel elegido (o su pasillo); R lo gira. */
+        /** Flechas del teclado: mueven 10 cm el anaquel elegido (o su fila); R lo gira. */
         teclado(evento) {
             const a = this.elegido;
             const pasos = { ArrowLeft: [-0.1, 0], ArrowRight: [0.1, 0], ArrowUp: [0, -0.1], ArrowDown: [0, 0.1] };

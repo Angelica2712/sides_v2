@@ -29,7 +29,7 @@
         <div>
             <h2 class="text-xl font-extrabold text-slate-900">{{ $titulo }}</h2>
             <p class="max-w-3xl text-sm text-slate-500">
-                El código de ubicación es siempre <span class="font-mono font-bold text-slate-700">ZONA-PASILLO-ANAQUEL-ESTANTE-POSICIÓN</span>.
+                Las ubicaciones se escriben <span class="font-mono font-bold text-slate-700">{{ \App\Support\UbicacionAlmacen::nombre($plano['config']['formato']) }}</span>.
                 Aquí se registran los pasillos y anaqueles del almacén y cómo están numerados, para que el Almacén 3D lo dibuje igual.
             </p>
         </div>
@@ -153,7 +153,7 @@
                 <div class="flex flex-wrap items-end gap-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
                     <label class="block min-w-48 flex-1 text-sm font-bold text-slate-700">
                         Probar una ubicación
-                        <input type="text" x-model="prueba" @input.debounce.300ms="resaltar()" autocomplete="off" placeholder="PK-01-03-A-01"
+                        <input type="text" x-model="prueba" @input.debounce.300ms="resaltar()" autocomplete="off" placeholder="{{ \App\Support\UbicacionAlmacen::ejemplo($plano['config']['formato']) }}"
                                class="mt-1 block w-full rounded-xl border-slate-300 font-mono focus:border-primary focus:ring-primary">
                     </label>
                     <dl class="flex flex-wrap gap-1.5">
@@ -187,7 +187,7 @@
                 <div class="flex flex-wrap items-center gap-2 rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200">
                     <label class="flex items-center gap-2 text-sm font-semibold text-slate-700">
                         <input type="checkbox" x-model="moverPasillo" class="rounded border-slate-300 text-primary focus:ring-primary">
-                        Todo el pasillo
+                        Toda la fila
                     </label>
                     <span class="mx-1 h-6 w-px bg-slate-200" aria-hidden="true"></span>
                     <button type="button" @click="girar()" :disabled="!elegido && !entradaElegida" class="{{ $boton }}">Girar 90°</button>
@@ -195,7 +195,7 @@
                     <button type="button" @click="restaurar()" :disabled="!elegido" class="{{ $boton }}">Devolver a su lugar</button>
                     <button type="button" @click="borrar()" :disabled="!entradaElegida && !elegido"
                             class="rounded-lg bg-white px-3 py-1.5 text-sm font-semibold text-rose-700 ring-1 ring-rose-200 hover:bg-rose-50 disabled:opacity-40"
-                            x-text="entradaElegida ? 'Quitar entrada' : (moverPasillo ? 'Borrar el pasillo' : 'Borrar anaquel')"></button>
+                            x-text="entradaElegida ? 'Quitar entrada' : (moverPasillo ? 'Borrar la fila' : 'Borrar anaquel')"></button>
                     <span class="mx-1 h-6 w-px bg-slate-200" aria-hidden="true"></span>
                     <button type="button" @click="abrirNuevoPasillo()"
                             class="rounded-lg bg-primary-soft px-3 py-1.5 text-sm font-bold text-primary-ink ring-1 ring-primary hover:bg-white">+ Pasillo</button>
@@ -212,7 +212,7 @@
                 </div>
 
                 <p class="text-xs text-slate-500">
-                    Toca un anaquel para elegirlo y ponerle el número de pasillo (con «Todo el pasillo» se elige su pasillo entero); arrástralo para ponerlo en su lugar; la raya naranja
+                    Toca un anaquel para elegirlo y ponerle el número de pasillo (con «Toda la fila» se elige la fila de anaqueles que tocaste); arrástralo para ponerlo en su lugar; la raya naranja
                     es su frente. En el plano, las flechas lo mueven 10 cm, la tecla R lo gira y Suprimir lo borra. Los cambios se guardan con «Guardar acomodo».
                 </p>
 
@@ -262,7 +262,7 @@
                     <span class="text-xs text-emerald-800">giro <span x-text="entradaElegida?.giro"></span>°</span>
                 </div>
                 <p x-show="elegido" class="text-sm text-slate-700">
-                    Elegido: <span class="font-mono font-bold" x-text="moverPasillo ? 'pasillo ' + elegido?.clave.slice(0, 5) : elegido?.clave"></span>
+                    Elegido: <span class="font-mono font-bold" x-text="moverPasillo ? 'fila del pasillo ' + elegido?.clave.slice(0, 5) : elegido?.clave"></span>
                     · <span x-text="nombreZona(elegido?.zona)"></span>
                     · giro <span x-text="elegido?.giro"></span>°
                     <span x-show="elegido?.movido" class="ml-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-800">ubicado a mano</span>
@@ -292,14 +292,19 @@
                     @include('almacen.partials.controles-3d')
                 </div>
 
-                {{-- Al tocar un anaquel: ponerle el número de pasillo (a todo su pasillo o solo a ese anaquel). --}}
+                </div>
+
+                {{--
+                    Al tocar un anaquel: ponerle el número de pasillo (a su fila o solo a ese anaquel).
+                    Va debajo del plano y no encima, para no tapar los anaqueles.
+                --}}
                 <template x-if="renumero && elegido">
-                    <form @submit.prevent="renumerar('pasillo')" @pointerdown.stop
-                          class="absolute left-2 top-2 z-10 w-[calc(100%-1rem)] max-w-sm space-y-2 rounded-2xl bg-white/95 p-3 shadow-lg ring-1 ring-orange-300 backdrop-blur">
+                    <form x-ref="renumero" @submit.prevent="renumerar('pasillo')"
+                          class="scroll-mb-4 space-y-2 rounded-2xl bg-white p-3 shadow-sm ring-1 ring-orange-300">
                         <div class="flex items-start justify-between gap-2">
                             <p class="text-sm font-bold text-slate-900">
                                 Anaquel <span class="font-mono" x-text="elegido.clave"></span>
-                                <span class="block text-xs font-normal text-slate-500">Escribe el número de pasillo y toca «Asignar».</span>
+                                <span class="block text-xs font-normal text-slate-500">Escribe el número nuevo y toca «Asignar». Sin pasillo, «Solo este anaquel» lo deja en el suyo.</span>
                             </p>
                             <button type="button" @click="renumero = null" aria-label="Cerrar"
                                     class="size-7 shrink-0 rounded-lg text-lg font-bold leading-none text-slate-400 hover:bg-slate-100 hover:text-slate-700">×</button>
@@ -309,15 +314,15 @@
                                 <input type="text" x-model="renumero.zona" list="zonas-almacen" maxlength="2" autocomplete="off" class="{{ $campo }} mt-1 text-center font-mono uppercase">
                             </label>
                             <label class="text-xs font-semibold text-slate-700">Pasillo
-                                <input type="number" x-model.number="renumero.pasillo" min="1" max="99" inputmode="numeric" class="{{ $campo }} mt-1 text-lg font-bold">
+                                <input type="number" x-model.number="renumero.pasillo" min="1" max="99" inputmode="numeric" placeholder="0" class="{{ $campo }} mt-1 text-lg font-bold">
                             </label>
                             <label class="text-xs font-semibold text-slate-700">Anaquel
-                                <input type="number" x-model.number="renumero.anaquel" min="1" max="99" inputmode="numeric" class="{{ $campo }} mt-1">
+                                <input type="number" x-model.number="renumero.anaquel" min="1" max="99" inputmode="numeric" placeholder="0" class="{{ $campo }} mt-1 text-lg font-bold">
                             </label>
                         </div>
                         <div class="flex flex-wrap gap-2">
                             <button type="submit" class="rounded-lg bg-orange-500 px-3 py-1.5 text-sm font-bold text-white hover:bg-orange-600">
-                                Asignar a todo el pasillo
+                                Asignar a toda la fila
                             </button>
                             <button type="button" @click="renumerar('anaquel')" class="{{ $boton }}">Solo este anaquel</button>
                         </div>
@@ -325,7 +330,6 @@
                         <p class="text-xs text-slate-500">Los anaqueles se quedan donde están; solo cambia su número. Se guarda con «Guardar acomodo».</p>
                     </form>
                 </template>
-                </div>
             </div>
         </div>
 

@@ -4,6 +4,7 @@ namespace App\Services\Almacen;
 
 use App\Models\Sides\SidesAlmacenCfg;
 use App\Support\ConfigAlmacen;
+use App\Support\UbicacionAlmacen;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -70,13 +71,25 @@ class AcomodoAlmacen
         foreach (['pasillos' => '{}', 'disposicion' => '{}', 'quitados' => '[]', 'extras' => '[]', 'entradas' => '[]'] as $campo => $vacio) {
             $datos[$campo] = json_decode($datos[$campo] ?? $vacio, true) ?: [];
         }
+        // El formato de las ubicaciones se cambia en «Registrar ubicaciones», no aquí.
+        $datos['formato'] = ConfigAlmacen::formatoDe($codisb);
 
         $this->escribir($codisb, $datos, $request->user()->email);
     }
 
+    /** Vuelve al acomodo recomendado; el formato de las ubicaciones se queda como estaba. */
     public function restablecer(string $codisb): void
     {
+        $formato = ConfigAlmacen::formatoDe($codisb);
         SidesAlmacenCfg::query()->whereKey($codisb)->delete();
+        if ($formato !== UbicacionAlmacen::FORMATO_SIDES) {
+            SidesAlmacenCfg::query()->create(['codisb' => $codisb, 'config' => ['formato' => $formato]]);
+        }
+    }
+
+    public function guardarFormato(string $codisb, array $formato, string $email): void
+    {
+        $this->escribir($codisb, [...ConfigAlmacen::de($codisb), 'formato' => $formato], $email);
     }
 
     // ---- Asistente «Armar almacén»: un pasillo a la vez ----

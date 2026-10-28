@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Sides\SidesAlmacenCfg;
 use App\Models\Sides\SidesUsers;
 use App\Support\ConfigAlmacen;
+use App\Support\UbicacionAlmacen;
 use Illuminate\Support\Facades\DB;
 use Tests\Concerns\TablasSides;
 use Tests\TestCase;
@@ -70,6 +71,7 @@ class AdminAlmacenTest extends TestCase
             'extras' => [],
             'disposicion' => [],
             'entradas' => [],
+            'formato' => UbicacionAlmacen::FORMATO_SIDES,
         ], SidesAlmacenCfg::query()->find('DROMARKO')->config);
         $this->assertSame('admin@example.com', SidesAlmacenCfg::query()->find('DROMARKO')->actualizado_por);
         $this->assertSame(ConfigAlmacen::POR_DEFECTO, ConfigAlmacen::de('SIDES'));

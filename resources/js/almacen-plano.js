@@ -11,7 +11,7 @@
  * Ejes: x a la derecha, z hacia abajo en el plano, y hacia arriba. Un anaquel con giro 0 tiene el
  * frente (el lado del que se recoge) mirando hacia +z.
  */
-import { columnasPasillo, configDe, lugarAnaquel } from './ubicacion';
+import { columnasPasillo, configDe, lugarAnaquel, textoEstante } from './ubicacion';
 
 export const POSICION_ANCHO = 0.45;
 export const ESTANTE_ALTO = 0.55;
@@ -224,7 +224,7 @@ export function cajaDe(disposicion, ubicacion, config) {
     // vea cómo se cuentan en esta droguería.
     const rotulos = [
         ...Array.from({ length: anaquel.estantes }, (_, letra) => ({
-            texto: String.fromCharCode(65 + letra),
+            texto: textoEstante(letra),
             posicion: punto(-anaquel.ancho / 2 - 0.18, alturaEstante(letra), delante),
         })),
         ...Array.from({ length: posiciones }, (_, i) => ({ texto: String(i + 1), posicion: punto(lxPosicion(i + 1), alto + 0.14, delante) })),

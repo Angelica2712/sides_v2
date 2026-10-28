@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Services\Almacen\AcomodoAlmacen;
 use App\Services\Almacen\UbicacionesRegistradas;
+use App\Support\ConfigAlmacen;
 use App\Support\UbicacionAlmacen;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -14,7 +15,8 @@ use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 /**
- * Pestañas del Almacén 3D para que la droguería numere su almacén con el formato de SIDES. Quien
+ * Pestañas del Almacén 3D para que la droguería numere su almacén con su formato de ubicación (el
+ * de SIDES u otro que arma aquí quien la administra, ver UbicacionAlmacen). Quien
  * tiene el permiso (activarUbicaciones) o administra la droguería (activarConfig) recorre el
  * almacén con el teléfono y le escribe a cada producto su ubicación (o lo arrastra en el 3D, que
  * guarda con este mismo controlador), y registra los pasillos y anaqueles en el acomodo. La
@@ -32,8 +34,11 @@ class UbicacionesController extends Controller
     {
         $usuario = $request->user();
         $pantalla = $this->acomodo->pantalla($usuario->codisb);
+        // Solo quien administra la droguería cambia el formato: vale para todas sus ubicaciones.
+        $editaFormato = (bool) $usuario->activarConfig;
 
         return view('almacen.ubicaciones', [
+            'editaFormato' => $editaFormato,
             'datos' => [
                 'plano' => $pantalla['plano'],
                 'zonas' => collect($pantalla['zonas'])
@@ -42,11 +47,17 @@ class UbicacionesController extends Controller
                 'recientes' => $this->recientes($usuario->codisb),
                 // Desde el Almacén 3D se llega con el producto ya buscado.
                 'buscar' => mb_substr(trim((string) $request->query('q', '')), 0, 100),
-                'urls' => [
+                'formato' => $pantalla['plano']['config']['formato'],
+                'formatoSides' => UbicacionAlmacen::FORMATO_SIDES,
+                'reglas' => UbicacionAlmacen::REGLAS,
+                'roles' => UbicacionAlmacen::ROLES,
+                'separadores' => UbicacionAlmacen::SEPARADORES,
+                'urls' => array_filter([
                     'buscar' => route('almacen.ubicaciones.buscar'),
                     'guardar' => route('almacen.ubicaciones.guardar'),
                     'quitar' => route('almacen.ubicaciones.quitar'),
-                ],
+                    'formato' => $editaFormato ? route('almacen.ubicaciones.formato') : null,
+                ]),
             ],
         ]);
     }
@@ -88,16 +99,17 @@ class UbicacionesController extends Controller
         ]);
         $codisb = $request->user()->codisb;
         $this->existe($codisb, $datos['codprod']);
+        $formato = ConfigAlmacen::formatoDe($codisb);
 
         $codigos = [];
         foreach (explode(';', $datos['ubicacion']) as $parte) {
             if (trim($parte) === '') {
                 continue;
             }
-            $ubicacion = UbicacionAlmacen::interpretar($parte);
+            $ubicacion = UbicacionAlmacen::interpretar($parte, $formato);
             if (! $ubicacion) {
                 throw ValidationException::withMessages([
-                    'ubicacion' => 'La ubicación «'.trim($parte).'» no sigue el formato ZONA-PASILLO-ANAQUEL-ESTANTE-POSICIÓN (por ejemplo PK-03-12-B-04).',
+                    'ubicacion' => 'La ubicación «'.trim($parte).'» no sigue el formato '.UbicacionAlmacen::nombre($formato).' (por ejemplo '.UbicacionAlmacen::ejemplo($formato).').',
                 ]);
             }
             $codigos[] = $ubicacion['codigo'];
@@ -109,6 +121,32 @@ class UbicacionesController extends Controller
         $this->ubicaciones->guardar($codisb, $datos['codprod'], implode(';', array_unique($codigos)), $request->user());
 
         return $this->respuesta($codisb, $datos['codprod'], 'Ubicación guardada.');
+    }
+
+    /**
+     * Formato de las ubicaciones de la droguería: qué partes lleva, en qué orden, cómo se llaman,
+     * cuántos dígitos o letras tiene cada una y el separador. Solo quien administra la droguería.
+     */
+    public function guardarFormato(Request $request): JsonResponse
+    {
+        abort_unless($request->user()->activarConfig, 403, 'Solo quien administra la droguería cambia el formato de las ubicaciones.');
+
+        $datos = $request->validate([
+            'separador' => ['present', 'nullable', 'string', 'max:1'],
+            'partes' => ['required', 'array', 'max:'.count(UbicacionAlmacen::ROLES)],
+            'partes.*' => ['array'],
+        ]);
+        $formato = UbicacionAlmacen::limpiar(['separador' => $datos['separador'] ?? '', 'partes' => $datos['partes']]);
+        if ($error = UbicacionAlmacen::errorDeFormato($formato)) {
+            throw ValidationException::withMessages(['formato' => $error]);
+        }
+
+        $this->acomodo->guardarFormato($request->user()->codisb, $formato, $request->user()->email);
+
+        return response()->json([
+            'formato' => $formato,
+            'mensaje' => 'Formato guardado: '.UbicacionAlmacen::nombre($formato).', por ejemplo '.UbicacionAlmacen::ejemplo($formato).'.',
+        ]);
     }
 
     /** Quita la ubicación registrada en SIDES: el producto vuelve a la del ERP. */

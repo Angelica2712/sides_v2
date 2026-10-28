@@ -7,7 +7,7 @@
  * El visor vive fuera del estado de Alpine: los objetos de three.js no soportan los proxies reactivos.
  */
 import { crearVisor, planoEjemplo } from './almacen-3d';
-import { describir, interpretar } from './ubicacion';
+import { describir, formatear, interpretar, nombreFormato } from './ubicacion';
 
 export default function almacenVista({ plano, urls }) {
     let visor = null;
@@ -65,7 +65,7 @@ export default function almacenVista({ plano, urls }) {
 
         verEjemplo() {
             this.ejemplo = true;
-            this.$nextTick(() => this.montar({ ...planoEjemplo(), config: this.plano.config }).then(() => this.ir('PK-02-07-C-03')));
+            this.$nextTick(() => this.montar({ ...planoEjemplo(), config: this.plano.config }).then(() => this.ir(formatear({ zona: 'PK', pasillo: 2, anaquel: 7, estante: 'C', posicion: 3 }))));
         },
 
         /** Con un código de ubicación se va directo; con otro texto se buscan productos. */
@@ -119,7 +119,7 @@ export default function almacenVista({ plano, urls }) {
                 this.ubicacion = null;
                 visor?.vistaGeneral();
                 this.mensaje = producto.ubicacion
-                    ? `La ubicación "${producto.ubicacion}" no sigue el formato ZONA-PASILLO-ANAQUEL-ESTANTE-POSICIÓN.`
+                    ? `La ubicación "${producto.ubicacion}" no sigue el formato ${nombreFormato()}.`
                     : 'Este producto no tiene ubicación en el catálogo.';
                 return;
             }

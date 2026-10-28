@@ -2,8 +2,10 @@
  * Almacén 3D > Armar almacén (resources/views/almacen/armar.blade.php): asistente para armar el
  * almacén caminándolo con el teléfono. Se elige la zona y, pasillo por pasillo, se cuenta lo que
  * se ve desde la entrada; un dibujo del pasillo y del anaquel muestra cómo queda numerado con el
- * formato de SIDES. Cada pasillo se guarda al terminarlo.
+ * formato de ubicación de la droguería. Cada pasillo se guarda al terminarlo.
  */
+import { formatear } from './ubicacion';
+
 const dosDigitos = (numero) => String(numero).padStart(2, '0');
 
 function mensajeDeError(error) {
@@ -75,7 +77,7 @@ export default function armarAlmacen({ zonas, pasillos, medidas, maximoPorLado, 
         },
         get ejemplo() {
             const primero = this.actual?.izquierda ? 1 : 2;
-            return `${this.clave}-${dosDigitos(primero)}-A-01`;
+            return this.actual ? formatear({ zona: this.zona, pasillo: this.actual.pasillo, anaquel: primero, estante: 'A', posicion: 1 }) : '';
         },
         /** Ya hay otro pasillo registrado con ese número en la zona: se reemplaza. */
         get repetido() {
