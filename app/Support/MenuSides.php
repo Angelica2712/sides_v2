@@ -24,6 +24,7 @@ class MenuSides
         'picking' => ['Picking', 'picking', 'picking', 'Recolección de productos por pedido.'],
         'batch' => ['Batch Picking', 'batch-picking', 'layers', 'Picking de varios pedidos agrupados en un lote.'],
         'packing' => ['Packing', 'packing', 'packing', 'Verificación y embalaje de pedidos.'],
+        'retenidos' => ['Alcabala de packing', 'retenidos', 'hand', 'Retiene pedidos empacados para sumarles otro del mismo cliente.'],
         'almacen' => ['Almacén 3D', 'almacen', 'warehouse', 'Los anaqueles del almacén y dónde está cada producto.'],
         'etiquetas' => ['Etiquetas', 'etiquetas', 'tag', 'Impresión de etiquetas de bultos.'],
         'pedidos' => ['Pedidos', 'pedidos', 'cart', 'Consulta de pedidos.'],
@@ -41,14 +42,14 @@ class MenuSides
 
     /** Agrupación del menú lateral y del inicio, en el orden en que se muestran. */
     public const SECCIONES = [
-        'Operación' => ['monitor', 'picking', 'batch', 'packing', 'etiquetas', 'almacen'],
+        'Operación' => ['monitor', 'picking', 'batch', 'packing', 'retenidos', 'etiquetas', 'almacen'],
         'Despacho' => ['guias', 'despacho', 'rutas'],
         'Consultas' => ['pedidos', 'resumen', 'informes'],
         'Ajustes' => ['filtromonitor', 'configuracion', 'usuarios', 'admin', 'auditoria'],
     ];
 
     /** Módulos que el administrador activa por droguería. Una droguería nueva los tiene apagados. */
-    public const OPCIONALES = ['batch', 'etiquetas', 'guias', 'rutas'];
+    public const OPCIONALES = ['batch', 'retenidos', 'etiquetas', 'guias', 'rutas'];
 
     /**
      * Módulos básicos: encendidos salvo que el administrador los apague para una droguería (fila
@@ -92,7 +93,7 @@ class MenuSides
             'almacen' => (bool) $usuario->activarAlmacen,
             // Registran ubicaciones y numeran el almacén quienes tienen el permiso y quien administra la droguería.
             'ubicaciones' => $usuario->activarUbicaciones || $usuario->activarConfig,
-            'packing' => $usuario->activarPacking && $cfg?->activarPacking,
+            'packing', 'retenidos' => $usuario->activarPacking && $cfg?->activarPacking,
             // El interruptor de la droguería (legacy activarEtiPacking) es ahora el módulo opcional.
             'etiquetas' => ! $usuario->activarGuiaCarga && ! $usuario->activarGuiaDescarga && ! $soloPicking,
             'pedidos' => (bool) $usuario->activarPedido,

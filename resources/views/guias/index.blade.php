@@ -13,11 +13,14 @@
                 <h2 class="text-xl font-extrabold text-slate-900">Guías de despacho</h2>
                 <p class="text-sm text-slate-500">Los bultos de los pedidos facturados que salen en cada viaje, por ruta y chofer.</p>
             </div>
-            <a href="{{ route('guias.create') }}" class="rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-on-primary hover:bg-primary-dark">Nueva guía</a>
+            <div class="flex gap-2">
+                <a href="{{ route('vehiculos.index') }}" class="rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50">Carros</a>
+                <a href="{{ route('guias.create') }}" class="rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-on-primary hover:bg-primary-dark">Nueva guía</a>
+            </div>
         </div>
 
         <form method="GET" action="{{ route('guias.index') }}" role="search"
-              class="grid gap-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 sm:grid-cols-2 lg:grid-cols-[auto_auto_1fr_1fr_auto] lg:items-end">
+              class="grid gap-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 sm:grid-cols-2 lg:grid-cols-[auto_auto_1fr_1fr_1fr_auto] lg:items-end">
             <div>
                 <label for="fecha" class="block text-xs font-semibold text-slate-600">Fecha</label>
                 <input id="fecha" name="fecha" type="date" value="{{ $filtros['fecha'] }}" class="{{ $campo }}">
@@ -46,6 +49,15 @@
                     <option value="">Todos</option>
                     @foreach ($choferes as $codigo => $nombre)
                         <option value="{{ $codigo }}" @selected($filtros['chofer'] === (string) $codigo)>{{ $nombre }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div>
+                <label for="unidad" class="block text-xs font-semibold text-slate-600">Carro</label>
+                <select id="unidad" name="unidad" class="{{ $campo }}">
+                    <option value="">Todos</option>
+                    @foreach ($unidades as $unidad)
+                        <option value="{{ $unidad }}" @selected($filtros['unidad'] === $unidad)>{{ $unidad }}</option>
                     @endforeach
                 </select>
             </div>

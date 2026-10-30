@@ -42,9 +42,7 @@
                 <h1>{{ $cfg?->nombre ?: 'SIDES' }}</h1>
                 <dl class="datos">
                     <dt>Ruta:</dt><dd>{{ $guia->ruta }}</dd>
-                    @if ($guia->unidad)
-                        <dt>Unidad:</dt><dd>{{ $guia->unidad }}</dd>
-                    @endif
+                    <dt>Carro:</dt><dd>{{ $guia->unidad ?: '—' }}</dd>
                     <dt>Chofer:</dt><dd>{{ $guia->nomchofer }}</dd>
                     @if ($guia->chof_aux_nom)
                         <dt>Auxiliar:</dt><dd>{{ $guia->chof_aux_nom }}</dd>

@@ -34,8 +34,10 @@ use Illuminate\Support\Facades\DB;
  */
 class PackingService
 {
-    public function __construct(private readonly DespachoSeped $despachoSeped)
-    {
+    public function __construct(
+        private readonly DespachoSeped $despachoSeped,
+        private readonly RetencionService $retencion,
+    ) {
     }
 
     /** Abre el pedido para empacar: lo deja a nombre del usuario y marca el inicio (fecpacking2). */
@@ -152,11 +154,12 @@ class PackingService
 
     /**
      * @param  array{cantBultos: string, despachador: ?string, embalador: ?string, cestas: ?string}  $datos
-     * @return 'PEND-FACTURA'|'ANULADO'
+     * @param  bool  $retener  deja el pedido en la alcabala de packing en vez de enviarlo a facturar
+     * @return 'PEND-FACTURA'|'ANULADO'|'RETENIDO'
      */
-    public function terminar(SidesUsers $usuario, int $pedidoId, array $datos): string
+    public function terminar(SidesUsers $usuario, int $pedidoId, array $datos, bool $retener = false): string
     {
-        return DB::transaction(function () use ($usuario, $pedidoId, $datos) {
+        return DB::transaction(function () use ($usuario, $pedidoId, $datos, $retener) {
             $pedido = $this->pedidoDeSucursal($usuario, $pedidoId);
             if ($pedido->estado === 'PEND-FACTURA') {
                 throw new PackingException("El pedido #{$pedidoId} ya fue enviado a facturar.");
@@ -189,7 +192,9 @@ class PackingService
             $inicioSesion = $operacion->fecpacking2 ? Carbon::parse($operacion->fecpacking2) : $ahora;
             $anterior = $this->ultimoLogDelDia($usuario, $inicioSesion);
 
-            Pedido::query()->whereKey($pedidoId)->update(['estado' => 'PEND-FACTURA', 'feccompletado' => $ahora]);
+            if (! $retener) {
+                Pedido::query()->whereKey($pedidoId)->update(['estado' => 'PEND-FACTURA', 'feccompletado' => $ahora]);
+            }
 
             $operacion->update([
                 'despachador' => trim((string) $datos['despachador']) ?: $operacion->despachador,
@@ -199,7 +204,11 @@ class PackingService
             ]);
 
             SidesPedrenOperacion::query()->where('id_pedido', $pedidoId)->update(['packing' => 1]);
-            $this->despachoSeped->escribir($pedidoId);
+            if ($retener) {
+                $this->retencion->retener($usuario, $pedido);
+            } else {
+                $this->despachoSeped->escribir($pedidoId);
+            }
 
             SidesLogpacking::query()->create([
                 'id_pedido' => $pedidoId,
@@ -222,7 +231,7 @@ class PackingService
                 ]);
             }
 
-            return 'PEND-FACTURA';
+            return $retener ? 'RETENIDO' : 'PEND-FACTURA';
         });
     }
 
@@ -257,6 +266,10 @@ class PackingService
     {
         if ($pedido->estado !== 'PACKING') {
             throw new PackingException("El pedido #{$pedido->id} no está en packing (estado: {$pedido->estado}).");
+        }
+
+        if ($this->retencion->estaRetenido($pedido->id)) {
+            throw new PackingException("El pedido #{$pedido->id} ya terminó el packing y está retenido en la alcabala.");
         }
     }
 

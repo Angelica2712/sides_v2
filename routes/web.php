@@ -21,10 +21,12 @@ use App\Http\Controllers\PackingController;
 use App\Http\Controllers\PedidosController;
 use App\Http\Controllers\PickingController;
 use App\Http\Controllers\ResumenController;
+use App\Http\Controllers\RetenidosController;
 use App\Http\Controllers\RutasController;
 use App\Http\Controllers\SsoController;
 use App\Http\Controllers\UbicacionesController;
 use App\Http\Controllers\UsuariosController;
+use App\Http\Controllers\VehiculosController;
 use App\Http\Controllers\WebhooksController;
 use App\Support\MenuSides;
 use Illuminate\Support\Facades\Route;
@@ -166,6 +168,13 @@ Route::middleware('auth')->group(function () {
             Route::post('{pedido}/liberar', 'liberar')->name('liberar');
         });
 
+    Route::prefix('retenidos')->name('retenidos.')->middleware('permiso:retenidos')
+        ->controller(RetenidosController::class)->whereNumber('retencion')
+        ->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::post('{retencion}/liberar', 'liberar')->name('liberar');
+        });
+
     Route::prefix('etiquetas')->name('etiquetas.')->middleware('permiso:etiquetas')
         ->controller(EtiquetasController::class)->whereNumber('pedido')
         ->group(function () {
@@ -258,6 +267,14 @@ Route::middleware('auth')->group(function () {
             Route::delete('{ruta}/clientes/{item}', 'quitarCliente')->name('clientes.destroy');
         });
 
+    Route::prefix('guias/vehiculos')->name('vehiculos.')->middleware('permiso:guias')
+        ->controller(VehiculosController::class)->whereNumber('vehiculo')
+        ->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::post('/', 'store')->name('store');
+            Route::put('{vehiculo}', 'update')->name('update');
+        });
+
     Route::prefix('guias')->name('guias.')->middleware('permiso:guias')
         ->controller(GuiasController::class)->whereNumber(['guia', 'pedido'])
         ->group(function () {
@@ -289,7 +306,7 @@ Route::middleware('auth')->group(function () {
 
     // Módulos aún no portados: al portar uno, se registra arriba con su controlador real
     // (mismo nombre "{clave}.index" y middleware permiso:{clave}) y se agrega a $portados.
-    $portados = ['monitor', 'picking', 'packing', 'batch', 'admin', 'etiquetas', 'pedidos', 'configuracion', 'usuarios', 'rutas', 'guias', 'despacho', 'resumen', 'filtromonitor', 'informes', 'auditoria', 'almacen'];
+    $portados = ['monitor', 'picking', 'packing', 'batch', 'admin', 'etiquetas', 'pedidos', 'configuracion', 'usuarios', 'rutas', 'guias', 'despacho', 'resumen', 'filtromonitor', 'informes', 'auditoria', 'almacen', 'retenidos'];
     foreach (MenuSides::MODULOS as $clave => [, $uri]) {
         if (in_array($clave, $portados, true)) {
             continue;

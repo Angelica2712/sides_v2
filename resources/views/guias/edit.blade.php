@@ -56,8 +56,15 @@
                     <input id="fecha_salida" name="fecha_salida" type="datetime-local" value="{{ old('fecha_salida', $paraInput($guia->fecha_salida)) }}" class="{{ $campo }}">
                 </div>
                 <div class="sm:col-span-2">
-                    <label for="unidad" class="block text-sm font-semibold text-slate-700">Unidad</label>
-                    <input id="unidad" name="unidad" type="text" maxlength="100" placeholder="Placa o nombre del vehículo" value="{{ old('unidad', $guia->unidad) }}" class="{{ $campo }}">
+                    <label for="vehiculo" class="block text-sm font-semibold text-slate-700">Carro</label>
+                    <select id="vehiculo" name="vehiculo" class="{{ $campo }}">
+                        @unless ($guia->id_vehiculo)
+                            <option value="">{{ $guia->unidad ?: 'Sin carro asignado' }}</option>
+                        @endunless
+                        @foreach ($vehiculos as $vehiculo)
+                            <option value="{{ $vehiculo->id }}" @selected((string) old('vehiculo', $guia->id_vehiculo) === (string) $vehiculo->id)>{{ $vehiculo->etiqueta() }}</option>
+                        @endforeach
+                    </select>
                 </div>
             </div>
 

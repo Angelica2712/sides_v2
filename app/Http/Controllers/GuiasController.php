@@ -32,6 +32,7 @@ class GuiasController extends Controller
             'estado' => in_array($request->query('estado'), GuiasService::ESTADOS, true) ? (string) $request->query('estado') : '',
             'ruta' => trim((string) $request->query('ruta', '')),
             'chofer' => trim((string) $request->query('chofer', '')),
+            'unidad' => trim((string) $request->query('unidad', '')),
         ];
 
         return view('guias.index', [
@@ -47,6 +48,7 @@ class GuiasController extends Controller
 
         return view('guias.create', [
             'choferes' => $this->guias->choferes($codisb),
+            'vehiculos' => $this->guias->vehiculos($codisb),
             'rutas' => SidesRuta::query()->where('codisb', $codisb)->orderBy('nombre')->get(['id', 'nombre']),
             'pendientes' => $this->guias->pedidosPendientes($codisb)->count(),
         ]);
@@ -58,14 +60,16 @@ class GuiasController extends Controller
             'fecha' => ['required', 'date'],
             'chofer' => ['required', 'string'],
             'ruta' => ['required', 'integer'],
+            'vehiculo' => ['required', 'integer'],
         ], [
             'fecha.*' => 'Escribe la fecha de la guía.',
             'chofer.required' => 'Elige el chofer.',
             'ruta.*' => 'Elige la ruta.',
+            'vehiculo.*' => 'Elige el carro.',
         ]);
 
         try {
-            $guia = $this->guias->crear($request->user()->codisb, $datos['fecha'], $datos['chofer'], (int) $datos['ruta']);
+            $guia = $this->guias->crear($request->user()->codisb, $datos['fecha'], $datos['chofer'], (int) $datos['ruta'], (int) $datos['vehiculo']);
         } catch (GuiasException $e) {
             return back()->withInput()->with('error', $e->getMessage());
         }
@@ -90,7 +94,11 @@ class GuiasController extends Controller
     {
         $registro = $this->guia($request, $guia);
 
-        return view('guias.edit', ['guia' => $registro, 'choferes' => $this->guias->choferes($registro->codisb)]);
+        return view('guias.edit', [
+            'guia' => $registro,
+            'choferes' => $this->guias->choferes($registro->codisb),
+            'vehiculos' => $this->guias->vehiculos($registro->codisb, $registro->id_vehiculo),
+        ]);
     }
 
     public function update(Request $request, int $guia): RedirectResponse
@@ -101,12 +109,12 @@ class GuiasController extends Controller
             'chofer' => ['required', 'string'],
             'auxiliar' => ['nullable', 'string'],
             'fecha_salida' => ['nullable', 'date'],
-            'unidad' => ['nullable', 'string', 'max:100'],
+            'vehiculo' => ['nullable', 'integer'],
         ], [
             'fecha.*' => 'Escribe la fecha de la guía.',
             'chofer.required' => 'Elige el chofer.',
             'fecha_salida.date' => 'La fecha de salida no es válida.',
-            'unidad.max' => 'La unidad no puede pasar de 100 caracteres.',
+            'vehiculo.*' => 'Elige un carro de la lista.',
         ]);
 
         return $this->ejecutar(function () use ($registro, $datos) {
@@ -115,7 +123,7 @@ class GuiasController extends Controller
                 'chofer' => $datos['chofer'],
                 'auxiliar' => $datos['auxiliar'] ?? null,
                 'fecha_salida' => $datos['fecha_salida'] ?? null,
-                'unidad' => $datos['unidad'] ?? null,
+                'vehiculo' => $datos['vehiculo'] ?? null,
             ]);
 
             return redirect()->route('guias.show', $registro->id)->with('mensaje', "Guía #{$registro->id} actualizada.");

@@ -16,6 +16,7 @@ use App\Models\Sides\SidesPedidoOperacion;
 use App\Models\Sides\SidesPedrenOperacion;
 use App\Models\Sides\SidesUsers;
 use App\Services\Almacen\UbicacionesRegistradas;
+use App\Services\Packing\RetencionService;
 use App\Support\FechaSeped;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
@@ -51,6 +52,10 @@ class PedidosService
 
     // Texto del legacy (con su ortografía) para que coincida con los pedidos ya anulados así.
     private const OBSERVACION_FACTURANDO_VIEJO = '(AUTOMATICO) PEDIDO ESTUBO MUCHO TIEMPO EN ESPERA POR FACTURAR';
+
+    public function __construct(private readonly RetencionService $retencion)
+    {
+    }
 
     /** Legacy AnulaPedidosFacturandoViejos: los FACTURANDO procesados hace 30 a 120 días pasan a ANULADO. */
     public function anularFacturandoViejos(string $codisb): int
@@ -188,6 +193,7 @@ class PedidosService
 
             if ($datos['estado'] !== $pedido->estado) {
                 $this->exigirSinLoteEnCurso($pedidoId);
+                $this->retencion->sacar($pedidoId, $usuario->email);
             }
 
             $pedido->forceFill([
@@ -229,6 +235,7 @@ class PedidosService
                 throw new PedidosException("El pedido #{$pedidoId} ya está cargado en {$guia}: no se puede resetear.");
             }
 
+            $this->retencion->sacar($pedidoId, $usuario->email);
             $pedido->forceFill(['estado' => 'RECIBIDO'])->save();
             // Lo único que SIDES escribe en pedren; vuelve a los valores por defecto de SEPED.
             DB::table('pedren')->where('id', $pedidoId)->update(['cantdesp' => 0, 'estado_desp' => null]);
@@ -261,6 +268,7 @@ class PedidosService
             $this->exigirSinLoteEnCurso($pedidoId);
 
             $anterior = $pedido->estado;
+            $this->retencion->sacar($pedidoId, $usuario->email);
             $pedido->forceFill(['estado' => 'ANULADO'])->save();
 
             $this->registrar('ANULADO', $pedidoId, $usuario, "ESTADO ANTERIOR: {$anterior}");

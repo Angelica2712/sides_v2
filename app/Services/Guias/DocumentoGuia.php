@@ -15,7 +15,7 @@ use OpenSpout\Writer\XLSX\Writer;
  */
 class DocumentoGuia
 {
-    public const COLUMNAS_EXCEL = ['CODIGO', 'DIRECCION', 'NOMBRE', 'SEC', 'BULTOS', 'NEV', 'FACT', 'NOTAS', 'DEV'];
+    public const COLUMNAS_EXCEL = ['CODIGO', 'DIRECCION', 'NOMBRE', 'SEC', 'BULTOS', 'NEV', 'FACT', 'NOTAS', 'DEV', 'PEDIDOS', 'FACTURAS'];
 
     public function __construct(private readonly GuiasService $guias)
     {
@@ -67,7 +67,7 @@ class DocumentoGuia
         $writer->openToFile($archivo);
         $writer->addRows([
             Row::fromValuesWithStyle(['GUIA DE RUTA', 'GUIA: '.$guia->id, 'FECHA: '.now()->format('d-m-Y H:i')], $negrita),
-            Row::fromValues(['RUTA: '.$guia->ruta, 'UNIDAD: '.($guia->unidad ?? ''), 'H. SALIDA: '.($guia->fecha_salida ?? '')]),
+            Row::fromValues(['RUTA: '.$guia->ruta, 'CARRO: '.($guia->unidad ?? ''), 'H. SALIDA: '.($guia->fecha_salida ?? '')]),
             Row::fromValues(['CHOFER: '.$guia->nomchofer, 'AUXILIAR: '.($guia->chof_aux_nom ?? '')]),
             Row::fromValuesWithStyle(self::COLUMNAS_EXCEL, $negrita),
         ]);
@@ -75,6 +75,8 @@ class DocumentoGuia
             $writer->addRow(Row::fromValues([
                 $cliente->codcli, $cliente->direccion, $cliente->nombre, $posicion + 1, $cliente->bultos,
                 $cliente->refrigerados, $cliente->facturados, $cliente->notas, $cliente->devoluciones,
+                $cliente->pedidos->pluck('id')->implode(', '),
+                $cliente->pedidos->flatMap(fn ($p) => $p->facturas)->pluck('factnum')->unique()->implode(', '),
             ]));
         }
         $writer->addRow(Row::fromValuesWithStyle(['', 'TOTAL CLIENTES: '.$clientes->count(), 'PIEZAS: '.$clientes->sum('bultos')], $negrita));

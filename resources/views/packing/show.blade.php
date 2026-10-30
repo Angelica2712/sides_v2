@@ -223,8 +223,18 @@
                                class="mt-1.5 block w-full rounded-xl border-slate-300 px-3.5 py-2.5 shadow-sm focus:border-primary focus:ring-primary">
                     </div>
                 </div>
-                <div class="flex justify-end gap-2">
+                @if ($puedeRetener && $retencionCliente)
+                    <p class="rounded-lg bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900">
+                        Este cliente tiene pedidos retenidos en la alcabala de packing. Puedes anexarle este pedido para que salgan juntos.
+                    </p>
+                @endif
+                <div class="flex flex-wrap justify-end gap-2">
                     <button type="button" @click="$refs.terminar.close()" class="rounded-xl px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100">Cancelar</button>
+                    @if ($puedeRetener)
+                        <button type="submit" name="retener" value="1" class="rounded-xl bg-amber-500 px-4 py-2 text-sm font-bold text-slate-900 hover:bg-amber-600">
+                            {{ $retencionCliente ? 'Anexar a los retenidos' : 'Retener en alcabala' }}
+                        </button>
+                    @endif
                     <button type="submit" class="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-700">Enviar a facturar</button>
                 </div>
             </form>

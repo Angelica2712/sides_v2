@@ -33,7 +33,7 @@
             <dl class="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
                 <div><dt class="text-xs font-semibold text-slate-500">Chofer</dt><dd class="font-semibold text-slate-800">{{ $guia->nomchofer }}</dd></div>
                 <div><dt class="text-xs font-semibold text-slate-500">Auxiliar</dt><dd class="font-semibold text-slate-800">{{ $guia->chof_aux_nom ?: '—' }}</dd></div>
-                <div><dt class="text-xs font-semibold text-slate-500">Unidad</dt><dd class="font-semibold text-slate-800">{{ $guia->unidad ?: '—' }}</dd></div>
+                <div><dt class="text-xs font-semibold text-slate-500">Carro</dt><dd class="font-semibold text-slate-800">{{ $guia->unidad ?: '—' }}</dd></div>
                 <div><dt class="text-xs font-semibold text-slate-500">Salida</dt><dd class="font-semibold text-slate-800">{{ $fecha($guia->fecha_salida) ?? '—' }}</dd></div>
             </dl>
 

@@ -261,6 +261,28 @@ trait TablasSides
             $table->integer('id_pedido')->unique();
         });
 
+        Schema::create('sides_retencion', function (Blueprint $table) {
+            $table->increments('id');
+            $table->string('codisb', 20);
+            $table->string('codcli', 20);
+            $table->string('nomcli', 150);
+            $table->string('estado', 20)->default('ABIERTA');
+            $table->string('usuario', 150);
+            $table->dateTime('fecha');
+            $table->string('usuario_liberado', 150)->nullable();
+            $table->dateTime('fec_liberada')->nullable();
+            $table->integer('id_grupo')->nullable();
+        });
+
+        Schema::create('sides_retencion_ren', function (Blueprint $table) {
+            $table->increments('id');
+            $table->integer('id_retencion');
+            $table->integer('id_pedido');
+            $table->string('usuario', 150);
+            $table->dateTime('fecha');
+            $table->dateTime('fec_liberado')->nullable();
+        });
+
         Schema::create('sides_pedido_operacion', function (Blueprint $table) {
             $table->integer('id_pedido')->primary();
             $table->string('codisb', 20);
@@ -462,6 +484,7 @@ trait TablasSides
             $table->string('chofer_aux_id', 20)->nullable();
             $table->string('chof_aux_nom', 255)->nullable();
             $table->dateTime('fecha_salida')->nullable();
+            $table->integer('id_vehiculo')->nullable();
             $table->string('unidad', 100)->nullable();
             $table->string('ordenarPor', 100)->default('clientes');
             $table->string('latitud', 100)->nullable();
@@ -472,6 +495,15 @@ trait TablasSides
     /** Renglones de guía y tablas de SEPED que leen las guías (choferes, users, fact, cxc, reclamo, recren). */
     protected function crearTablasGuias(): void
     {
+        Schema::create('sides_vehiculo', function (Blueprint $table) {
+            $table->increments('id');
+            $table->string('codisb', 20);
+            $table->string('placa', 20);
+            $table->string('descripcion', 70)->nullable();
+            $table->tinyInteger('activo')->default(1);
+            $table->unique(['codisb', 'placa']);
+        });
+
         Schema::create('sides_guia_ren', function (Blueprint $table) {
             $table->integer('id');
             $table->string('codcli', 100);

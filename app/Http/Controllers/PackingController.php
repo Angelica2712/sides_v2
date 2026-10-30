@@ -10,6 +10,7 @@ use App\Services\Etiquetas\EtiquetasException;
 use App\Services\Etiquetas\EtiquetasService;
 use App\Services\Packing\PackingException;
 use App\Services\Packing\PackingService;
+use App\Services\Packing\RetencionService;
 use App\Support\MenuSides;
 use App\Support\Monitor\NotificarMonitor;
 use App\Support\PartesPedido;
@@ -24,6 +25,7 @@ class PackingController extends Controller
         private readonly PackingService $packing,
         private readonly RenglonesPedido $renglonesPedido,
         private readonly EtiquetasService $etiquetas,
+        private readonly RetencionService $retencion,
     ) {
     }
 
@@ -35,6 +37,7 @@ class PackingController extends Controller
             ->leftJoin('sides_pedido_operacion as op', 'op.id_pedido', '=', 'pedido.id')
             ->where('pedido.codisb', $request->user()->codisb)
             ->where('pedido.estado', 'PACKING')
+            ->whereNotIn('pedido.id', $this->retencion->retenidos($request->user()->codisb))
             ->when($buscar !== '', function ($consulta) use ($buscar) {
                 $consulta->where(function ($filtro) use ($buscar) {
                     $filtro->where('pedido.id', 'like', "%{$buscar}%")
@@ -95,6 +98,8 @@ class PackingController extends Controller
             'parte' => PartesPedido::deLista($usuario->codisb, [$datosPedido])[(int) $datosPedido->id] ?? null,
             'renglones' => $renglones,
             'cfg' => $cfg,
+            'puedeRetener' => MenuSides::puede($usuario, $cfg, 'retenidos'),
+            'retencionCliente' => $this->retencion->abiertaDelCliente($usuario->codisb, (string) $datosPedido->codcli),
         ]);
     }
 
@@ -155,15 +160,24 @@ class PackingController extends Controller
             'cantBultos.required' => 'Indica la cantidad de bultos.',
         ]);
 
+        $retener = $request->boolean('retener') && MenuSides::puede($request->user(), $request->user()->cfg, 'retenidos');
+
         try {
             $resultado = $this->packing->terminar($request->user(), $pedido, [
                 'cantBultos' => $datos['cantBultos'],
                 'despachador' => $datos['despachador'] ?? null,
                 'embalador' => $datos['embalador'] ?? null,
                 'cestas' => $datos['cestas'] ?? null,
-            ]);
+            ], $retener);
         } catch (PackingException $e) {
             return back()->with('error', $e->getMessage());
+        }
+
+        // Un pedido retenido no va a facturar todavía: el aviso packing.terminar sale al liberarlo.
+        if ($resultado === 'RETENIDO') {
+            NotificarMonitor::cambio($request->user()->codisb, 'packing.retener', $pedido);
+
+            return redirect()->route('packing.index')->with('mensaje', "Pedido #{$pedido} retenido en la alcabala de packing.");
         }
 
         NotificarMonitor::cambio($request->user()->codisb, 'packing.terminar', $pedido);

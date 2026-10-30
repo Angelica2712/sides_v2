@@ -7,6 +7,7 @@ use App\Models\Sides\SidesGuiaRen;
 use App\Models\Sides\SidesRuta;
 use App\Models\Sides\SidesRutaren;
 use App\Models\Sides\SidesUsers;
+use App\Models\Sides\SidesVehiculo;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use OpenSpout\Reader\XLSX\Reader;
@@ -20,6 +21,8 @@ class GuiasTest extends TestCase
     private SidesUsers $usuario;
 
     private SidesRuta $ruta;
+
+    private SidesVehiculo $vehiculo;
 
     protected function setUp(): void
     {
@@ -40,6 +43,7 @@ class GuiasTest extends TestCase
             ['chof_co' => 'CH9', 'chof_nom' => 'DE OTRA SUCURSAL', 'chof_ced' => 'V9', 'codisb' => 'OTRA'],
         ]);
 
+        $this->vehiculo = SidesVehiculo::query()->create(['codisb' => '505094939', 'placa' => 'ABC123', 'descripcion' => 'NPR BLANCO']);
         $this->ruta = SidesRuta::query()->create(['nombre' => 'NORTE', 'codisb' => '505094939']);
         foreach ([['C1', 40, 0], ['C2', 20, 0], ['C3', 60, 1]] as [$codcli, $sec, $retira]) {
             SidesRutaren::query()->create([
@@ -76,9 +80,54 @@ class GuiasTest extends TestCase
 
     private function crearGuia(): SidesGuia
     {
-        $this->actingAs($this->usuario)->post('/guias', ['fecha' => '2026-09-16T08:00', 'chofer' => 'CH1', 'ruta' => $this->ruta->id])->assertRedirect();
+        $this->actingAs($this->usuario)->post('/guias', ['fecha' => '2026-09-16T08:00', 'chofer' => 'CH1', 'ruta' => $this->ruta->id, 'vehiculo' => $this->vehiculo->id])->assertRedirect();
 
         return SidesGuia::query()->latest('id')->firstOrFail();
+    }
+
+    private function otroCarro(array $atributos = []): SidesVehiculo
+    {
+        return SidesVehiculo::query()->create(array_merge(['codisb' => '505094939', 'placa' => 'XYZ789'], $atributos));
+    }
+
+    public function test_la_guia_exige_un_carro_de_la_sucursal_y_lo_imprime(): void
+    {
+        $ajeno = $this->otroCarro(['codisb' => 'OTRA', 'placa' => 'AJENO1']);
+        $inactivo = $this->otroCarro(['placa' => 'VIEJO1', 'activo' => 0]);
+        $base = ['fecha' => '2026-09-16T08:00', 'chofer' => 'CH1', 'ruta' => $this->ruta->id];
+
+        $this->actingAs($this->usuario)->get('/guias/nueva')->assertOk()
+            ->assertSee('ABC123 - NPR BLANCO')->assertDontSee('AJENO1')->assertDontSee('VIEJO1');
+
+        $this->post('/guias', $base)->assertSessionHasErrors(['vehiculo' => 'Elige el carro.']);
+        $this->post('/guias', $base + ['vehiculo' => $ajeno->id])->assertSessionHas('error', 'Elige un carro de la lista.');
+        $this->post('/guias', $base + ['vehiculo' => $inactivo->id])->assertSessionHas('error', 'Elige un carro de la lista.');
+        $this->assertSame(0, SidesGuia::query()->count());
+
+        $guia = $this->crearGuia();
+        $this->assertSame([$this->vehiculo->id, 'ABC123 - NPR BLANCO'], [(int) $guia->id_vehiculo, $guia->unidad]);
+        $this->get("/guias/{$guia->id}/imprimir")->assertOk()->assertSeeInOrder(['Carro:', 'ABC123 - NPR BLANCO', 'Chofer:', 'JUAN CHOFER']);
+        $this->get('/guias?unidad='.urlencode('ABC123 - NPR BLANCO'))->assertOk()->assertSee("#{$guia->id}");
+        $this->get('/guias?unidad=OTRO')->assertOk()->assertDontSee("#{$guia->id}");
+
+        // Desactivar el carro no cambia la guía, y ella lo puede seguir usando.
+        $this->vehiculo->update(['activo' => 0, 'descripcion' => 'CAMBIADO']);
+        $this->assertSame('ABC123 - NPR BLANCO', $guia->fresh()->unidad);
+        $this->get("/guias/{$guia->id}/modificar")->assertOk()->assertSee('ABC123 - CAMBIADO');
+    }
+
+    public function test_catalogo_de_carros(): void
+    {
+        $this->actingAs($this->usuario)->post('/guias/vehiculos', ['placa' => ' ab 12 ', 'descripcion' => 'Cava'])->assertRedirect(route('vehiculos.index'));
+        $carro = SidesVehiculo::query()->where('placa', 'AB 12')->firstOrFail();
+        $this->post('/guias/vehiculos', ['placa' => 'ab 12'])->assertSessionHasErrors(['placa' => 'Ya hay un carro con esa placa.']);
+
+        $this->put("/guias/vehiculos/{$carro->id}", ['placa' => 'AB 12', 'descripcion' => ''])->assertRedirect();
+        $this->assertSame([0, null], [(int) $carro->fresh()->activo, $carro->fresh()->descripcion]);
+
+        $ajeno = $this->otroCarro(['codisb' => 'OTRA']);
+        $this->put("/guias/vehiculos/{$ajeno->id}", ['placa' => 'ROBADO'])->assertNotFound();
+        $this->get('/guias/vehiculos')->assertOk()->assertSee('AB 12')->assertDontSee('XYZ789');
     }
 
     private function bulto(string $etiqueta): object
@@ -117,9 +166,9 @@ class GuiasTest extends TestCase
             ->assertSeeInOrder(['CLIENTE C2', 'Pedido #102', '102-01', 'CLIENTE C1', 'Pedido #101', '101-01', '101-02', 'Pedidos pendientes de la ruta', '#103']);
 
         // Ya no quedan pedidos para la ruta.
-        $this->post('/guias', ['fecha' => '2026-09-16T09:00', 'chofer' => 'CH1', 'ruta' => $this->ruta->id])
+        $this->post('/guias', ['fecha' => '2026-09-16T09:00', 'chofer' => 'CH1', 'ruta' => $this->ruta->id, 'vehiculo' => $this->vehiculo->id])
             ->assertSessionHas('error', 'La ruta NORTE no tiene pedidos facturados con etiquetas pendientes de despacho.');
-        $this->post('/guias', ['fecha' => '2026-09-16T09:00', 'chofer' => 'CH9', 'ruta' => $this->ruta->id])
+        $this->post('/guias', ['fecha' => '2026-09-16T09:00', 'chofer' => 'CH9', 'ruta' => $this->ruta->id, 'vehiculo' => $this->vehiculo->id])
             ->assertSessionHas('error', 'Elige un chofer de la lista.');
         $this->assertSame(1, SidesGuia::query()->count());
     }
@@ -177,10 +226,10 @@ class GuiasTest extends TestCase
 
         $this->put("/guias/{$guia->id}", ['fecha' => '2026-09-16T08:00', 'chofer' => 'CH1', 'auxiliar' => 'CH1'])
             ->assertSessionHas('error', 'El auxiliar no puede ser el mismo chofer.');
-        $this->put("/guias/{$guia->id}", ['fecha' => '2026-09-16T08:00', 'chofer' => 'CH1', 'auxiliar' => 'CH2', 'fecha_salida' => '2026-09-16T11:30', 'unidad' => ' ABC-123 '])
+        $this->put("/guias/{$guia->id}", ['fecha' => '2026-09-16T08:00', 'chofer' => 'CH1', 'auxiliar' => 'CH2', 'fecha_salida' => '2026-09-16T11:30', 'vehiculo' => $this->otroCarro()->id])
             ->assertRedirect(route('guias.show', $guia->id));
         $guia->refresh();
-        $this->assertSame(['CH2', 'PEDRO AUXILIAR', 'ABC-123', '2026-09-16 11:30:00'], [$guia->chofer_aux_id, $guia->chof_aux_nom, $guia->unidad, $guia->fecha_salida]);
+        $this->assertSame(['CH2', 'PEDRO AUXILIAR', 'XYZ789', '2026-09-16 11:30:00'], [$guia->chofer_aux_id, $guia->chof_aux_nom, $guia->unidad, $guia->fecha_salida]);
 
         $this->post("/guias/{$guia->id}/separar", ['clientes' => ['C1', 'C2'], 'chofer' => 'CH2'])
             ->assertSessionHas('error', 'Deja al menos un cliente en esta guía. Para mover todos, cambia el chofer de la guía.');
@@ -232,9 +281,9 @@ class GuiasTest extends TestCase
         }
         $reader->close();
 
-        $this->assertSame(['CODIGO', 'DIRECCION', 'NOMBRE', 'SEC', 'BULTOS', 'NEV', 'FACT', 'NOTAS', 'DEV'], $filas[3]);
-        $this->assertSame(['C2', '', 'CLIENTE C2', 1, 1, 0, 0, 0, 0], $filas[4]);
-        $this->assertSame(['C1', 'CALLE 1, LOCAL 2', 'FARMACIA UNO', 2, 2, 1, 1, 1, 1], $filas[5]);
+        $this->assertSame(['CODIGO', 'DIRECCION', 'NOMBRE', 'SEC', 'BULTOS', 'NEV', 'FACT', 'NOTAS', 'DEV', 'PEDIDOS', 'FACTURAS'], $filas[3]);
+        $this->assertSame(['C2', '', 'CLIENTE C2', 1, 1, 0, 0, 0, 0, '102', ''], $filas[4]);
+        $this->assertSame(['C1', 'CALLE 1, LOCAL 2', 'FARMACIA UNO', 2, 2, 1, 1, 1, 1, '101', 'F-500'], $filas[5]);
         $this->assertContains('PIEZAS: 3', end($filas));
     }
 

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Events\MonitorActualizado;
 use App\Models\Seped\Pedido;
 use App\Models\Sides\SidesCfg;
+use App\Services\Packing\RetencionService;
 use App\Support\Monitor\FiltrosMonitor;
 use App\Support\Monitor\TiemposPedido;
 use App\Support\PartesPedido;
@@ -89,12 +90,15 @@ class MonitorController extends Controller
         $usuario = $request->user();
         $codisb = $usuario->codisb;
         $ahora = Carbon::now();
+        // Los retenidos ya terminaron el packing: siguen en PACKING pero no son trabajo en proceso.
+        $retenidos = app(RetencionService::class)->retenidos($codisb);
 
         // Pedidos en proceso por ruta: de acá salen el conteo de cada pestaña y las rutas que
         // entran al filtro elegido.
         $porRuta = Pedido::query()
             ->where('codisb', $codisb)
             ->whereIn('estado', self::ESTADOS)
+            ->whereNotIn('id', $retenidos)
             ->selectRaw('ruta, COUNT(*) as total')
             ->groupBy('ruta')
             ->get()
@@ -107,6 +111,7 @@ class MonitorController extends Controller
             ->leftJoin('sides_pedido_operacion as op', 'op.id_pedido', '=', 'pedido.id')
             ->where('pedido.codisb', $codisb)
             ->whereIn('pedido.estado', self::ESTADOS)
+            ->whereNotIn('pedido.id', $retenidos)
             ->when($filtro, fn ($consulta) => $consulta->whereIn(
                 'pedido.ruta', FiltrosMonitor::rutasDe($filtro, $porRuta->pluck('ruta'))
             ))
@@ -127,6 +132,7 @@ class MonitorController extends Controller
         $porEstado = Pedido::query()
             ->where('codisb', $codisb)
             ->whereIn('estado', [...self::ESTADOS, 'POR-APROBAR'])
+            ->whereNotIn('id', $retenidos)
             ->selectRaw('estado, COUNT(*) as total')
             ->groupBy('estado')
             ->pluck('total', 'estado');

@@ -15,6 +15,7 @@ final class EventosWebhook
         'picking.terminar' => 'Terminó el picking del pedido',
         'picking.liberar' => 'El pedido se liberó del picking y volvió a la cola',
         'packing.terminar' => 'Terminó el packing: el pedido pasa a facturar',
+        'packing.retener' => 'Terminó el packing y el pedido quedó retenido en la alcabala de packing',
         'packing.liberar' => 'El pedido se liberó del packing',
         'pedidos.modificar' => 'Se modificaron datos del pedido',
         'pedidos.resetear' => 'El pedido se reseteó y volvió a RECIBIDO',

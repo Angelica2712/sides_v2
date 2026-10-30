@@ -7,6 +7,7 @@ use App\Models\Sides\SidesGuia;
 use App\Models\Sides\SidesGuiaRen;
 use App\Models\Sides\SidesRuta;
 use App\Models\Sides\SidesRutaren;
+use App\Models\Sides\SidesVehiculo;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -33,7 +34,7 @@ class GuiasService
     /** Motivos de reclamo que el legacy contaba como devolución en el Excel de la guía. */
     public const MOTIVOS_DEVOLUCION = ['MAL ESTADO', 'NO SOLICITADO', 'RETIRO DEL MERCADO', 'SOBRANTE', 'VENCIMIENTO'];
 
-    /** @param array{fecha: string, estado: string, ruta: string, chofer: string} $filtros */
+    /** @param array{fecha: string, estado: string, ruta: string, chofer: string, unidad: string} $filtros */
     public function listar(string $codisb, array $filtros): LengthAwarePaginator
     {
         return SidesGuia::query()
@@ -42,6 +43,7 @@ class GuiasService
             ->when($filtros['estado'] !== '', fn ($q) => $q->where('estado', $filtros['estado']))
             ->when($filtros['ruta'] !== '', fn ($q) => $q->where('ruta', $filtros['ruta']))
             ->when($filtros['chofer'] !== '', fn ($q) => $q->where(fn ($q) => $q->where('chofer', $filtros['chofer'])->orWhere('chofer_aux_id', $filtros['chofer'])))
+            ->when($filtros['unidad'] !== '', fn ($q) => $q->where('unidad', $filtros['unidad']))
             ->select('sides_guia.*')
             ->selectSub(fn ($q) => $q->from('sides_guia_ren')->whereColumn('sides_guia_ren.id', 'sides_guia.id')->selectRaw('COUNT(*)'), 'clientes')
             ->selectSub(fn ($q) => $q->from('sides_etiqueta_pedido')->whereColumn('sides_etiqueta_pedido.guia', 'sides_guia.id')->selectRaw('COUNT(*)'), 'bultos')
@@ -51,7 +53,7 @@ class GuiasService
             ->withQueryString();
     }
 
-    /** @return array{rutas: Collection, choferes: Collection} valores usados en las guías de la sucursal */
+    /** @return array{rutas: Collection, choferes: Collection, unidades: Collection} valores usados en las guías de la sucursal */
     public function opcionesFiltro(string $codisb): array
     {
         $guias = SidesGuia::query()->where('codisb', $codisb);
@@ -59,6 +61,7 @@ class GuiasService
         return [
             'rutas' => (clone $guias)->distinct()->orderBy('ruta')->pluck('ruta'),
             'choferes' => (clone $guias)->distinct()->orderBy('nomchofer')->pluck('nomchofer', 'chofer'),
+            'unidades' => (clone $guias)->whereNotNull('unidad')->where('unidad', '!=', '')->distinct()->orderBy('unidad')->pluck('unidad'),
         ];
     }
 
@@ -74,12 +77,21 @@ class GuiasService
             ?? throw new GuiasException("La guía #{$id} no existe en tu sucursal.");
     }
 
+    /** Carros activos de la sucursal; $incluir suma el que ya tiene la guía aunque lo hayan desactivado. */
+    public function vehiculos(string $codisb, ?int $incluir = null): Collection
+    {
+        return SidesVehiculo::query()->where('codisb', $codisb)
+            ->where(fn ($q) => $q->where('activo', 1)->when($incluir, fn ($q) => $q->orWhere('id', $incluir)))
+            ->orderBy('placa')->get();
+    }
+
     /** Crea la guía de una ruta con los pedidos facturados (y etiquetados) de sus clientes. */
-    public function crear(string $codisb, string $fecha, string $chofer, int $rutaId): SidesGuia
+    public function crear(string $codisb, string $fecha, string $chofer, int $rutaId, int $vehiculoId): SidesGuia
     {
         $ruta = SidesRuta::query()->where('codisb', $codisb)->find($rutaId)
             ?? throw new GuiasException('Elige una ruta de la lista.');
         $datosChofer = $this->chofer($codisb, $chofer);
+        $vehiculo = $this->vehiculo($codisb, $vehiculoId);
 
         // Los clientes que retiran en local no van en la guía.
         $clientes = SidesRutaren::query()->where('id', $ruta->id)->where('retiraLocal', 0)->get()->keyBy('codcli');
@@ -88,7 +100,7 @@ class GuiasService
             throw new GuiasException("La ruta {$ruta->nombre} no tiene pedidos facturados con etiquetas pendientes de despacho.");
         }
 
-        return DB::transaction(function () use ($codisb, $fecha, $datosChofer, $ruta, $clientes, $pedidos) {
+        return DB::transaction(function () use ($codisb, $fecha, $datosChofer, $vehiculo, $ruta, $clientes, $pedidos) {
             $guia = SidesGuia::query()->create([
                 'fecha' => Carbon::parse($fecha),
                 'chofer' => $datosChofer->chof_co,
@@ -96,6 +108,8 @@ class GuiasService
                 'codisb' => $codisb,
                 'estado' => 'NUEVO',
                 'ruta' => $ruta->nombre,
+                'id_vehiculo' => $vehiculo->id,
+                'unidad' => $vehiculo->etiqueta(),
             ]);
 
             $this->asignarPedidos($guia, $pedidos, $clientes);
@@ -285,9 +299,14 @@ class GuiasService
         });
     }
 
-    /** @param array{fecha: string, chofer: string, auxiliar: ?string, fecha_salida: ?string, unidad: ?string} $datos */
+    /**
+     * Sin vehículo se deja el carro que tenía: las guías viejas guardan solo el texto de la unidad.
+     *
+     * @param array{fecha: string, chofer: string, auxiliar: ?string, fecha_salida: ?string, vehiculo: ?int} $datos
+     */
     public function actualizar(SidesGuia $guia, array $datos): void
     {
+        $vehiculo = filled($datos['vehiculo']) ? $this->vehiculo($guia->codisb, (int) $datos['vehiculo'], $guia->id_vehiculo) : null;
         $chofer = $this->chofer($guia->codisb, $datos['chofer']);
         $auxiliar = filled($datos['auxiliar']) ? $this->chofer($guia->codisb, $datos['auxiliar']) : null;
         if ($auxiliar && $auxiliar->chof_co === $chofer->chof_co) {
@@ -301,7 +320,8 @@ class GuiasService
             'chofer_aux_id' => $auxiliar?->chof_co,
             'chof_aux_nom' => $auxiliar?->chof_nom,
             'fecha_salida' => filled($datos['fecha_salida']) ? Carbon::parse($datos['fecha_salida']) : null,
-            'unidad' => filled($datos['unidad']) ? trim($datos['unidad']) : null,
+            'id_vehiculo' => $vehiculo?->id ?? $guia->id_vehiculo,
+            'unidad' => $vehiculo?->etiqueta() ?? $guia->unidad,
         ]);
     }
 
@@ -448,6 +468,13 @@ class GuiasService
     {
         return Choferes::query()->where('codisb', $codisb)->where('chof_co', $codigo)->first()
             ?? throw new GuiasException('Elige un chofer de la lista.');
+    }
+
+    /** Un carro desactivado no se puede elegir, salvo el que la guía ya tiene ($actual). */
+    private function vehiculo(string $codisb, int $id, ?int $actual = null): SidesVehiculo
+    {
+        return $this->vehiculos($codisb, $actual)->firstWhere('id', $id)
+            ?? throw new GuiasException('Elige un carro de la lista.');
     }
 
     /** Bulto de la guía por su código impreso (ej. 12345-01). */
