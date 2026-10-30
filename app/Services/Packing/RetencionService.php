@@ -10,6 +10,7 @@ use App\Services\Despacho\DespachoSeped;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Alcabala de packing: pedidos de un cliente que terminaron el packing y se retienen por si llega
@@ -170,6 +171,7 @@ class RetencionService
             }
 
             $this->exigirMismasCondiciones($pedidos);
+            $this->exigirLimiteRenglones($usuario->codisb, $pedidos);
 
             $ahora = Carbon::now();
             $ids = $pedidos->pluck('id')->map(fn ($id) => (int) $id)->values()->all();
@@ -220,6 +222,29 @@ class RetencionService
                     throw new PackingException("Los pedidos #{$primero->id} y #{$pedido->id} no se pueden unir: tienen distinto {$nombre}. Envíalos a facturar uno por uno.");
                 }
             }
+        }
+    }
+
+    /**
+     * El pedido fundido no puede pasar del máximo de renglones por factura de la droguería (cfg.numRengPedido de SEPED,
+     * 0 o vacío = sin límite): si lo pasara, SEPED lo volvería a partir. Cada pedido por separado sí puede salir.
+     *
+     * @param  Collection<int, Pedido>  $pedidos
+     */
+    private function exigirLimiteRenglones(string $codisb, Collection $pedidos): void
+    {
+        if ($pedidos->count() < 2 || ! Schema::hasTable('cfg')) {
+            return;
+        }
+
+        $limite = (int) DB::table('cfg')->where('codisb', $codisb)->value('numRengPedido');
+        if ($limite <= 0) {
+            return;
+        }
+
+        $renglones = DB::table('pedren')->whereIn('id', $pedidos->pluck('id')->all())->count();
+        if ($renglones > $limite) {
+            throw new PackingException("Unidos los pedidos #".$pedidos->pluck('id')->implode(', #')." sumarían {$renglones} renglones y el máximo por factura es {$limite}. Envíalos a facturar uno por uno o libera menos pedidos juntos.");
         }
     }
 
