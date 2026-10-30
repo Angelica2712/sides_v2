@@ -3,11 +3,11 @@
 namespace Tests\Feature;
 
 use App\Models\Seped\Pedido;
-use App\Models\Sides\SidesFacturaGrupoRen;
 use App\Models\Sides\SidesLogpacking;
 use App\Models\Sides\SidesPedrenOperacion;
 use App\Models\Sides\SidesRetencion;
 use App\Models\Sides\SidesRetencionRen;
+use App\Services\Siad\SiadPedidosService;
 use App\Models\Sides\SidesUsers;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -41,8 +41,9 @@ class RetenidosTest extends TestCase
     private function pedidoListo(int $id, string $codcli = 'C1', string $estado = 'PACKING'): void
     {
         $this->crearPedido(['id' => $id, 'estado' => $estado, 'codcli' => $codcli, 'nomcli' => "CLIENTE {$codcli}"]);
-        $this->crearRenglon($id, 1, ['cantidad' => 2, 'barra' => '0771']);
-        SidesPedrenOperacion::query()->insert(['id_pedido' => $id, 'item' => 1, 'codisb' => '505094939', 'cantdesp' => 2, 'chequeado' => 2]);
+        // Como en la base real, el item no se repite entre pedidos.
+        $this->crearRenglon($id, $id, ['cantidad' => 2, 'barra' => '0771']);
+        SidesPedrenOperacion::query()->insert(['id_pedido' => $id, 'item' => $id, 'codisb' => '505094939', 'cantdesp' => 2, 'chequeado' => 2]);
     }
 
     private function terminarRetenido(int $id): void
@@ -68,7 +69,7 @@ class RetenidosTest extends TestCase
         $this->get('/retenidos')->assertOk()->assertSee('CLIENTE C1')->assertSee('#800');
     }
 
-    public function test_anexar_y_liberar_juntos_quedan_en_un_grupo(): void
+    public function test_anexar_y_liberar_juntos_funde_los_pedidos_en_uno(): void
     {
         $this->pedidoListo(800);
         $this->pedidoListo(801);
@@ -86,13 +87,56 @@ class RetenidosTest extends TestCase
 
         $this->post("/retenidos/{$retencion->id}/liberar", ['bultos' => [800 => 3, 801 => 1]])->assertRedirect(route('retenidos.index'));
 
-        $this->assertSame(['PEND-FACTURA', 'PEND-FACTURA', 'PACKING'], Pedido::query()->orderBy('id')->whereIn('id', [800, 801, 802])->pluck('estado')->all());
-        $this->assertSame(2, (int) DB::table('pedren')->where('id', 800)->value('cantdesp'));
-        $this->assertSame('FACTURADO', DB::table('pedren')->where('id', 801)->value('estado_desp'));
-        $this->assertSame('3', DB::table('sides_pedido_operacion')->where('id_pedido', 800)->value('cantBultos'));
-        $this->assertSame([800, 801], SidesFacturaGrupoRen::query()->orderBy('id_pedido')->pluck('id_pedido')->map(fn ($id) => (int) $id)->all());
+        $this->assertSame(['PEND-FACTURA', 'ANULADO', 'PACKING'], Pedido::query()->orderBy('id')->whereIn('id', [800, 801, 802])->pluck('estado')->all());
+        $this->assertSame([800, 801], DB::table('pedren')->where('id', 800)->orderBy('item')->pluck('item')->map(fn ($i) => (int) $i)->all());
+        $this->assertSame(0, DB::table('pedren')->where('id', 801)->count());
+        $this->assertSame(['FACTURADO', 'FACTURADO'], DB::table('pedren')->where('id', 800)->pluck('estado_desp')->all());
+        $this->assertSame(2, (int) DB::table('pedren')->where('item', 801)->value('cantdesp'));
+        $this->assertSame(2, DB::table('sides_pedren_operacion')->where('id_pedido', 800)->count());
+        $this->assertSame('4', DB::table('sides_pedido_operacion')->where('id_pedido', 800)->value('cantBultos'));
+        $this->assertStringStartsWith('Unido al pedido #800.', Pedido::query()->find(801)->observacion);
+        $this->assertSame('[801]', DB::table('sides_pedido_union')->where('id_unido', 801)->value('items'));
         $this->assertSame('LIBERADA', $retencion->fresh()->estado);
-        $this->assertNotNull($retencion->fresh()->id_grupo);
+    }
+
+    public function test_el_pedido_fundido_suma_la_cabecera_y_el_siad_lo_recibe_completo(): void
+    {
+        $this->pedidoListo(800);
+        $this->pedidoListo(801);
+        Pedido::query()->whereKey(800)->update(['numren' => 1, 'numund' => 2, 'total' => 100, 'subtotal' => 90]);
+        Pedido::query()->whereKey(801)->update(['numren' => 1, 'numund' => 2, 'total' => 50.5, 'subtotal' => 40]);
+        $this->terminarRetenido(800);
+        $this->terminarRetenido(801);
+        $retencion = SidesRetencion::query()->first();
+
+        $this->post("/retenidos/{$retencion->id}/liberar")
+            ->assertSessionHas('mensaje', 'Los pedidos #801 se unieron al #800, que se envió a facturar.');
+
+        $pedido = Pedido::query()->find(800);
+        $this->assertSame([2, 4, 150.5, 130.0], [(int) $pedido->numren, (int) $pedido->numund, (float) $pedido->total, (float) $pedido->subtotal]);
+        $this->assertSame('4', DB::table('sides_pedido_operacion')->where('id_pedido', 800)->value('cantBultos'));
+
+        $entrega = app(SiadPedidosService::class)->pedido('505094939', 'PEND-FACTURA');
+        $this->assertSame(800, $entrega[0]['id']);
+        $this->assertCount(2, $entrega[0]['pedren']);
+        $this->assertSame([], app(SiadPedidosService::class)->idsEnEstado('505094939', 'PACKING'));
+    }
+
+    public function test_no_funde_pedidos_con_distintas_condiciones_pero_se_pueden_enviar_por_separado(): void
+    {
+        $this->pedidoListo(800);
+        $this->pedidoListo(801);
+        Pedido::query()->whereKey(801)->update(['dcredito' => 30]);
+        $this->terminarRetenido(800);
+        $this->terminarRetenido(801);
+        $retencion = SidesRetencion::query()->first();
+
+        $this->post("/retenidos/{$retencion->id}/liberar")
+            ->assertSessionHas('error', 'Los pedidos #800 y #801 no se pueden unir: tienen distinto días de crédito. Envíalos a facturar uno por uno.');
+        $this->assertSame(1, DB::table('pedren')->where('id', 801)->count());
+        $this->assertSame('PACKING', Pedido::query()->find(800)->estado);
+
+        $this->post("/retenidos/{$retencion->id}/liberar", ['pedido' => 801])->assertSessionHas('mensaje', 'Pedido #801 enviado a facturar.');
     }
 
     public function test_liberar_uno_solo_deja_los_demas_retenidos(): void
@@ -108,7 +152,7 @@ class RetenidosTest extends TestCase
         $this->assertSame('PEND-FACTURA', Pedido::query()->find(800)->estado);
         $this->assertSame('PACKING', Pedido::query()->find(801)->estado);
         $this->assertSame('ABIERTA', $retencion->fresh()->estado);
-        $this->assertSame(0, SidesFacturaGrupoRen::query()->count());
+        $this->assertSame(0, DB::table('sides_pedido_union')->count());
 
         $this->post("/retenidos/{$retencion->id}/liberar")->assertSessionHas('mensaje', 'Pedido #801 enviado a facturar.');
         $this->assertSame('LIBERADA', $retencion->fresh()->estado);

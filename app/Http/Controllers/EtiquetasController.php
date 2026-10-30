@@ -72,6 +72,7 @@ class EtiquetasController extends Controller
             'cfg' => $this->cfg($request),
             'formato' => FormatosEtiqueta::de($this->cfg($request)),
             'bultos' => max(1, (int) $datos->cantBultos),
+            'pedidosJuntos' => $this->etiquetas->pedidosJuntos($pedido),
             'volver' => $this->volver($request, $pedido),
             'autoImprimir' => $request->boolean('imprimir'),
         ]);

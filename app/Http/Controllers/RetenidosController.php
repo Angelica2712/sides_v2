@@ -39,38 +39,33 @@ class RetenidosController extends Controller
         $usuario = $request->user();
 
         try {
-            $ids = $this->retencion->liberar(
+            $liberado = $this->retencion->liberar(
                 $usuario, $retencion, $datos['bultos'] ?? [], isset($datos['pedido']) ? (int) $datos['pedido'] : null
             );
         } catch (PackingException $e) {
             return back()->with('error', $e->getMessage());
         }
 
-        foreach ($ids as $id) {
+        $pedido = $liberado['pedido'];
+        foreach ([$pedido, ...$liberado['unidos']] as $id) {
             NotificarMonitor::cambio($usuario->codisb, 'packing.terminar', $id);
         }
 
-        $mensaje = count($ids) === 1
-            ? "Pedido #{$ids[0]} enviado a facturar."
-            : count($ids).' pedidos enviados a facturar juntos: #'.implode(', #', $ids).'.';
+        $mensaje = $liberado['unidos'] === []
+            ? "Pedido #{$pedido} enviado a facturar."
+            : 'Los pedidos #'.implode(', #', $liberado['unidos'])." se unieron al #{$pedido}, que se envió a facturar.";
 
         // Mismo interruptor que al terminar un packing normal: las etiquetas salen cuando ya se puede facturar.
         $cfg = SidesCfg::query()->find($usuario->codisb);
         if ($cfg?->activar_etiqueta_packing && MenuSides::puede($usuario, $cfg, 'etiquetas')) {
             try {
-                foreach ($ids as $id) {
-                    $bultos = max(1, (int) ($datos['bultos'][$id] ?? $this->etiquetas->pedido($usuario->codisb, $id)->cantBultos));
-                    $this->etiquetas->generar($usuario, $id, $bultos);
-                }
+                $this->etiquetas->generar($usuario, $pedido, max(1, (int) $this->etiquetas->pedido($usuario->codisb, $pedido)->cantBultos));
             } catch (EtiquetasException $e) {
                 return redirect()->route('retenidos.index')->with('mensaje', $mensaje)
                     ->with('error', "No se pudieron preparar las etiquetas: {$e->getMessage()}");
             }
 
-            if (count($ids) === 1) {
-                return redirect()->route('etiquetas.imprimir', ['pedido' => $ids[0], 'imprimir' => 1, 'volver' => 'packing'])->with('mensaje', $mensaje);
-            }
-            $mensaje .= ' Sus etiquetas están listas para imprimir en Etiquetas.';
+            return redirect()->route('etiquetas.imprimir', ['pedido' => $pedido, 'imprimir' => 1, 'volver' => 'packing'])->with('mensaje', $mensaje);
         }
 
         return redirect()->route('retenidos.index')->with('mensaje', $mensaje);

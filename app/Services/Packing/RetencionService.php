@@ -3,8 +3,6 @@
 namespace App\Services\Packing;
 
 use App\Models\Seped\Pedido;
-use App\Models\Sides\SidesFacturaGrupo;
-use App\Models\Sides\SidesFacturaGrupoRen;
 use App\Models\Sides\SidesRetencion;
 use App\Models\Sides\SidesRetencionRen;
 use App\Models\Sides\SidesUsers;
@@ -22,13 +20,22 @@ use Illuminate\Support\Facades\DB;
  * abierta en sides_retencion_ren (fec_liberado nulo). Al liberarlo pasa a PEND-FACTURA y recién ahí
  * se escribe el despacho en pedren, igual que al terminar un packing normal.
  *
- * Anexar no funde pedidos: cada uno conserva su número y sus renglones, y el ERP emite una factura
- * por pedido. Los que salen juntos quedan en un mismo grupo de facturación (sides_factura_grupo).
+ * Los que se liberan juntos se funden en el de número más bajo y el ERP recibe un solo pedido: sus
+ * renglones pasan a ese pedido (pedren.item es único en toda la tabla) sin sumarse, porque cada uno
+ * trae su precio y sus descuentos. Los demás quedan ANULADO, sin renglones y sin comprometer unidades,
+ * con la observación de a dónde fueron; sides_pedido_union guarda de dónde salió cada renglón.
  */
 class RetencionService
 {
     /** Estados en los que otro pedido del cliente todavía puede llegar a esta alcabala. */
     public const ESTADOS_EN_CAMINO = ['ALCABALA', 'RECIBIDO', 'PICKING', 'PACKING'];
+
+    /** Condiciones comerciales de la cabecera: si difieren, una sola factura cobraría mal alguno de los pedidos. */
+    private const DEBEN_COINCIDIR = ['dcredito' => 'días de crédito', 'pedfiscal' => 'tipo fiscal', 'di' => 'descuento', 'dc' => 'descuento',
+        'pp' => 'pronto pago', 'factorcambiario' => 'tasa de cambio', 'codvend' => 'vendedor'];
+
+    /** Importes de la cabecera que se suman al fundir. */
+    private const SE_SUMAN = ['subrenglon', 'descuento', 'subtotal', 'impuesto', 'total', 'numren', 'numund'];
 
     public function __construct(private readonly DespachoSeped $despachoSeped)
     {
@@ -141,10 +148,10 @@ class RetencionService
 
     /**
      * Libera a facturar los pedidos de la retención. Con $pedidoId sale solo ese y los demás siguen
-     * retenidos; si salen dos o más a la vez quedan en un grupo de facturación.
+     * retenidos; si salen dos o más a la vez se funden en uno.
      *
      * @param  array<int|string, string|null>  $bultos  bultos por pedido: al anexar suelen cambiar
-     * @return list<int> pedidos liberados
+     * @return array{pedido: int, unidos: list<int>} el pedido que sale a facturar y los que se fundieron en él
      */
     public function liberar(SidesUsers $usuario, int $retencionId, array $bultos = [], ?int $pedidoId = null): array
     {
@@ -157,32 +164,35 @@ class RetencionService
             $renglones = SidesRetencionRen::query()->where('id_retencion', $retencion->id)->whereNull('fec_liberado')
                 ->when($pedidoId !== null, fn ($q) => $q->where('id_pedido', $pedidoId))
                 ->get();
-            $pedidos = Pedido::query()->whereIn('id', $renglones->pluck('id_pedido')->all())->where('estado', 'PACKING')->lockForUpdate()->get();
+            $pedidos = Pedido::query()->whereIn('id', $renglones->pluck('id_pedido')->all())->where('estado', 'PACKING')->orderBy('id')->lockForUpdate()->get();
             if ($pedidos->isEmpty()) {
                 throw new PackingException('Esos pedidos ya no están retenidos.');
             }
 
-            $ahora = Carbon::now();
-            foreach ($pedidos as $pedido) {
-                Pedido::query()->whereKey($pedido->id)->update(['estado' => 'PEND-FACTURA', 'feccompletado' => $ahora]);
-                $this->despachoSeped->escribir($pedido->id);
+            $this->exigirMismasCondiciones($pedidos);
 
-                $cantidad = trim((string) ($bultos[$pedido->id] ?? ''));
-                if ($cantidad !== '') {
-                    DB::table('sides_pedido_operacion')->where('id_pedido', $pedido->id)->update(['cantBultos' => $cantidad]);
-                }
+            $ahora = Carbon::now();
+            $ids = $pedidos->pluck('id')->map(fn ($id) => (int) $id)->values()->all();
+            $final = $pedidos->first();
+            $unidos = $pedidos->slice(1)->values();
+            $totalBultos = $this->totalBultos($ids, $bultos);
+
+            foreach ($unidos as $unido) {
+                $this->fundir($final, $unido, $usuario, $ahora);
             }
 
-            $ids = $pedidos->pluck('id')->map(fn ($id) => (int) $id)->values()->all();
+            Pedido::query()->whereKey($final->id)->update(['estado' => 'PEND-FACTURA', 'feccompletado' => $ahora]);
+            $this->despachoSeped->escribir($final->id);
+
+            if ($totalBultos > 0) {
+                DB::table('sides_pedido_operacion')->where('id_pedido', $final->id)->update(['cantBultos' => (string) $totalBultos]);
+            }
+
             SidesRetencionRen::query()->where('id_retencion', $retencion->id)->whereIn('id_pedido', $ids)->whereNull('fec_liberado')->update(['fec_liberado' => $ahora]);
 
-            if (count($ids) > 1) {
-                $retencion->id_grupo = $this->agrupar($retencion, $ids, $usuario, $ahora);
-                $retencion->save();
-            }
             $this->cerrarSiQuedoVacia($retencion->id, $usuario->email);
 
-            return $ids;
+            return ['pedido' => (int) $final->id, 'unidos' => $unidos->pluck('id')->map(fn ($id) => (int) $id)->all()];
         });
     }
 
@@ -196,22 +206,57 @@ class RetencionService
         }
     }
 
-    private function agrupar(SidesRetencion $retencion, array $ids, SidesUsers $usuario, Carbon $ahora): int
+    /** @param  Collection<int, Pedido>  $pedidos */
+    private function exigirMismasCondiciones(Collection $pedidos): void
     {
-        $grupo = SidesFacturaGrupo::query()->create([
-            'codisb' => $retencion->codisb,
-            'codcli' => $retencion->codcli,
-            'nomcli' => $retencion->nomcli,
-            'estado' => 'ABIERTO',
+        $primero = $pedidos->first();
+        foreach ($pedidos->slice(1) as $pedido) {
+            foreach (self::DEBEN_COINCIDIR as $campo => $nombre) {
+                $iguales = is_numeric($pedido->{$campo}) && is_numeric($primero->{$campo})
+                    ? (float) $pedido->{$campo} === (float) $primero->{$campo}
+                    : (string) $pedido->{$campo} === (string) $primero->{$campo};
+
+                if (! $iguales) {
+                    throw new PackingException("Los pedidos #{$primero->id} y #{$pedido->id} no se pueden unir: tienen distinto {$nombre}. Envíalos a facturar uno por uno.");
+                }
+            }
+        }
+    }
+
+    /**
+     * Bultos del pedido fundido: los que escribieron al liberar o, si no, los de su packing.
+     *
+     * @param  list<int>  $ids
+     */
+    private function totalBultos(array $ids, array $bultos): int
+    {
+        $guardados = DB::table('sides_pedido_operacion')->whereIn('id_pedido', $ids)->pluck('cantBultos', 'id_pedido');
+
+        return (int) collect($ids)->sum(fn (int $id) => (int) (trim((string) ($bultos[$id] ?? '')) ?: $guardados->get($id)));
+    }
+
+    /** Pasa los renglones de $unido a $final, suma la cabecera y deja a $unido anulado con la referencia. */
+    private function fundir(Pedido $final, Pedido $unido, SidesUsers $usuario, Carbon $ahora): void
+    {
+        DB::table('sides_pedido_union')->insert([
+            'codisb' => $final->codisb,
+            'id_pedido' => $final->id,
+            'id_unido' => $unido->id,
+            'items' => json_encode(DB::table('pedren')->where('id', $unido->id)->pluck('item')->map(fn ($item) => (int) $item)->all()),
             'usuario' => $usuario->email,
             'fecha' => $ahora,
         ]);
 
-        foreach ($ids as $id) {
-            SidesFacturaGrupoRen::query()->create(['id_grupo' => $grupo->id, 'id_pedido' => $id]);
-        }
+        DB::table('pedren')->where('id', $unido->id)->update(['id' => $final->id]);
+        DB::table('sides_pedren_operacion')->where('id_pedido', $unido->id)->update(['id_pedido' => $final->id]);
 
-        return $grupo->id;
+        Pedido::query()->whereKey($final->id)->update(collect(self::SE_SUMAN)
+            ->mapWithKeys(fn (string $campo) => [$campo => DB::raw("COALESCE({$campo}, 0) + ".(float) $unido->{$campo})])->all());
+
+        Pedido::query()->whereKey($unido->id)->update([
+            'estado' => 'ANULADO',
+            'observacion' => mb_substr(trim("Unido al pedido #{$final->id}. {$unido->observacion}"), 0, 500),
+        ]);
     }
 
     private function cerrarSiQuedoVacia(int $retencionId, string $usuario): void

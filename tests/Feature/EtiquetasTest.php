@@ -8,6 +8,7 @@ use App\Models\Sides\SidesModuloSucursal;
 use App\Models\Sides\SidesPedidoOperacion;
 use App\Models\Sides\SidesUsers;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Tests\Concerns\TablasSides;
 use Tests\TestCase;
 
@@ -72,6 +73,31 @@ class EtiquetasTest extends TestCase
         $this->pedidoEmpacado(520, ['fecprocesado' => '2026-09-15 09:00:00', 'estado' => 'PICKING']);
 
         $this->actingAs($this->usuario)->get('/etiquetas?buscar=C7')->assertSee('Pedido #510');
+    }
+
+    public function test_la_etiqueta_lista_los_pedidos_que_salen_juntos(): void
+    {
+        $this->pedidoEmpacado(500);
+        $this->pedidoEmpacado(501);
+        $this->pedidoEmpacado(502);
+        DB::table('sides_factura_grupo_ren')->insert([['id_grupo' => 9, 'id_pedido' => 501], ['id_grupo' => 9, 'id_pedido' => 500]]);
+
+        $this->actingAs($this->usuario)->get('/etiquetas/501/imprimir')
+            ->assertOk()
+            ->assertSee('PEDIDOS EN ESTE DESPACHO:')
+            ->assertSee('500, 501');
+
+        $this->get('/etiquetas/502/imprimir')->assertOk()->assertDontSee('PEDIDOS EN ESTE DESPACHO:');
+    }
+
+    public function test_la_etiqueta_del_pedido_fundido_lista_los_que_se_le_unieron(): void
+    {
+        $this->pedidoEmpacado(500);
+        DB::table('sides_pedido_union')->insert(['codisb' => '505094939', 'id_pedido' => 500, 'id_unido' => 504, 'items' => '[]', 'usuario' => 'x', 'fecha' => now()]);
+
+        $this->actingAs($this->usuario)->get('/etiquetas/500/imprimir')
+            ->assertSee('PEDIDOS EN ESTE DESPACHO:')
+            ->assertSee('500, 504');
     }
 
     public function test_imprimir_guarda_los_bultos_y_registra_una_etiqueta_por_bulto(): void

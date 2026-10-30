@@ -88,6 +88,28 @@ class EtiquetasService
         });
     }
 
+    /**
+     * Pedidos que van en este despacho: los que la alcabala de packing fundió en él o, si no, los de
+     * su grupo de facturación (módulo Pedidos).
+     *
+     * @return list<int> todos, o vacío si el pedido sale solo
+     */
+    public function pedidosJuntos(int $pedidoId): array
+    {
+        $unidos = DB::table('sides_pedido_union')->where('id_pedido', $pedidoId)->orderBy('id_unido')->pluck('id_unido')->map(fn ($id) => (int) $id)->all();
+        if ($unidos !== []) {
+            return [$pedidoId, ...$unidos];
+        }
+
+        $grupo = DB::table('sides_factura_grupo_ren')->where('id_pedido', $pedidoId)->value('id_grupo');
+        if ($grupo === null) {
+            return [];
+        }
+
+        return DB::table('sides_factura_grupo_ren')->where('id_grupo', $grupo)->orderBy('id_pedido')
+            ->pluck('id_pedido')->map(fn ($id) => (int) $id)->all();
+    }
+
     /** @return Collection<int, object{codprod: string, desprod: string, cantdesp: int}> */
     public function renglonesDespachados(int $pedidoId): Collection
     {

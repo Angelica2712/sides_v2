@@ -22,10 +22,12 @@
         .rotulo { display: block; font-size: calc(2.4mm * var(--k)); font-weight: 700; letter-spacing: .02em; }
         .qr { flex: none; width: calc(13mm * var(--k)); height: calc(13mm * var(--k)); }
         .qr svg { display: block; width: 100%; height: 100%; }
-        .cliente { flex: 1; min-height: 0; }
+        .cliente { flex: 1; min-height: 0; overflow: hidden; }
         .nombre, .entrega { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
         .nombre { font-size: calc(5mm * var(--k)); font-weight: 900; }
         .entrega { margin-top: calc(.6mm * var(--k)); font-size: calc(2.8mm * var(--k)); }
+        .juntos { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; font-size: calc(3.2mm * var(--k)); font-weight: 900; }
+        .juntos .rotulo { display: inline; }
         .datos { display: grid; grid-template-columns: 1.2fr 1fr 1.3fr; gap: 2mm; padding-top: calc(1.2mm * var(--k)); border-top: .4mm solid #000; }
         .valor { display: block; overflow: hidden; font-size: calc(4.6mm * var(--k)); font-weight: 900; white-space: nowrap; text-overflow: ellipsis; }
         .pie { display: grid; grid-template-columns: auto 1fr; align-items: end; gap: 4mm; }
@@ -56,6 +58,10 @@
                     <p class="entrega">{{ $entrega }}</p>
                 @endif
             </div>
+
+            @if ($pedidosJuntos !== [])
+                <p class="juntos"><span class="rotulo">PEDIDOS EN ESTE DESPACHO:</span> {{ implode(', ', $pedidosJuntos) }}</p>
+            @endif
 
             <div class="datos">
                 <p><span class="rotulo">BULTO</span><span class="valor">{{ $bulto }} de {{ $bultos }}</span></p>

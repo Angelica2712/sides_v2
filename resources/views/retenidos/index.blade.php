@@ -22,7 +22,7 @@
                         <p class="text-sm text-slate-500">{{ $retencion->codcli }} · retenido desde {{ $fecha($retencion->fecha) }}</p>
                     </div>
                     <button type="submit" class="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-700">
-                        {{ $retencion->pedidos->count() === 1 ? 'Enviar a facturar' : 'Enviar todos a facturar' }}
+                        {{ $retencion->pedidos->count() === 1 ? 'Enviar a facturar' : 'Unir y enviar a facturar' }}
                     </button>
                 </div>
 

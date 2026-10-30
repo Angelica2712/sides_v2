@@ -219,6 +219,14 @@ trait TablasSides
             $table->integer('numren')->default(0);
             $table->integer('numund')->default(0);
             $table->decimal('total', 12, 2)->nullable();
+            // Cabecera comercial: la alcabala de packing la compara y la suma al fundir pedidos.
+            foreach (['subrenglon', 'descuento', 'subtotal', 'impuesto', 'di', 'dc', 'pp'] as $importe) {
+                $table->decimal($importe, 24, 2)->default(0);
+            }
+            $table->integer('dcredito')->default(0);
+            $table->integer('pedfiscal')->default(1);
+            $table->decimal('factorcambiario', 24, 2)->default(1);
+            $table->string('codvend', 20)->nullable();
             $table->string('observacion', 500)->nullable();
             $table->string('codtransp', 100)->nullable();
             $table->string('entrega', 250)->nullable();
@@ -251,6 +259,16 @@ trait TablasSides
             $table->dateTime('fecentregado')->nullable();
             $table->integer('guia')->nullable();
             $table->dateTime('feccargado')->nullable();
+        });
+
+        Schema::create('sides_pedido_union', function (Blueprint $table) {
+            $table->increments('id');
+            $table->string('codisb', 20);
+            $table->integer('id_pedido');
+            $table->integer('id_unido')->unique();
+            $table->text('items');
+            $table->string('usuario', 150);
+            $table->dateTime('fecha');
         });
 
         Schema::create('sides_factura_grupo', function (Blueprint $table) {
