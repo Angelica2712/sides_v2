@@ -119,6 +119,21 @@ class ConfiguracionTest extends TestCase
         $this->actingAs($this->usuario->fresh())->get('/etiquetas')->assertForbidden();
     }
 
+    public function test_una_clave_vieja_corta_no_impide_guardar_si_nadie_la_pide(): void
+    {
+        SidesCfg::query()->whereKey('505094939')->update(['claveValPicking' => '12']);
+
+        $this->actingAs($this->usuario)
+            ->put('/configuracion', $this->formulario(['activarValPicking' => null, 'activarValPacking' => null, 'claveValPicking' => '12']))
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('12', SidesCfg::query()->find('505094939')->claveValPicking);
+
+        // Si la activan, ahí sí tiene que ser válida.
+        $this->put('/configuracion', $this->formulario(['activarValPicking' => '1', 'claveValPicking' => '12']))
+            ->assertSessionHasErrors('claveValPicking');
+    }
+
     public function test_valida_clave_de_supervisor_y_listas(): void
     {
         $this->actingAs($this->usuario)->from('/configuracion')

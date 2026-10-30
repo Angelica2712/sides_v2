@@ -53,13 +53,13 @@ class ConfiguracionController extends Controller
     public function update(Request $request): RedirectResponse
     {
         $cfg = $this->cfg($request);
+        // El campo viaja aunque esté oculto: si nadie pide la clave no se valida, se conserva la guardada.
+        $usaClave = $request->boolean('activarValPicking') || $request->boolean('activarValPacking');
+
         $datos = $request->validate([
             'TamLetraMonitor' => ['required', 'integer', Rule::in(self::TAMANOS_LETRA)],
             'ordenPedSides' => ['required', Rule::in(array_keys(self::ORDENES))],
-            'claveValPicking' => [
-                Rule::requiredIf($request->boolean('activarValPicking') || $request->boolean('activarValPacking')),
-                'nullable', 'string', 'min:4', 'max:20',
-            ],
+            'claveValPicking' => $usaClave ? ['required', 'string', 'min:4', 'max:20'] : ['nullable'],
         ], [
             'TamLetraMonitor.*' => 'Elige un tamaño de letra de la lista.',
             'ordenPedSides.*' => 'Elige un orden de productos de la lista.',
@@ -76,7 +76,7 @@ class ConfiguracionController extends Controller
             $datos['activarSincronizacionRutas'] = $request->boolean('activarSincronizacionRutas') ? 1 : 0;
         }
         // Si nadie la pide, se conserva la clave anterior en vez de dejarla vacía.
-        $datos['claveValPicking'] = filled($datos['claveValPicking'] ?? null) ? $datos['claveValPicking'] : $cfg->claveValPicking;
+        $datos['claveValPicking'] = $usaClave ? $datos['claveValPicking'] : $cfg->claveValPicking;
 
         // Etiquetas: la droguería lo enciende o apaga sola (igual que lo guarda Administración).
         $etiquetas = $request->boolean('moduloEtiquetas');
