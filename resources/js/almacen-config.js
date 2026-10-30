@@ -19,9 +19,29 @@ const redondear = (metros) => Math.round(metros * 10) / 10;
 const COLORES_ZONA = ['#2563eb', '#16a34a', '#9333ea', '#db2777', '#0891b2', '#ca8a04', '#dc2626'];
 const MAXIMO_POR_LADO = 49;
 
-export default function almacenConfig({ plano, config }) {
+/** Teléfono: pantalla angosta. Coincide con el md: de Tailwind que usa la vista. */
+const esTelefono = () => window.matchMedia('(max-width: 767px)').matches;
+// Cuánto puede temblar un dedo (en píxeles) sin que deje de ser un toque.
+const TEMBLOR_DEDO = 12;
+// Al guardar desde la pantalla completa la página se recarga: se vuelve a ella con la misma cámara.
+const CLAVE_FOCO = 'sides-acomodo-foco';
+
+function leerFoco() {
+    try {
+        const guardado = sessionStorage.getItem(CLAVE_FOCO);
+        sessionStorage.removeItem(CLAVE_FOCO);
+        return guardado ? JSON.parse(guardado) : null;
+    } catch {
+        return null;
+    }
+}
+
+export default function almacenConfig({ plano, config, guardado = null, conErrores = false }) {
     let visor = null;
     let espera = null;
+    let turnoDibujo = 0;
+    const foco = leerFoco();
+    let vistaInicial = foco?.vista ?? null;
     // Dedos apoyados en el plano (pointerId => [x, y]), para el zoom con dos dedos en el teléfono.
     const dedos = new Map();
     const distanciaDedos = () => {
@@ -65,6 +85,10 @@ export default function almacenConfig({ plano, config }) {
         // Formularios del pasillo nuevo y del cambio de número (null = cerrados).
         nuevo: null,
         renumero: null,
+        // Teléfono: el visor ocupa toda la pantalla, con lo necesario para asignar debajo.
+        enfocado: Boolean(foco) && esTelefono() && !conErrores,
+        // Lo último que se asignó, para proponer el número que sigue.
+        ultimo: null,
 
         /** Plano con lo que se está editando; sin pasillos, el almacén de ejemplo. */
         get armado() {
@@ -124,10 +148,15 @@ export default function almacenConfig({ plano, config }) {
         init() {
             this.$watch('config', () => {
                 clearTimeout(espera);
-                espera = setTimeout(() => this.dibujar(), 250);
+                espera = setTimeout(() => this.redibujar(), 250);
             });
             this.$watch('seleccionado', () => this.marcar3d());
             this.$watch('moverPasillo', () => this.marcar3d());
+            this.$watch('enfocado', (enfocado) => document.documentElement.classList.toggle('overflow-hidden', enfocado));
+            if (this.enfocado) {
+                document.documentElement.classList.add('overflow-hidden');
+                this.avisoPlano = guardado ?? '';
+            }
             this.encajar();
             this.dibujar();
             this.$el.addEventListener('alpine:destroy', () => visor?.destruir());
@@ -135,19 +164,49 @@ export default function almacenConfig({ plano, config }) {
 
         /** Dibuja el 3D; al redibujar por un cambio, la cámara se queda donde estaba. */
         async dibujar() {
-            const vista = visor?.vista();
-            visor?.destruir();
-            visor = null;
+            const turno = ++turnoDibujo;
+            const vista = visor?.vista() ?? vistaInicial;
+            vistaInicial = null;
+            let nuevo;
             try {
-                visor = await crearVisor(this.$refs.visor, this.planoPrevio, { vista });
+                nuevo = await crearVisor(this.$refs.visor, this.planoPrevio, { vista });
             } catch (error) {
                 this.mensaje = 'No se pudo dibujar el almacén en este equipo.';
                 console.error(error);
                 return;
             }
+            // Mientras se armaba cambió otra vez: vale el dibujo más nuevo.
+            if (turno !== turnoDibujo) {
+                nuevo.destruir();
+                return;
+            }
+            // El anterior se quita recién ahora, para que la pantalla no parpadee.
+            visor?.destruir();
+            visor = nuevo;
             visor.editar({ alElegir: (clave) => this.elegir3d(clave), alMover: (dx, dz) => this.mover3d(dx, dz) });
             this.marcar3d();
             this.resaltar();
+        },
+
+        /** Sin cortar lo que el dedo esté haciendo en el visor. */
+        redibujar() {
+            if (visor?.ocupado()) {
+                espera = setTimeout(() => this.redibujar(), 250);
+                return;
+            }
+            this.dibujar();
+        },
+
+        /** Guardando desde la pantalla completa, se vuelve a ella al recargar. */
+        recordarFoco() {
+            if (!this.enfocado) {
+                return;
+            }
+            try {
+                sessionStorage.setItem(CLAVE_FOCO, JSON.stringify({ vista: visor?.vista() ?? null }));
+            } catch {
+                // Sin almacenamiento solo se vuelve a la página normal.
+            }
         },
 
         navegar3d(accion) {
@@ -332,7 +391,7 @@ export default function almacenConfig({ plano, config }) {
             this.entrada = indice;
             this.seleccionado = null;
             this.capturar(evento);
-            this.arrastre = { tipo: 'entrada', indice, inicio: this.puntoEnPlano(evento), dx: 0, dz: 0 };
+            this.arrastre = { tipo: 'entrada', indice, inicio: this.puntoEnPlano(evento), dx: 0, dz: 0, ...this.inicioDedo(evento) };
         },
 
         /** Pone una puerta nueva en el centro de lo que se está viendo y la deja elegida. */
@@ -354,16 +413,27 @@ export default function almacenConfig({ plano, config }) {
             this.prueba = formatear({ zona: a.zona, pasillo: a.pasillo, anaquel: a.anaquel, estante: 'A', posicion: 1 });
             this.resaltar();
             this.capturar(evento);
-            this.arrastre = { tipo: 'anaquel', claves: this.grupoDe(a).map((b) => b.clave), inicio: this.puntoEnPlano(evento), dx: 0, dz: 0 };
+            this.arrastre = { tipo: 'anaquel', claves: this.grupoDe(a).map((b) => b.clave), inicio: this.puntoEnPlano(evento), dx: 0, dz: 0, ...this.inicioDedo(evento) };
         },
 
-        /** Arrastrar el fondo desplaza la vista. */
-        tomarFondo(evento) {
+        /** Con el dedo, dónde se apoyó: lo que mueve un anaquel es un arrastre, no el temblor de un toque. */
+        inicioDedo(evento) {
+            return evento.pointerType === 'touch' ? { dedo: [evento.clientX, evento.clientY] } : {};
+        },
+
+        soltarElegido() {
             this.seleccionado = null;
             this.renumero = null;
             this.entrada = null;
+        },
+
+        /** Arrastrar el fondo desplaza la vista; con el dedo, solo un toque sin arrastre suelta lo elegido. */
+        tomarFondo(evento) {
+            if (evento.pointerType !== 'touch') {
+                this.soltarElegido();
+            }
             this.capturar(evento);
-            this.arrastre = { tipo: 'vista', inicio: [evento.clientX, evento.clientY], caja: [...this.caja] };
+            this.arrastre = { tipo: 'vista', inicio: [evento.clientX, evento.clientY], caja: [...this.caja], ...this.inicioDedo(evento) };
         },
 
         mover(evento) {
@@ -379,6 +449,18 @@ export default function almacenConfig({ plano, config }) {
                 const factor = Math.min(Math.max(this.arrastre.distancia / Math.max(distanciaDedos(), 1), 3 / ancho), 400 / ancho);
                 this.caja = [x + (ancho - ancho * factor) / 2, y + (alto - alto * factor) / 2, ancho * factor, alto * factor];
                 return;
+            }
+            if (this.arrastre.dedo) {
+                if (Math.hypot(evento.clientX - this.arrastre.dedo[0], evento.clientY - this.arrastre.dedo[1]) <= TEMBLOR_DEDO) {
+                    return;
+                }
+                // Desde aquí es un arrastre; se cuenta desde donde está el dedo, sin salto.
+                this.arrastre.dedo = null;
+                if (this.arrastre.tipo === 'vista') {
+                    this.arrastre.inicio = [evento.clientX, evento.clientY];
+                } else {
+                    this.arrastre.inicio = this.puntoEnPlano(evento);
+                }
             }
             if (this.arrastre.tipo === 'vista') {
                 const svg = this.$refs.plano.getBoundingClientRect();
@@ -401,7 +483,10 @@ export default function almacenConfig({ plano, config }) {
             dedos.delete(evento?.pointerId);
             const arrastre = this.arrastre;
             this.arrastre = null;
-            if (arrastre?.tipo === 'anaquel' && this.renumero) {
+            if (arrastre?.tipo === 'vista' && arrastre.dedo) {
+                this.soltarElegido();
+            }
+            if (arrastre?.tipo === 'anaquel' && this.renumero && !esTelefono()) {
                 // El cuadro de números va debajo del plano: se trae a la vista ya soltado el anaquel.
                 this.$nextTick(() => this.$refs.renumero?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
             }
@@ -641,8 +726,23 @@ export default function almacenConfig({ plano, config }) {
             }
             this.nuevo = null;
             this.avisoPlano = '';
+            if (esTelefono()) {
+                // Sin teclado: los números se proponen y se ajustan con − y +.
+                this.enfocado = true;
+                const { zona, pasillo, anaquel, modo } = this.ultimo ?? {};
+                this.renumero = {
+                    zona: zona ?? a.zona,
+                    pasillo: Math.min(pasillo === undefined ? a.pasillo : pasillo + (modo === 'pasillo' ? 1 : 0), 99),
+                    anaquel: Math.min(modo === 'anaquel' ? anaquel + 1 : a.anaquel, 99),
+                };
+                return;
+            }
             // Los números empiezan vacíos para escribirlos; el actual se ve en el título del cuadro.
             this.renumero = { zona: a.zona, pasillo: '', anaquel: '' };
+        },
+
+        cambiarNumero(campo, paso) {
+            this.renumero[campo] = Math.min(Math.max((Number(this.renumero[campo]) || 0) + paso, 1), 99);
         },
 
         /**
@@ -722,6 +822,14 @@ export default function almacenConfig({ plano, config }) {
             }
             this.renumero = null;
             this.avisoPlano = '';
+            if (this.enfocado) {
+                // Queda libre para tocar el que sigue: uno elegido se agarraría para moverlo.
+                this.ultimo = { zona, pasillo: numero, anaquel: nuevoAnaquel, modo };
+                this.avisoPlano = modo === 'pasillo'
+                    ? `Fila asignada al pasillo ${dosDigitos(numero)}. Toca la que sigue.`
+                    : `Anaquel ${claveAnaquel(zona, numero, nuevoAnaquel)} asignado. Toca el que sigue.`;
+                this.seleccionado = null;
+            }
         },
 
         /** Le pone otro número a un anaquel; se queda en el mismo lugar del almacén. */

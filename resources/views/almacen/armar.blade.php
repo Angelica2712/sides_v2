@@ -1,5 +1,5 @@
 @php
-    $paso = 'size-12 shrink-0 rounded-xl bg-white text-2xl font-bold text-slate-700 ring-1 ring-slate-300 active:bg-slate-100';
+    $paso = 'size-14 md:size-12 shrink-0 rounded-xl bg-white text-2xl font-bold text-slate-700 ring-1 ring-slate-300 active:bg-slate-100';
     $numero = 'w-14 shrink-0 text-center font-mono text-3xl font-black text-slate-900';
     $preguntas = [
         'izquierda' => ['¿Cuántos anaqueles hay a tu izquierda?', 'Cuenta todos, de la entrada hasta el fondo.'],
@@ -10,7 +10,7 @@
 @endphp
 
 <x-layouts.app titulo="Almacén 3D">
-    <div class="mx-auto max-w-xl space-y-4" x-data="armarAlmacen(@js($datos))">
+    <div class="mx-auto max-w-xl touch-manipulation space-y-4" x-data="armarAlmacen(@js($datos))">
         @include('almacen.partials.pestanas', ['activa' => 'almacen.armar'])
 
         <p x-show="aviso" role="status" class="rounded-xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 ring-1 ring-emerald-200" x-text="aviso"></p>
@@ -57,7 +57,7 @@
                         <input type="text" x-model="nombreNuevo" maxlength="40" placeholder="Nombre, por ejemplo Quirúrgicos" aria-label="Nombre de la zona"
                                class="min-w-0 flex-1 rounded-xl border-slate-300 focus:border-primary focus:ring-primary">
                     </div>
-                    <button type="submit" class="w-full rounded-xl bg-white px-4 py-2 text-sm font-semibold text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50">Usar esta zona</button>
+                    <button type="submit" class="min-h-11 w-full rounded-xl bg-white px-4 py-2 text-sm font-semibold text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50">Usar esta zona</button>
                 </form>
                 <button type="button" x-show="pasillos.length" @click="paso = 'resumen'" class="w-full rounded-xl px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100">Volver al resumen</button>
             </section>
@@ -73,9 +73,9 @@
                     <div class="mt-1 flex items-center justify-between gap-3">
                         <h2 class="text-xl font-extrabold">Pasillo</h2>
                         <div class="flex items-center gap-1.5">
-                            <button type="button" @click="cambiar('pasillo', -1)" class="size-10 rounded-xl bg-white/10 text-xl font-bold" aria-label="Pasillo anterior">−</button>
+                            <button type="button" @click="cambiar('pasillo', -1)" class="size-12 md:size-10 rounded-xl bg-white/10 text-xl font-bold" aria-label="Pasillo anterior">−</button>
                             <span class="w-12 text-center font-mono text-3xl font-black" x-text="String(actual.pasillo).padStart(2, '0')"></span>
-                            <button type="button" @click="cambiar('pasillo', 1)" class="size-10 rounded-xl bg-white/10 text-xl font-bold" aria-label="Pasillo siguiente">+</button>
+                            <button type="button" @click="cambiar('pasillo', 1)" class="size-12 md:size-10 rounded-xl bg-white/10 text-xl font-bold" aria-label="Pasillo siguiente">+</button>
                         </div>
                     </div>
                     <p class="mt-2 text-sm text-white/80">Párate en la entrada del pasillo, mirando hacia adentro.</p>
@@ -151,14 +151,15 @@
                     </div>
                 </div>
 
+                {{-- En el teléfono queda a la vista: el dibujo crece con cada anaquel y no hay que bajar a buscarlo. --}}
+                <button type="button" @click="guardar(true)" :disabled="guardando"
+                        class="sticky bottom-3 z-10 w-full rounded-xl bg-primary px-5 py-3.5 text-base font-bold text-on-primary shadow-lg hover:bg-primary-dark disabled:opacity-50 md:static md:shadow-none"
+                        x-text="guardando ? 'Guardando…' : (antes ? 'Guardar cambios y seguir' : 'Guardar y seguir con el pasillo ' + String(Math.min(actual.pasillo + 1, 99)).padStart(2, '0'))"></button>
                 <div class="space-y-2">
-                    <button type="button" @click="guardar(true)" :disabled="guardando"
-                            class="w-full rounded-xl bg-primary px-5 py-3.5 text-base font-bold text-on-primary hover:bg-primary-dark disabled:opacity-50"
-                            x-text="guardando ? 'Guardando…' : (antes ? 'Guardar cambios y seguir' : 'Guardar y seguir con el pasillo ' + String(Math.min(actual.pasillo + 1, 99)).padStart(2, '0'))"></button>
                     <button type="button" @click="guardar(false)" :disabled="guardando"
                             class="w-full rounded-xl bg-white px-5 py-3 text-sm font-bold text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50 disabled:opacity-50">Guardar y terminar esta zona</button>
                     <button type="button" @click="paso = pasillos.length ? 'resumen' : 'zona'" :disabled="guardando"
-                            class="w-full rounded-xl px-5 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-100">Salir sin guardar este pasillo</button>
+                            class="min-h-11 w-full rounded-xl px-5 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-100">Salir sin guardar este pasillo</button>
                 </div>
             </section>
         </template>
@@ -183,7 +184,7 @@
                     <div class="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
                         <div class="flex items-center justify-between gap-3 bg-slate-50 px-4 py-2.5">
                             <p class="text-sm font-bold text-slate-900"><span class="font-mono" x-text="grupo.zona"></span> · <span x-text="grupo.nombre"></span></p>
-                            <button type="button" @click="elegirZona(grupo.zona)" class="text-sm font-semibold text-primary-ink hover:underline">+ Pasillo</button>
+                            <button type="button" @click="elegirZona(grupo.zona)" class="min-h-11 px-2 text-sm font-semibold text-primary-ink hover:underline">+ Pasillo</button>
                         </div>
                         <ul class="divide-y divide-slate-100">
                             <template x-for="p in grupo.pasillos" :key="p.clave">
@@ -193,8 +194,8 @@
                                         <span x-text="p.izquierda"></span> a la izquierda · <span x-text="p.derecha"></span> a la derecha<br>
                                         <span x-text="p.estantes"></span> estantes × <span x-text="p.posiciones"></span> huecos
                                     </span>
-                                    <button type="button" @click="editar(p)" class="rounded-lg px-2 py-1 text-sm font-semibold text-primary-ink hover:bg-primary-soft">Editar</button>
-                                    <button type="button" @click="quitar(p)" :disabled="guardando" class="rounded-lg px-2 py-1 text-sm font-semibold text-rose-700 hover:bg-rose-50" aria-label="Quitar pasillo">Quitar</button>
+                                    <button type="button" @click="editar(p)" class="min-h-11 rounded-lg px-2 py-1 text-sm font-semibold text-primary-ink hover:bg-primary-soft">Editar</button>
+                                    <button type="button" @click="quitar(p)" :disabled="guardando" class="min-h-11 rounded-lg px-2 py-1 text-sm font-semibold text-rose-700 hover:bg-rose-50" aria-label="Quitar pasillo">Quitar</button>
                                 </li>
                             </template>
                         </ul>

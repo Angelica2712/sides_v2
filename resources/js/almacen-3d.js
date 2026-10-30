@@ -560,6 +560,9 @@ export async function crearVisor(contenedor, plano, { vista: vistaInicial = null
     desechables.push(materialMarcado);
     const piso0 = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
     let toque = null;
+    // En el teléfono: dedos apoyados y cuánto puede temblar un dedo sin que deje de ser un toque.
+    const dedos = new Set();
+    const TEMBLOR_DEDO = 12;
 
     const anaquelBajo = (evento) => {
         apuntar(evento);
@@ -588,8 +591,20 @@ export async function crearVisor(contenedor, plano, { vista: vistaInicial = null
         if (!edicion || evento.button > 0) {
             return;
         }
+        const dedo = evento.pointerType === 'touch';
+        if (dedo) {
+            dedos.add(evento.pointerId);
+            controles.enableDamping = false;
+            if (dedos.size > 1) {
+                // Dos dedos giran y acercan (MapControls), salvo que uno ya tenga agarrado un anaquel.
+                if (!toque?.inicio) {
+                    toque = null;
+                }
+                return;
+            }
+        }
         const a = anaquelBajo(evento);
-        toque = { x: evento.clientX, y: evento.clientY, clave: a?.clave ?? null, inicio: null, arrastro: false };
+        toque = { x: evento.clientX, y: evento.clientY, clave: a?.clave ?? null, inicio: null, arrastro: false, dedo, paneo: null };
         // Sobre lo elegido se agarra para moverlo (la cámara se queda quieta); si no, la vista se
         // desplaza como siempre y, si el dedo no se movió, al soltar se elige lo tocado.
         if (a && marcadas.has(a.clave)) {
@@ -600,8 +615,36 @@ export async function crearVisor(contenedor, plano, { vista: vistaInicial = null
             render.domElement.style.cursor = 'grabbing';
         }
     };
+    /** Un dedo sobre lo no elegido: el piso sigue al dedo, recién cuando dejó de ser un toque y sin inercia. */
+    const panearConDedo = (evento) => {
+        if (!toque.paneo) {
+            toque.paneo = puntoEnPiso(evento);
+            return;
+        }
+        const punto = puntoEnPiso(evento);
+        if (punto) {
+            vuelo = null;
+            const corrimiento = toque.paneo.clone().sub(punto);
+            camara.position.add(corrimiento);
+            controles.target.add(corrimiento);
+            camara.updateMatrixWorld();
+        }
+    };
     const moverEdicion = (evento) => {
-        if (!toque?.inicio) {
+        if (!toque) {
+            return;
+        }
+        if (toque.dedo) {
+            toque.salio ||= Math.hypot(evento.clientX - toque.x, evento.clientY - toque.y) > TEMBLOR_DEDO;
+            if (!toque.salio) {
+                return;
+            }
+            if (!toque.inicio) {
+                panearConDedo(evento);
+                return;
+            }
+        }
+        if (!toque.inicio) {
             return;
         }
         const punto = puntoEnPiso(evento);
@@ -611,14 +654,15 @@ export async function crearVisor(contenedor, plano, { vista: vistaInicial = null
         }
     };
     const soltarEdicion = (evento) => {
+        dedos.delete(evento.pointerId);
         if (!toque) {
             return;
         }
-        const { x, y, clave, inicio, arrastro } = toque;
+        const { x, y, clave, inicio, arrastro, dedo } = toque;
         toque = null;
         controles.enabled = true;
         render.domElement.style.cursor = '';
-        const movio = Math.hypot(evento.clientX - x, evento.clientY - y) > 6;
+        const movio = Math.hypot(evento.clientX - x, evento.clientY - y) > (dedo ? TEMBLOR_DEDO : 6);
         if (inicio && arrastro && movio) {
             const { x: dx, z: dz } = marcados.position;
             edicion.alMover(Math.round(dx * 100) / 100, Math.round(dz * 100) / 100);
@@ -645,7 +689,11 @@ export async function crearVisor(contenedor, plano, { vista: vistaInicial = null
          */
         editar(opciones) {
             edicion = opciones;
+            // Un dedo lo maneja moverEdicion, que distingue un toque de un arrastre; dos siguen en MapControls.
+            controles.touches.ONE = null;
         },
+        /** Hay un dedo o el ratón trabajando en el editor: no es momento de volver a dibujar. */
+        ocupado: () => Boolean(toque),
         /** Marca (en naranja translúcido) los anaqueles elegidos en el editor. */
         marcar,
         /** Dónde está la cámara, para dejarla igual al volver a dibujar. */

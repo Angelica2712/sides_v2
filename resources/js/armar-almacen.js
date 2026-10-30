@@ -204,7 +204,7 @@ export default function armarAlmacen({ zonas, pasillos, medidas, maximoPorLado, 
         },
 
         arriba() {
-            this.$nextTick(() => window.scrollTo({ top: 0, behavior: 'smooth' }));
+            this.$nextTick(() => window.scrollTo({ top: 0, behavior: window.matchMedia('(max-width: 767px)').matches ? 'instant' : 'smooth' }));
         },
     };
 }

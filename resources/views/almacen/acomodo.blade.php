@@ -2,7 +2,7 @@
     use App\Support\ConfigAlmacen;
 
     $config = $plano['config'];
-    $datos = ['plano' => $plano, 'config' => [
+    $datos = ['plano' => $plano, 'guardado' => session('mensaje'), 'conErrores' => $errors->any(), 'config' => [
         ...$config,
         'zonas' => (object) $config['zonas'],
         'pasillos' => (object) $config['pasillos'],
@@ -14,12 +14,12 @@
         'posicion1' => ['¿Dónde está la posición 1?', ConfigAlmacen::POSICION_1],
     ];
     $columnas = 'grid grid-cols-[3.5rem_1fr_1fr_1fr_2rem] gap-2';
-    $campo = 'block w-full rounded-lg border-slate-300 px-2 py-1 text-sm focus:border-primary focus:ring-primary';
-    $boton = 'rounded-lg bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50 disabled:opacity-40';
+    $campo = 'block w-full rounded-lg border-slate-300 px-2 py-1 text-base md:text-sm focus:border-primary focus:ring-primary';
+    $boton = 'min-h-11 md:min-h-0 rounded-lg bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50 disabled:opacity-40';
 @endphp
 
 <x-layouts.app titulo="Almacén">
-    <div class="mx-auto max-w-6xl space-y-4" x-data="almacenConfig(@js($datos))">
+    <div class="mx-auto max-w-6xl touch-manipulation space-y-4" x-data="almacenConfig(@js($datos))">
         @isset($pestana)
             @include('almacen.partials.pestanas', ['activa' => $pestana])
         @else
@@ -34,8 +34,11 @@
             </p>
         </div>
 
+        {{-- En el teléfono: el visor a pantalla completa, sin página que se mueva. --}}
+        <button type="button" @click="enfocado = true" class="min-h-12 w-full rounded-xl bg-primary px-5 py-3 text-base font-bold text-on-primary md:hidden">Asignar pasillos a pantalla completa</button>
+
         <div class="grid gap-4 xl:grid-cols-[22rem_1fr]">
-            <form method="POST" action="{{ $urls['guardar'] }}" class="space-y-4">
+            <form id="form-acomodo" method="POST" action="{{ $urls['guardar'] }}" @submit="recordarFoco()" class="space-y-4">
                 @csrf
                 @method('PUT')
 
@@ -63,16 +66,16 @@
                             <div class="{{ $columnas }} items-center">
                                 <input type="text" :value="fila.zona" @change="renombrarPasillo(fila.clave, $event.target.value, fila.pasillo)"
                                        list="zonas-almacen" maxlength="2" aria-label="Zona" autocomplete="off"
-                                       class="block w-full rounded-xl border-slate-300 px-2 py-1.5 text-center font-mono text-sm uppercase focus:border-primary focus:ring-primary">
+                                       class="block w-full rounded-xl border-slate-300 px-2 py-1.5 text-center font-mono text-base md:text-sm uppercase focus:border-primary focus:ring-primary">
                                 <input type="number" :value="fila.pasillo" @change="renombrarPasillo(fila.clave, fila.zona, $event.target.value)"
                                        min="1" max="99" inputmode="numeric" aria-label="Número de pasillo"
-                                       class="block w-full rounded-xl border-slate-300 px-2 py-1.5 text-sm focus:border-primary focus:ring-primary">
+                                       class="block w-full rounded-xl border-slate-300 px-2 py-1.5 text-base md:text-sm focus:border-primary focus:ring-primary">
                                 <input type="number" x-model.number="config.pasillos[fila.clave].izquierda" min="0" max="{{ ConfigAlmacen::MAXIMO_POR_LADO }}" inputmode="numeric" aria-label="Anaqueles a la izquierda"
-                                       class="block w-full rounded-xl border-slate-300 px-2 py-1.5 text-sm focus:border-primary focus:ring-primary">
+                                       class="block w-full rounded-xl border-slate-300 px-2 py-1.5 text-base md:text-sm focus:border-primary focus:ring-primary">
                                 <input type="number" x-model.number="config.pasillos[fila.clave].derecha" min="0" max="{{ ConfigAlmacen::MAXIMO_POR_LADO }}" inputmode="numeric" aria-label="Anaqueles a la derecha"
-                                       class="block w-full rounded-xl border-slate-300 px-2 py-1.5 text-sm focus:border-primary focus:ring-primary">
+                                       class="block w-full rounded-xl border-slate-300 px-2 py-1.5 text-base md:text-sm focus:border-primary focus:ring-primary">
                                 <button type="button" @click="quitarPasillo(fila.clave)" aria-label="Quitar pasillo"
-                                        class="size-8 rounded-lg text-lg font-bold text-slate-400 hover:bg-rose-50 hover:text-rose-700">×</button>
+                                        class="size-11 md:size-8 rounded-lg text-lg font-bold text-slate-400 hover:bg-rose-50 hover:text-rose-700">×</button>
                             </div>
                         </template>
                         <button type="button" @click="abrirNuevoPasillo()" class="{{ $boton }}">+ Agregar pasillo</button>
@@ -128,7 +131,7 @@
                                 <span class="sr-only">Nombre de la zona {{ $codigo }}</span>
                                 <input type="text" name="zonas[{{ $codigo }}]" maxlength="40" placeholder="{{ $nombre ?: 'Sin nombre' }}"
                                        x-model="config.zonas['{{ $codigo }}']"
-                                       class="block w-full rounded-xl border-slate-300 py-1.5 text-sm focus:border-primary focus:ring-primary">
+                                       class="block w-full rounded-xl border-slate-300 py-1.5 text-base md:text-sm focus:border-primary focus:ring-primary">
                             </label>
                         @endforeach
                     </div>
@@ -149,8 +152,15 @@
                 </div>
             </form>
 
-            <div class="order-first space-y-3 xl:sticky xl:top-4 xl:order-none xl:self-start">
-                <div class="flex flex-wrap items-end gap-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
+            <div class="order-first space-y-3 xl:sticky xl:top-4 xl:order-none xl:self-start"
+                 :class="enfocado && 'fixed inset-0 z-[45] flex flex-col !space-y-1.5 bg-slate-100 p-1.5'">
+                {{-- Barra de la pantalla completa: salir y guardar, siempre a mano. --}}
+                <div x-show="enfocado" x-cloak class="flex shrink-0 items-center gap-2">
+                    <button type="button" @click="enfocado = false; renumero = null" class="{{ $boton }}">← Salir</button>
+                    <button type="submit" form="form-acomodo" class="min-h-11 flex-1 rounded-lg bg-primary px-3 text-sm font-bold text-on-primary">Guardar acomodo</button>
+                </div>
+
+                <div x-show="!enfocado" class="flex flex-wrap items-end gap-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
                     <label class="block min-w-48 flex-1 text-sm font-bold text-slate-700">
                         Probar una ubicación
                         <input type="text" x-model="prueba" @input.debounce.300ms="resaltar()" autocomplete="off" placeholder="{{ \App\Support\UbicacionAlmacen::ejemplo($plano['config']['formato']) }}"
@@ -165,7 +175,7 @@
                     </dl>
                 </div>
 
-                <p x-show="ejemplo" class="flex flex-wrap items-center gap-2 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900 ring-1 ring-amber-200">
+                <p x-show="ejemplo && !enfocado" class="flex flex-wrap items-center gap-2 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900 ring-1 ring-amber-200">
                     <span>Estos pasillos son <strong>de ejemplo</strong>: este almacén todavía no tiene pasillos registrados.</span>
                     <button type="button" @click="usarEjemplo()" class="font-bold underline">Usar este ejemplo como mi almacén</button>
                     @isset($pestana)
@@ -174,18 +184,19 @@
                     @endisset
                 </p>
 
-                <div class="flex gap-1 rounded-xl bg-slate-200 p-1" role="tablist" aria-label="Vista">
+                <div class="flex shrink-0 gap-1 rounded-xl bg-slate-200 p-1" role="tablist" aria-label="Vista">
                     <button type="button" role="tab" :aria-selected="vista === '3d'" @click="vista = '3d'"
                             :class="vista === '3d' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'"
-                            class="flex-1 rounded-lg px-3 py-2 text-sm font-bold">Vista 3D</button>
+                            class="min-h-11 md:min-h-0 flex-1 rounded-lg px-3 py-2 text-sm font-bold">Vista 3D</button>
                     <button type="button" role="tab" :aria-selected="vista === 'plano'" @click="vista = 'plano'; $nextTick(() => $refs.plano.focus())"
                             :class="vista === 'plano' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'"
-                            class="flex-1 rounded-lg px-3 py-2 text-sm font-bold">Plano desde arriba</button>
+                            class="min-h-11 md:min-h-0 flex-1 rounded-lg px-3 py-2 text-sm font-bold">Plano desde arriba</button>
                 </div>
 
                 {{-- Herramientas: sirven igual en el 3D y en el plano. --}}
-                <div class="flex flex-wrap items-center gap-2 rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200">
-                    <label class="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                <div class="flex items-center gap-2 rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200"
+                     :class="enfocado ? 'shrink-0 overflow-x-auto whitespace-nowrap !p-1.5' : 'flex-wrap'">
+                    <label class="flex min-h-11 md:min-h-0 items-center gap-2 text-sm font-semibold text-slate-700">
                         <input type="checkbox" x-model="moverPasillo" class="rounded border-slate-300 text-primary focus:ring-primary">
                         Toda la fila
                     </label>
@@ -194,31 +205,31 @@
                     <button type="button" @click="abrirRenumerar()" :disabled="!elegido" class="{{ $boton }}">Asignar pasillo</button>
                     <button type="button" @click="restaurar()" :disabled="!elegido" class="{{ $boton }}">Devolver a su lugar</button>
                     <button type="button" @click="borrar()" :disabled="!entradaElegida && !elegido"
-                            class="rounded-lg bg-white px-3 py-1.5 text-sm font-semibold text-rose-700 ring-1 ring-rose-200 hover:bg-rose-50 disabled:opacity-40"
+                            class="min-h-11 md:min-h-0 rounded-lg bg-white px-3 py-1.5 text-sm font-semibold text-rose-700 ring-1 ring-rose-200 hover:bg-rose-50 disabled:opacity-40"
                             x-text="entradaElegida ? 'Quitar entrada' : (moverPasillo ? 'Borrar la fila' : 'Borrar anaquel')"></button>
                     <span class="mx-1 h-6 w-px bg-slate-200" aria-hidden="true"></span>
                     <button type="button" @click="abrirNuevoPasillo()"
-                            class="rounded-lg bg-primary-soft px-3 py-1.5 text-sm font-bold text-primary-ink ring-1 ring-primary hover:bg-white">+ Pasillo</button>
+                            class="min-h-11 md:min-h-0 rounded-lg bg-primary-soft px-3 py-1.5 text-sm font-bold text-primary-ink ring-1 ring-primary hover:bg-white">+ Pasillo</button>
                     <button type="button" @click="agregarEntrada()" :disabled="config.entradas.length >= {{ ConfigAlmacen::MAXIMO_ENTRADAS }}"
-                            class="rounded-lg bg-emerald-50 px-3 py-1.5 text-sm font-bold text-emerald-800 ring-1 ring-emerald-300 hover:bg-emerald-100 disabled:opacity-40">+ Entrada</button>
+                            class="min-h-11 md:min-h-0 rounded-lg bg-emerald-50 px-3 py-1.5 text-sm font-bold text-emerald-800 ring-1 ring-emerald-300 hover:bg-emerald-100 disabled:opacity-40">+ Entrada</button>
                     <template x-if="vista === 'plano'">
                         <div class="ml-auto flex items-center gap-2">
-                            <button type="button" @click="acercar(0.8)" aria-label="Acercar" class="size-8 rounded-lg bg-white text-lg font-bold text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50">+</button>
-                            <button type="button" @click="acercar(1.25)" aria-label="Alejar" class="size-8 rounded-lg bg-white text-lg font-bold text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50">−</button>
+                            <button type="button" @click="acercar(0.8)" aria-label="Acercar" class="size-11 md:size-8 rounded-lg bg-white text-lg font-bold text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50">+</button>
+                            <button type="button" @click="acercar(1.25)" aria-label="Alejar" class="size-11 md:size-8 rounded-lg bg-white text-lg font-bold text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50">−</button>
                             <button type="button" @click="encajar()" class="{{ $boton }}">Ver todo</button>
                         </div>
                     </template>
-                    <button type="button" @click="restaurarTodo()" x-show="movidos" class="rounded-lg px-3 py-1.5 text-sm font-semibold text-rose-700 hover:bg-rose-50">Acomodar todo automático</button>
+                    <button type="button" @click="restaurarTodo()" x-show="movidos" class="min-h-11 md:min-h-0 rounded-lg px-3 py-1.5 text-sm font-semibold text-rose-700 hover:bg-rose-50">Acomodar todo automático</button>
                 </div>
 
-                <p class="text-xs text-slate-500">
+                <p x-show="!enfocado" class="text-xs text-slate-500">
                     Toca un anaquel para elegirlo y ponerle el número de pasillo (con «Toda la fila» se elige la fila de anaqueles que tocaste); arrástralo para ponerlo en su lugar; la raya naranja
                     es su frente. En el plano, las flechas lo mueven 10 cm, la tecla R lo gira y Suprimir lo borra. Los cambios se guardan con «Guardar acomodo».
                 </p>
 
                 {{-- Pasillo nuevo --}}
                 <template x-if="nuevo">
-                    <form @submit.prevent="crearPasillo()" class="space-y-3 rounded-2xl bg-primary-soft p-4 ring-1 ring-primary">
+                    <form @submit.prevent="crearPasillo()" class="space-y-3 rounded-2xl bg-primary-soft p-4 ring-1 ring-primary" :class="enfocado && 'absolute inset-x-1.5 bottom-1.5 z-10 max-h-[70%] overflow-y-auto'">
                         <p class="text-sm font-bold text-slate-900">Pasillo nuevo</p>
                         <div class="grid grid-cols-3 gap-2 sm:grid-cols-6">
                             <label class="text-xs font-semibold text-slate-700">Zona
@@ -246,52 +257,64 @@
                             en el ejemplo, cancela y toca «Usar este ejemplo como mi almacén».
                         </p>
                         <div class="flex gap-2">
-                            <button type="submit" class="rounded-lg bg-primary px-4 py-1.5 text-sm font-bold text-on-primary hover:bg-primary-dark">Crear pasillo</button>
-                            <button type="button" @click="nuevo = null" class="rounded-lg px-3 py-1.5 text-sm font-semibold text-slate-600 hover:bg-white">Cancelar</button>
+                            <button type="submit" class="min-h-11 md:min-h-0 rounded-lg bg-primary px-4 py-1.5 text-sm font-bold text-on-primary hover:bg-primary-dark">Crear pasillo</button>
+                            <button type="button" @click="nuevo = null" class="min-h-11 md:min-h-0 rounded-lg px-3 py-1.5 text-sm font-semibold text-slate-600 hover:bg-white">Cancelar</button>
                         </div>
                     </form>
                 </template>
 
-                <div x-show="entradaElegida" x-cloak class="flex flex-wrap items-center gap-2 rounded-xl bg-emerald-50 px-3 py-2 ring-1 ring-emerald-200">
+                <div x-show="entradaElegida" x-cloak class="flex flex-wrap items-center gap-2 rounded-xl bg-emerald-50 px-3 py-2 ring-1 ring-emerald-200" :class="enfocado && 'absolute inset-x-1.5 bottom-1.5 z-10'">
                     <label class="flex flex-1 items-center gap-2 text-sm font-semibold text-emerald-900">
                         Nombre de la entrada
                         <input type="text" maxlength="30" placeholder="Entrada" :value="entradaElegida?.nombre ?? ''"
                                @input="entradaElegida && (entradaElegida.nombre = $event.target.value)"
-                               class="min-w-0 flex-1 rounded-lg border-emerald-300 py-1 text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                               class="min-w-0 flex-1 rounded-lg border-emerald-300 py-1 text-base md:text-sm focus:border-emerald-500 focus:ring-emerald-500">
                     </label>
                     <span class="text-xs text-emerald-800">giro <span x-text="entradaElegida?.giro"></span>°</span>
                 </div>
-                <p x-show="elegido" class="text-sm text-slate-700">
+                <p x-show="elegido && !enfocado" class="text-sm text-slate-700">
                     Elegido: <span class="font-mono font-bold" x-text="moverPasillo ? 'fila del pasillo ' + elegido?.clave.slice(0, 5) : elegido?.clave"></span>
                     · <span x-text="nombreZona(elegido?.zona)"></span>
                     · giro <span x-text="elegido?.giro"></span>°
                     <span x-show="elegido?.movido" class="ml-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-800">ubicado a mano</span>
                     <span x-show="elegidoOcupado" class="ml-1 rounded-full bg-sky-100 px-2 py-0.5 text-xs font-bold text-sky-800">tiene productos</span>
                 </p>
-                <p x-show="avisoPlano" x-cloak role="status" class="rounded-xl bg-sky-50 px-3 py-2 text-sm font-semibold text-sky-900 ring-1 ring-sky-200" x-text="avisoPlano"></p>
-                <p x-show="borrados" x-cloak class="flex flex-wrap items-center gap-2 rounded-xl bg-rose-50 px-3 py-2 text-xs text-rose-900 ring-1 ring-rose-200">
+                <p x-show="avisoPlano && !(enfocado && renumero)" x-cloak role="status" class="rounded-xl bg-sky-50 px-3 py-2 text-sm font-semibold text-sky-900 ring-1 ring-sky-200" :class="enfocado && ('absolute inset-x-1.5 z-20 ' + (nuevo ? 'top-1.5' : 'bottom-1.5'))" x-text="avisoPlano"></p>
+                <p x-show="borrados && !enfocado" x-cloak class="flex flex-wrap items-center gap-2 rounded-xl bg-rose-50 px-3 py-2 text-xs text-rose-900 ring-1 ring-rose-200">
                     <span><span class="font-bold" x-text="borrados"></span> anaqueles borrados del plano.</span>
                     <button type="button" @click="devolverBorrados()" class="font-semibold underline">Volver a ponerlos</button>
                 </p>
 
-                <div class="relative">
+                <div class="relative" :class="enfocado && 'min-h-0 flex-1'">
                 {{-- Plano visto desde arriba. --}}
                 <svg x-show="vista === 'plano'" x-ref="plano" :view-box.camel="viewBox" tabindex="0" role="application" aria-label="Plano del almacén"
+                     :class="enfocado ? 'h-full' : 'h-[60vh] min-h-80'"
                      preserveAspectRatio="xMidYMid meet"
-                     class="block h-[60vh] min-h-80 w-full touch-none select-none rounded-2xl bg-slate-50 ring-1 ring-slate-200 focus:outline-none focus:ring-2 focus:ring-primary"
+                     class="block w-full touch-none select-none rounded-2xl bg-slate-50 ring-1 ring-slate-200 focus:outline-none focus:ring-2 focus:ring-primary"
                      @pointerdown="presionar($event)" @pointermove="mover($event)" @pointerup="soltar($event)" @pointercancel="soltar($event)"
                      @wheel.prevent="acercar($event.deltaY > 0 ? 1.1 : 0.9)" @keydown="teclado($event)">
                     {{-- x-for no funciona dentro de un SVG: el contenido lo arma svgPlano. --}}
                     <g x-html="svgPlano"></g>
                 </svg>
 
-                <div x-show="vista === '3d'" class="relative h-[65vh] min-h-80 overflow-hidden rounded-2xl ring-1 ring-slate-200">
+                <div x-show="vista === '3d'" class="relative overflow-hidden rounded-2xl ring-1 ring-slate-200" :class="enfocado ? 'h-full' : 'h-[65vh] min-h-80'">
                     <div x-ref="visor" class="absolute inset-0"></div>
                     <p x-show="mensaje" x-cloak class="absolute inset-x-0 top-0 m-3 rounded-xl bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900 ring-1 ring-amber-200" x-text="mensaje"></p>
-                    <p class="pointer-events-none absolute bottom-2 left-3 right-40 text-xs text-slate-500">Toca un anaquel para elegirlo · arrastra lo elegido para moverlo · arrastra el resto para desplazarte</p>
-                    @include('almacen.partials.controles-3d')
+                    <p class="pointer-events-none absolute bottom-2 left-3 right-40 text-xs text-slate-500" :class="enfocado && 'hidden'">Toca un anaquel para elegirlo · arrastra lo elegido para moverlo · arrastra el resto para desplazarte</p>
+                    {{-- En el teléfono, botones de tamaño para el dedo (el mapa del picking no cambia). --}}
+                    <div class="max-md:[&_button]:size-11">
+                        @include('almacen.partials.controles-3d')
+                    </div>
                 </div>
 
+                </div>
+
+                {{--
+                    Pantalla completa: este espacio está siempre reservado y los cuadros se abren encima. Si el
+                    visor cambiara de tamaño al abrirlos, el 3D se reacomodaría con cada toque.
+                --}}
+                <div x-show="enfocado" x-cloak class="flex h-54 shrink-0 items-start justify-center pt-4 text-center text-sm font-semibold text-slate-500">
+                    Toca un anaquel para ponerle su pasillo y su número.
                 </div>
 
                 {{--
@@ -300,16 +323,34 @@
                 --}}
                 <template x-if="renumero && elegido">
                     <form x-ref="renumero" @submit.prevent="renumerar('pasillo')"
-                          class="scroll-mb-4 space-y-2 rounded-2xl bg-white p-3 shadow-sm ring-1 ring-orange-300">
+                          class="scroll-mb-4 space-y-2 rounded-2xl bg-white p-3 shadow-sm ring-1 ring-orange-300"
+                          :class="enfocado && 'absolute inset-x-1.5 bottom-1.5 z-10 max-h-[55%] overflow-y-auto'">
                         <div class="flex items-start justify-between gap-2">
                             <p class="text-sm font-bold text-slate-900">
                                 Anaquel <span class="font-mono" x-text="elegido.clave"></span>
-                                <span class="block text-xs font-normal text-slate-500">Escribe el número nuevo y toca «Asignar». Sin pasillo, «Solo este anaquel» lo deja en el suyo.</span>
+                                <span x-show="!enfocado" class="block text-xs font-normal text-slate-500">Escribe el número nuevo y toca «Asignar». Sin pasillo, «Solo este anaquel» lo deja en el suyo.</span>
                             </p>
                             <button type="button" @click="renumero = null" aria-label="Cerrar"
-                                    class="size-7 shrink-0 rounded-lg text-lg font-bold leading-none text-slate-400 hover:bg-slate-100 hover:text-slate-700">×</button>
+                                    class="size-11 md:size-7 shrink-0 rounded-lg text-lg font-bold leading-none text-slate-400 hover:bg-slate-100 hover:text-slate-700">×</button>
                         </div>
-                        <div class="grid grid-cols-3 gap-2">
+                        {{-- Pantalla completa: − y + en vez del teclado, que taparía el almacén. --}}
+                        <template x-if="enfocado">
+                            <div class="flex items-end gap-2">
+                                <label class="w-14 shrink-0 text-xs font-semibold text-slate-700">Zona
+                                    <input type="text" x-model="renumero.zona" list="zonas-almacen" maxlength="2" autocomplete="off" class="{{ $campo }} mt-1 h-12 text-center font-mono uppercase">
+                                </label>
+                                @foreach (['pasillo' => 'Pasillo', 'anaquel' => 'Anaquel'] as $numero => $nombreNumero)
+                                    <div class="min-w-0 flex-1 text-center text-xs font-semibold text-slate-700">{{ $nombreNumero }}
+                                        <div class="mt-1 flex items-center justify-between">
+                                            <button type="button" @click="cambiarNumero('{{ $numero }}', -1)" aria-label="{{ $nombreNumero }} menos" class="h-12 w-11 rounded-xl bg-slate-100 text-2xl font-bold text-slate-700 active:bg-slate-200">−</button>
+                                            <span class="font-mono text-xl font-black text-slate-900" x-text="String(renumero.{{ $numero }}).padStart(2, '0')" aria-live="polite"></span>
+                                            <button type="button" @click="cambiarNumero('{{ $numero }}', 1)" aria-label="{{ $nombreNumero }} más" class="h-12 w-11 rounded-xl bg-slate-100 text-2xl font-bold text-slate-700 active:bg-slate-200">+</button>
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        </template>
+                        <div x-show="!enfocado" class="grid grid-cols-3 gap-2">
                             <label class="text-xs font-semibold text-slate-700">Zona
                                 <input type="text" x-model="renumero.zona" list="zonas-almacen" maxlength="2" autocomplete="off" class="{{ $campo }} mt-1 text-center font-mono uppercase">
                             </label>
@@ -321,13 +362,13 @@
                             </label>
                         </div>
                         <div class="flex flex-wrap gap-2">
-                            <button type="submit" class="rounded-lg bg-orange-500 px-3 py-1.5 text-sm font-bold text-white hover:bg-orange-600">
+                            <button type="submit" class="min-h-12 md:min-h-0 flex-1 md:flex-none rounded-lg bg-orange-500 px-3 py-1.5 text-sm font-bold text-white hover:bg-orange-600">
                                 Asignar a toda la fila
                             </button>
                             <button type="button" @click="renumerar('anaquel')" class="{{ $boton }}">Solo este anaquel</button>
                         </div>
                         <p x-show="avisoPlano" class="rounded-lg bg-sky-50 px-2 py-1 text-xs font-semibold text-sky-900 ring-1 ring-sky-200" x-text="avisoPlano"></p>
-                        <p class="text-xs text-slate-500">Los anaqueles se quedan donde están; solo cambia su número. Se guarda con «Guardar acomodo».</p>
+                        <p x-show="!enfocado" class="text-xs text-slate-500">Los anaqueles se quedan donde están; solo cambia su número. Se guarda con «Guardar acomodo».</p>
                     </form>
                 </template>
             </div>
