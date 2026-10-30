@@ -64,8 +64,13 @@
                 <form method="POST" action="{{ route('batch.iniciar', $lote->id) }}" class="flex flex-wrap items-end gap-2 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
                     @csrf
                     <div class="min-w-48 flex-1">
-                        <label for="recipiente" class="block text-sm font-semibold text-slate-700">Recipiente para todo el lote</label>
-                        <input id="recipiente" name="recipiente" type="text" required maxlength="50" placeholder="Escanea o escribe el código de la cesta"
+                        <label for="recipiente" class="block text-sm font-semibold text-slate-700">Cesta para todo el lote</label>
+                        <datalist id="cestas-libres">
+                            @foreach ($cestasLibres as $cesta)
+                                <option value="{{ $cesta }}"></option>
+                            @endforeach
+                        </datalist>
+                        <input id="recipiente" name="recipiente" type="text" required maxlength="50" list="cestas-libres" autocomplete="off" placeholder="Escanea o elige una cesta libre"
                                class="mt-1.5 block w-full rounded-xl border-slate-300 px-3.5 py-2.5 text-lg font-bold shadow-sm focus:border-primary focus:ring-primary">
                     </div>
                     <button type="submit" class="rounded-xl bg-primary px-5 py-3 text-sm font-bold text-on-primary hover:bg-primary-dark">Iniciar picking del lote</button>

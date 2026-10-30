@@ -24,8 +24,26 @@
                 @if ($buscar !== '')
                     <a href="{{ route('picking.index') }}" class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-500 hover:text-slate-800">Limpiar</a>
                 @endif
+                @if (\App\Support\MenuSides::puede(auth()->user(), auth()->user()->cfg, 'configuracion'))
+                    <a href="{{ route('cestas.index') }}" class="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50">Cestas</a>
+                @endif
             </form>
         </div>
+
+        <datalist id="cestas-libres">
+            @foreach ($cestasLibres as $cesta)
+                <option value="{{ $cesta }}"></option>
+            @endforeach
+        </datalist>
+
+        @if ($cestasLibres === [] && ! $miPedido)
+            <div role="alert" class="rounded-xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900 ring-1 ring-amber-200">
+                No hay cestas libres para tomar pedidos.
+                @if (\App\Support\MenuSides::puede(auth()->user(), auth()->user()->cfg, 'configuracion'))
+                    <a href="{{ route('cestas.index') }}" class="underline">Revisa la lista de cestas</a>.
+                @endif
+            </div>
+        @endif
 
         {{-- sides_cfg.pickingSiguienteParte: al terminar una parte se pregunta si sigue con la otra. --}}
         @if (($siguiente = session('siguienteParte')) && ! $miPedido)
@@ -153,11 +171,12 @@
                                             <h3 class="text-lg font-extrabold text-slate-900">Tomar el pedido #{{ $pedido->id }}</h3>
                                             <p class="mt-1 text-sm text-slate-600">{{ $pedido->nomcli }}</p>
                                         </div>
+                                        @php($heredada = $pedido->estado === 'PICKING' && $pedido->recipiente)
                                         <div>
-                                            <label for="recipiente-{{ $pedido->id }}" class="block text-sm font-semibold text-slate-700">Recipiente</label>
+                                            <label for="recipiente-{{ $pedido->id }}" class="block text-sm font-semibold text-slate-700">Cesta</label>
                                             <input x-ref="recipiente" id="recipiente-{{ $pedido->id }}" name="recipiente" type="text" maxlength="50"
-                                                   value="{{ $pedido->recipiente }}" @if ($pedido->recipiente) readonly @else required @endif
-                                                   placeholder="Escanea o escribe el código de la cesta"
+                                                   value="{{ $heredada ? $pedido->recipiente : '' }}" @if ($heredada) readonly @else required list="cestas-libres" autocomplete="off" @endif
+                                                   placeholder="Escanea o elige una cesta libre"
                                                    class="mt-1.5 block w-full rounded-xl border-slate-300 px-3.5 py-2.5 text-lg font-bold shadow-sm focus:border-primary focus:ring-primary read-only:bg-slate-100">
                                         </div>
                                         <div class="flex justify-end gap-2">

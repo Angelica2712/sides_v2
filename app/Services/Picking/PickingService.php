@@ -55,6 +55,7 @@ class PickingService
     public function __construct(
         private readonly DespachoSeped $despachoSeped,
         private readonly AsignacionPicking $asignacion,
+        private readonly CestasService $cestas,
     ) {
     }
 
@@ -83,9 +84,19 @@ class PickingService
                 throw new PickingException("Ya tienes el lote #{$lote} de Batch Picking en curso. Termínalo antes de tomar otro pedido.");
             }
 
-            $recipiente = trim((string) ($operacion?->recipiente ?: $recipiente));
-            if ($recipiente === '') {
-                throw new PickingException('Escribe el código del recipiente.');
+            // Quien retoma un pedido liberado sigue con su cesta: la mercancía ya está adentro.
+            if ($pedido->estado === 'PICKING' && filled($operacion?->recipiente)) {
+                $recipiente = $operacion->recipiente;
+            } else {
+                if (trim((string) $recipiente) === '') {
+                    throw new PickingException('Escribe el código del recipiente.');
+                }
+
+                $cesta = $this->cestas->apartar($usuario->codisb, $recipiente, [$pedidoId]);
+                if ($cesta['error']) {
+                    throw new PickingException($cesta['error']);
+                }
+                $recipiente = $cesta['codigo'];
             }
 
             $this->asignacion->asignar($pedido, $usuario, $recipiente);

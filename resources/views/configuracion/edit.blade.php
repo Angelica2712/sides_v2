@@ -41,7 +41,7 @@
     <div class="mx-auto max-w-3xl space-y-4">
         <div>
             <h2 class="text-xl font-extrabold text-slate-900">Configuración</h2>
-            <p class="text-sm text-slate-500">Parámetros de la sucursal {{ $cfg->codisb }}. Se aplican a todos sus usuarios.</p>
+            <p class="text-sm text-slate-500">Parámetros de la sucursal {{ $cfg->codisb }}. Se aplican a todos sus usuarios. <a href="{{ route('cestas.index') }}" class="font-semibold text-primary-ink hover:underline">Lista de cestas</a></p>
         </div>
 
         <form method="POST" action="{{ route('configuracion.update') }}" class="space-y-4"

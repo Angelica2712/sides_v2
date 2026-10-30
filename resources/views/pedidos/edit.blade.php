@@ -45,7 +45,12 @@
                     </div>
                     <div>
                         <label for="recipiente" class="block text-sm font-semibold text-slate-700">Recipiente</label>
-                        <input id="recipiente" name="recipiente" type="text" maxlength="50" value="{{ old('recipiente', $pedido->recipiente_sides) }}" class="{{ $campo }}">
+                        <input id="recipiente" name="recipiente" type="text" maxlength="50" list="cestas-libres" autocomplete="off" value="{{ old('recipiente', $pedido->recipiente_sides) }}" class="{{ $campo }}">
+                        <datalist id="cestas-libres">
+                            @foreach ($cestasLibres as $cesta)
+                                <option value="{{ $cesta }}"></option>
+                            @endforeach
+                        </datalist>
                     </div>
 
                     @foreach ($fechas as $nombre => $etiqueta)

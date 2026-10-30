@@ -26,6 +26,14 @@ trait TablasSides
 
     protected function crearTablasSides(): void
     {
+        Schema::create('sides_cesta', function (Blueprint $table) {
+            $table->increments('id');
+            $table->string('codisb', 20);
+            $table->string('codigo', 50);
+            $table->tinyInteger('activo')->default(1);
+            $table->unique(['codisb', 'codigo']);
+        });
+
         Schema::create('sides_cfg', function (Blueprint $table) {
             $table->string('codisb', 20)->primary();
             $table->string('nombre', 150)->nullable();
@@ -492,6 +500,14 @@ trait TablasSides
         });
     }
 
+    /** Cestas que usan las pruebas al tomar pedidos. */
+    protected function crearCestas(string $codisb = '505094939'): void
+    {
+        foreach (['CESTA 5', 'CESTA 6', 'CESTA 12', 'X', 'C1', 'C5', 'C7', 'C9', 'CAJA-1', 'CAJA-3', 'CAJA-7'] as $codigo) {
+            DB::table('sides_cesta')->insertOrIgnore(['codisb' => $codisb, 'codigo' => $codigo, 'activo' => 1]);
+        }
+    }
+
     /** Renglones de guía y tablas de SEPED que leen las guías (choferes, users, fact, cxc, reclamo, recren). */
     protected function crearTablasGuias(): void
     {
@@ -607,6 +623,8 @@ trait TablasSides
     /** @param list<string>|null $modulos opcionales activos; por defecto todos */
     protected function crearCfg(array $atributos = [], ?array $modulos = null): SidesCfg
     {
+        $this->crearCestas($atributos['codisb'] ?? '505094939');
+
         $cfg = SidesCfg::query()->create(array_merge([
             'codisb' => '505094939',
             'nombre' => 'DROGUERIA ACTIVA,C.A',

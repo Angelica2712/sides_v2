@@ -6,6 +6,7 @@ use App\Models\Seped\Pedido;
 use App\Models\Sides\SidesPedidoOperacion;
 use App\Services\BatchPicking\BatchPickingService;
 use App\Services\Despacho\RenglonesPedido;
+use App\Services\Picking\CestasService;
 use App\Services\Picking\PickingException;
 use App\Services\Picking\PickingService;
 use Illuminate\Http\JsonResponse;
@@ -62,6 +63,7 @@ class PickingController extends Controller
             'partes' => PartesPedido::deLista($usuario->codisb, $pedidos),
             'buscar' => $buscar,
             'miPedido' => $this->picking->pedidoActivoDe($usuario),
+            'cestasLibres' => app(CestasService::class)->libres($usuario->codisb),
             'lotes' => MenuSides::puede($usuario, $usuario->cfg, 'batch')
                 ? app(BatchPickingService::class)->lotesEnCurso($usuario->codisb)
                 : collect(),

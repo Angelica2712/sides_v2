@@ -17,6 +17,7 @@ use App\Models\Sides\SidesPedrenOperacion;
 use App\Models\Sides\SidesUsers;
 use App\Services\Almacen\UbicacionesRegistradas;
 use App\Services\Packing\RetencionService;
+use App\Services\Picking\CestasService;
 use App\Support\FechaSeped;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
@@ -53,8 +54,10 @@ class PedidosService
     // Texto del legacy (con su ortografía) para que coincida con los pedidos ya anulados así.
     private const OBSERVACION_FACTURANDO_VIEJO = '(AUTOMATICO) PEDIDO ESTUBO MUCHO TIEMPO EN ESPERA POR FACTURAR';
 
-    public function __construct(private readonly RetencionService $retencion)
-    {
+    public function __construct(
+        private readonly RetencionService $retencion,
+        private readonly CestasService $cestas,
+    ) {
     }
 
     /** Legacy AnulaPedidosFacturandoViejos: los FACTURANDO procesados hace 30 a 120 días pasan a ANULADO. */
@@ -207,6 +210,16 @@ class PedidosService
             ])->save();
 
             $operacion = SidesPedidoOperacion::query()->find($pedidoId);
+
+            // Cambiar la cesta sigue las reglas del picking; dejar la que ya tiene (aunque sea de antes de la lista), no.
+            if (filled($datos['recipiente']) && CestasService::normalizar($datos['recipiente']) !== CestasService::normalizar($operacion?->recipiente)) {
+                $cesta = $this->cestas->apartar($usuario->codisb, $datos['recipiente'], [$pedidoId]);
+                if ($cesta['error']) {
+                    throw new PedidosException($cesta['error']);
+                }
+                $datos['recipiente'] = $cesta['codigo'];
+            }
+
             if ($operacion || filled($datos['recipiente'])) {
                 SidesPedidoOperacion::query()->updateOrCreate(
                     ['id_pedido' => $pedidoId],

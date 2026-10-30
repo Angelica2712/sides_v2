@@ -12,6 +12,7 @@ use App\Models\Sides\SidesUsers;
 use App\Services\Almacen\UbicacionesRegistradas;
 use App\Services\Despacho\AsignacionPicking;
 use App\Services\Despacho\RenglonesPedido;
+use App\Services\Picking\CestasService;
 use App\Services\Picking\PickingService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -39,6 +40,7 @@ class BatchPickingService
     public function __construct(
         private readonly PickingService $picking,
         private readonly AsignacionPicking $asignacion,
+        private readonly CestasService $cestas,
     ) {
     }
 
@@ -272,8 +274,13 @@ class BatchPickingService
                 throw new BatchPickingException('Los pedidos #'.$noDisponibles->implode(', #').' ya no están disponibles (cambiaron de estado en SEPED). Anula el lote y vuelve a armarlo.');
             }
 
+            $cesta = $this->cestas->apartar($usuario->codisb, $recipiente, array_map('intval', $pedidoIds));
+            if ($cesta['error']) {
+                throw new BatchPickingException($cesta['error']);
+            }
+
             foreach ($pedidos as $pedido) {
-                $this->asignacion->asignar($pedido, $usuario, $recipiente);
+                $this->asignacion->asignar($pedido, $usuario, $cesta['codigo']);
             }
 
             $lote->update(['estado' => 'CONFIRMADO', 'fecha_confirmado' => Carbon::now()]);

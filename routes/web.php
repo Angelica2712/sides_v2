@@ -7,6 +7,7 @@ use App\Http\Controllers\AlmacenController;
 use App\Http\Controllers\ArmarAlmacenController;
 use App\Http\Controllers\AuditoriaController;
 use App\Http\Controllers\BatchPickingController;
+use App\Http\Controllers\CestasController;
 use App\Http\Controllers\ConfiguracionController;
 use App\Http\Controllers\DespachoController;
 use App\Http\Controllers\EtiquetasController;
@@ -227,6 +228,15 @@ Route::middleware('auth')->group(function () {
             Route::get('{tipo}/{vista}/operario/{usuario}', 'operario')->name('operario');
             Route::get('{tipo}/{vista}/operario/{usuario}/excel', 'excelOperario')->name('operario.excel');
             Route::delete('{tipo}/inactividad/{registro}', 'quitarInactividad')->name('inactividad.destroy');
+        });
+
+    Route::prefix('configuracion/cestas')->name('cestas.')->middleware('permiso:configuracion')
+        ->controller(CestasController::class)->whereNumber('cesta')
+        ->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::post('/', 'store')->name('store');
+            Route::put('{cesta}', 'update')->name('update');
+            Route::delete('{cesta}', 'destroy')->name('destroy');
         });
 
     Route::prefix('configuracion')->name('configuracion.')->middleware('permiso:configuracion')

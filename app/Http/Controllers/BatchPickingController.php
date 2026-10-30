@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Services\BatchPicking\BatchPickingException;
 use App\Services\BatchPicking\BatchPickingService;
+use App\Services\Picking\CestasService;
 use App\Support\Monitor\NotificarMonitor;
 use App\Support\PartesPedido;
 use Illuminate\Http\JsonResponse;
@@ -80,6 +81,7 @@ class BatchPickingController extends Controller
             'pedidos' => $pedidos,
             'partes' => PartesPedido::deLista($request->user()->codisb, $pedidos),
             'responsable' => $pedidos->firstWhere('despasignado', 1)?->despachador,
+            'cestasLibres' => app(CestasService::class)->libres($request->user()->codisb),
         ]);
     }
 

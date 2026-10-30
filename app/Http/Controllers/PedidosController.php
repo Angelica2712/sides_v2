@@ -68,6 +68,7 @@ class PedidosController extends Controller
         return view('pedidos.edit', [
             'pedido' => $encontrado,
             'estados' => $this->pedidos->estadosEditables(SidesCfg::query()->find($request->user()->codisb)),
+            'cestasLibres' => app(\App\Services\Picking\CestasService::class)->libres($request->user()->codisb),
         ]);
     }
 
