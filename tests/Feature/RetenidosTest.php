@@ -11,6 +11,7 @@ use App\Services\Siad\SiadPedidosService;
 use App\Models\Sides\SidesUsers;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Tests\Concerns\TablasSides;
 use Tests\TestCase;
 
@@ -137,6 +138,30 @@ class RetenidosTest extends TestCase
         $this->assertSame('PACKING', Pedido::query()->find(800)->estado);
 
         $this->post("/retenidos/{$retencion->id}/liberar", ['pedido' => 801])->assertSessionHas('mensaje', 'Pedido #801 enviado a facturar.');
+    }
+
+    public function test_no_funde_pedidos_si_los_renglones_pasan_el_tope_de_la_factura(): void
+    {
+        Schema::create('cfg', function ($table) {
+            $table->string('codisb', 20);
+            $table->integer('numRengPedido')->default(0);
+        });
+        $this->pedidoListo(800);
+        $this->pedidoListo(801);
+        $this->terminarRetenido(800);
+        $this->terminarRetenido(801);
+        $retencion = SidesRetencion::query()->first();
+        $codisb = Pedido::query()->find(800)->codisb;
+
+        DB::table('cfg')->insert(['codisb' => $codisb, 'numRengPedido' => 1]);
+        $this->post("/retenidos/{$retencion->id}/liberar")
+            ->assertSessionHas('error', 'Los pedidos #800, #801 suman 2 renglones y la factura admite 1. Envíalos a facturar por separado.');
+        $this->assertSame('PACKING', Pedido::query()->find(800)->estado);
+        $this->assertSame(1, DB::table('pedren')->where('id', 801)->count());
+
+        DB::table('cfg')->update(['numRengPedido' => 2]);
+        $this->post("/retenidos/{$retencion->id}/liberar")->assertSessionHas('mensaje');
+        $this->assertSame('PEND-FACTURA', Pedido::query()->find(800)->estado);
     }
 
     public function test_liberar_uno_solo_deja_los_demas_retenidos(): void
