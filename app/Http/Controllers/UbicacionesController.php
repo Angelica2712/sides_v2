@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Services\Almacen\AcomodoAlmacen;
 use App\Services\Almacen\UbicacionesRegistradas;
+use App\Support\CodigoBarra;
 use App\Support\ConfigAlmacen;
 use App\Support\UbicacionAlmacen;
 use Illuminate\Http\JsonResponse;
@@ -70,14 +71,16 @@ class UbicacionesController extends Controller
             return response()->json(['productos' => []]);
         }
 
+        $barras = CodigoBarra::variantes($buscar);
+        $marcas = implode(', ', array_fill(0, count($barras), '?'));
         $productos = $this->consulta($request->user()->codisb)
-            ->where(function ($filtro) use ($buscar) {
+            ->where(function ($filtro) use ($buscar, $barras) {
                 $filtro->where('producto.codprod', $buscar)
-                    ->orWhere('producto.barra', $buscar)
+                    ->orWhereIn('producto.barra', $barras)
                     ->orWhere('producto.desprod', 'like', "%{$buscar}%");
             })
             // El código o la barra exactos primero: con el lector se elige solo.
-            ->orderByRaw('CASE WHEN producto.codprod = ? OR producto.barra = ? THEN 0 ELSE 1 END', [$buscar, $buscar])
+            ->orderByRaw("CASE WHEN producto.codprod = ? OR producto.barra IN ({$marcas}) THEN 0 ELSE 1 END", [$buscar, ...$barras])
             ->orderBy('producto.desprod')
             ->limit(20)
             ->get()
@@ -85,7 +88,7 @@ class UbicacionesController extends Controller
 
         return response()->json([
             'productos' => $productos,
-            'exacto' => $productos->contains(fn ($p) => $p['codprod'] === $buscar || $p['barra'] === $buscar),
+            'exacto' => $productos->contains(fn ($p) => $p['codprod'] === $buscar || CodigoBarra::iguales($p['barra'], $buscar)),
         ]);
     }
 

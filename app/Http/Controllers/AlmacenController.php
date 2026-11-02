@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Services\Almacen\PlanoAlmacen;
 use App\Services\Almacen\UbicacionesRegistradas;
+use App\Support\CodigoBarra;
 use App\Support\ConfigAlmacen;
 use App\Support\UbicacionAlmacen;
 use Illuminate\Http\JsonResponse;
@@ -45,7 +46,7 @@ class AlmacenController extends Controller
             ->where('producto.codisb', $request->user()->codisb)
             ->where(function ($filtro) use ($buscar) {
                 $filtro->where('producto.codprod', $buscar)
-                    ->orWhere('producto.barra', $buscar)
+                    ->orWhereIn('producto.barra', CodigoBarra::variantes($buscar))
                     ->orWhere('producto.desprod', 'like', "%{$buscar}%");
             })
             ->orderBy('producto.desprod')

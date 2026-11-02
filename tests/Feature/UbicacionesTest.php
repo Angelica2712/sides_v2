@@ -206,6 +206,24 @@ class UbicacionesTest extends TestCase
         $this->assertSame(['A1'], array_column($porTexto['productos'], 'codprod'));
     }
 
+    public function test_la_barra_del_lector_se_encuentra_con_o_sin_ceros_adelante(): void
+    {
+        DB::table('producto')->insert([
+            ['codprod' => 'U12', 'codisb' => '505094939', 'desprod' => 'CREMA UPC', 'barra' => '070501111111', 'ubicacion' => ''],
+            ['codprod' => 'E13', 'codisb' => '505094939', 'desprod' => 'JARABE EAN', 'barra' => '0759352000123', 'ubicacion' => ''],
+        ]);
+
+        // El lector manda el UPC-A de 12 dígitos como EAN-13 (con un 0 adelante), y al revés.
+        foreach (['0070501111111' => 'U12', '759352000123' => 'E13', '070501111111' => 'U12'] as $leido => $codprod) {
+            $datos = $this->actingAs($this->registrador)->getJson('/almacen/ubicaciones/buscar?q='.$leido)->assertOk()->json();
+            $this->assertTrue($datos['exacto'], $leido);
+            $this->assertSame([$codprod], array_column($datos['productos'], 'codprod'), $leido);
+        }
+
+        $this->assertSame(['U12'], array_column($this->actingAs($this->registrador)->getJson('/almacen/buscar?q=0070501111111')->json('productos'), 'codprod'));
+        $this->guardar('U12', 'PK-01-02-A-01')->assertOk();
+    }
+
     public function test_la_de_sides_gana_en_el_almacen_3d(): void
     {
         $this->guardar('A1', 'FR-01-02-A-01');
