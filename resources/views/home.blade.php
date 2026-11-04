@@ -109,8 +109,8 @@
                     @if ($vivo)
                         {{-- Los mismos despachadores y el mismo Almacén 3D de «Picking en vivo» (resources/js/picking-vivo.js). --}}
                         <div x-data="pickingVivo({ canal: @js('sides-monitor.'.auth()->user()->codisb), urls: @js($vivo) })"
-                             class="grid gap-4 {{ $vivo['plano'] ? 'lg:grid-cols-[20rem_1fr]' : '' }}">
-                            <div class="space-y-2 lg:max-h-[28rem] lg:overflow-y-auto lg:pr-1">
+                             class="grid items-start gap-4 {{ $vivo['plano'] ? 'lg:grid-cols-[20rem_1fr]' : '' }}">
+                            <div class="space-y-2 lg:max-h-[min(40rem,75vh)] lg:overflow-y-auto lg:pr-1">
                                 <p x-show="cargando" class="text-sm text-slate-500">Cargando…</p>
                                 <p x-show="!cargando && operarios.length === 0" x-cloak class="rounded-xl bg-slate-50 p-4 text-center text-sm text-slate-500">
                                     Nadie está haciendo picking ahora.
@@ -140,7 +140,9 @@
                             </div>
 
                             @if ($vivo['plano'])
-                                <div x-show="conMapa" class="relative h-[28rem] overflow-hidden rounded-xl ring-1 ring-slate-200">
+                                {{-- Alto fijo en el estilo (no en una clase): el almacén se ve grande siempre, haya una o veinte personas en picking. --}}
+                                <div x-show="conMapa" class="relative overflow-hidden rounded-xl ring-1 ring-slate-200"
+                                     style="height: clamp(26rem, 75vh, 46rem)">
                                     <div x-ref="visor" class="absolute inset-0"></div>
                                     <p x-show="mensajeMapa" x-cloak class="absolute inset-x-0 top-12 m-3 rounded-xl bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900 ring-1 ring-amber-200" x-text="mensajeMapa"></p>
                                     <div class="absolute left-3 top-3">
