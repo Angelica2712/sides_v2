@@ -51,6 +51,7 @@ Route::middleware('auth')->group(function () {
     Route::get('ir-a-seped', [SsoController::class, 'irASeped'])->name('sso.seped');
 
     Route::get('home', HomeController::class)->name('home');
+    Route::get('home/indicadores', [HomeController::class, 'indicadores'])->name('home.indicadores');
 
     Route::middleware('permiso:monitor')->group(function () {
         Route::get('monitor', MonitorController::class)->name('monitor.index');
@@ -58,12 +59,16 @@ Route::middleware('auth')->group(function () {
         Route::get('monitor/contenido', [MonitorController::class, 'contenido'])->name('monitor.contenido');
         // Letra de la vista Tabla: la cambia desde el propio monitor quien administra la droguería (permiso de Configuración).
         Route::put('monitor/letra', [MonitorController::class, 'letra'])->middleware('permiso:configuracion')->name('monitor.letra');
-        // Picking en vivo: cada despachador con su avance y su lugar en el Almacén 3D. Solo quien
-        // administra la droguería (permiso de Configuración); los demás usuarios del monitor no lo ven.
-        Route::middleware('permiso:configuracion')->group(function () {
-            Route::get('monitor/picking', [PickingVivoController::class, 'index'])->name('monitor.picking');
-            Route::get('monitor/picking/datos', [PickingVivoController::class, 'datos'])->name('monitor.picking.datos');
-        });
+    });
+
+    // Picking en vivo: cada despachador con su avance y su lugar en el Almacén 3D. Quien administra
+    // la droguería (Monitor + Configuración) o el jefe con «Indicadores del almacén», desde el Inicio;
+    // los demás usuarios del monitor no lo ven. Todo es de lectura.
+    Route::middleware('permiso:pickingvivo')->group(function () {
+        Route::get('monitor/picking', [PickingVivoController::class, 'index'])->name('monitor.picking');
+        Route::get('monitor/picking/datos', [PickingVivoController::class, 'datos'])->name('monitor.picking.datos');
+        // El plano del Almacén 3D para esta pantalla, sin pedir el permiso del Almacén 3D.
+        Route::get('monitor/picking/plano', [PickingVivoController::class, 'plano'])->middleware('permiso:mapavivo')->name('monitor.picking.plano');
     });
 
     Route::prefix('picking')->name('picking.')->middleware('permiso:picking')

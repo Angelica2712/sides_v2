@@ -7,6 +7,7 @@ import almacenConfig from './almacen-config';
 import armarAlmacen from './armar-almacen';
 import batchPicking from './batch-picking';
 import despachoGuia from './despacho';
+import inicioIndicadores from './inicio';
 import monitorEnVivo from './monitor';
 import packingPedido from './packing';
 import pickingPedido from './picking';
@@ -28,6 +29,7 @@ Alpine.data('batchPicking', batchPicking);
 Alpine.data('despachoGuia', despachoGuia);
 Alpine.data('monitorEnVivo', monitorEnVivo);
 Alpine.data('pickingVivo', pickingVivo);
+Alpine.data('inicioIndicadores', inicioIndicadores);
 Alpine.data('registroUbicaciones', registroUbicaciones);
 
 Alpine.start();

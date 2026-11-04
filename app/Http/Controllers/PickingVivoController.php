@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Seped\Pedido;
+use App\Services\Almacen\PlanoAlmacen;
 use App\Services\Despacho\RenglonesPedido;
 use App\Support\MenuSides;
 use Illuminate\Http\JsonResponse;
@@ -31,11 +32,19 @@ class PickingVivoController extends Controller
         return view('monitor.picking', [
             'codisb' => $usuario->codisb,
             'cfg' => $usuario->cfg,
+            // El jefe con solo «Indicadores del almacén» no entra al Monitor: sin el enlace de regreso.
+            'conMonitor' => MenuSides::puede($usuario, $usuario->cfg, 'monitor'),
             'urls' => [
                 'datos' => route('monitor.picking.datos'),
-                'plano' => MenuSides::puede($usuario, $usuario->cfg, 'almacen') ? route('almacen.plano') : null,
+                'plano' => MenuSides::puede($usuario, $usuario->cfg, 'mapavivo') ? route('monitor.picking.plano') : null,
             ],
         ]);
+    }
+
+    /** El mismo plano que AlmacenController@plano, para quien ve esta pantalla. */
+    public function plano(Request $request, PlanoAlmacen $plano): JsonResponse
+    {
+        return response()->json($plano->de($request->user()->codisb));
     }
 
     public function datos(Request $request): JsonResponse

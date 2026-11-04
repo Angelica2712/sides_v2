@@ -69,7 +69,7 @@ class MenuSides
      * Módulos que dependen de otro con otra clave. "ubicaciones" no sale en el menú: son las
      * pestañas del Almacén 3D para registrar ubicaciones y numerar los anaqueles.
      */
-    private const DEPENDE_DE = ['despacho' => 'guias', 'ubicaciones' => 'almacen'];
+    private const DEPENDE_DE = ['despacho' => 'guias', 'ubicaciones' => 'almacen', 'pickingvivo' => 'monitor', 'mapavivo' => 'almacen'];
 
     public static function puede(SidesUsers $usuario, ?SidesCfg $cfg, string $clave): bool
     {
@@ -87,6 +87,13 @@ class MenuSides
 
         return match ($clave) {
             'monitor' => (bool) $usuario->activarMonitor,
+            // «Picking en vivo» (no sale en el menú, se entra desde el Monitor): quien administra la
+            // droguería. El jefe con «Indicadores del almacén» lo ve en el Inicio.
+            'pickingvivo' => ($usuario->activarMonitor && $usuario->activarConfig) || $usuario->activarIndicadores,
+            // El Almacén 3D dentro de «Picking en vivo»: el jefe lo trae sin el permiso del Almacén 3D.
+            'mapavivo' => $usuario->activarAlmacen || $usuario->activarIndicadores,
+            // El Inicio con los tiempos promedio, el almacén en vivo y el desempeño de la droguería.
+            'indicadores' => (bool) $usuario->activarIndicadores,
             'picking', 'batch' => (bool) $usuario->activarPicking,
             // Permiso propio desde 2026-10-28; la migración se lo dio a quienes ya lo veían
             // (Picking, Packing, Registrar ubicaciones o Configuración). También es el mapa del picking.

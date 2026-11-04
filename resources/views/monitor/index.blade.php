@@ -52,8 +52,8 @@
                     </div>
                 @endif
 
-                {{-- Picking en vivo: solo quien administra la droguería (permiso de Configuración). --}}
-                @if (\App\Support\MenuSides::puede(auth()->user(), $cfg, 'configuracion'))
+                {{-- Picking en vivo: quien administra la droguería (Monitor + Configuración). --}}
+                @if (\App\Support\MenuSides::puede(auth()->user(), $cfg, 'pickingvivo'))
                     <a href="{{ route('monitor.picking') }}"
                        class="flex items-center gap-1.5 rounded-xl bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50">
                         <svg class="size-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{!! \App\Support\IconosSvg::path('warehouse') !!}</svg>

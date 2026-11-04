@@ -28,6 +28,7 @@ class PermisosUsuario
             'activarGuiaDescarga' => ['Guía de descarga', 'Registra la entrega de las guías. Sin acceso a Etiquetas.'],
         ],
         'Gestión' => [
+            'activarIndicadores' => ['Indicadores del almacén', 'Para el jefe de operaciones o del almacén: ve en el Inicio los tiempos promedio de aceptar, picking y packing, el almacén en vivo y el desempeño de toda la droguería.'],
             'activarResumen' => ['Resumen', 'Ve el resumen de la operación del día.'],
             'activarInformes' => ['Informes', 'Ve los informes de picking y packing.'],
             'activarUsuario' => ['Usuarios', 'Crea usuarios y cambia sus permisos y contraseñas.'],

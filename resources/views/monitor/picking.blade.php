@@ -7,7 +7,9 @@
 
         <div class="flex flex-wrap items-end justify-between gap-3">
             <div>
-                <a href="{{ route('monitor.index') }}" class="text-sm font-semibold text-primary-ink hover:underline">← Monitor</a>
+                @if ($conMonitor)
+                    <a href="{{ route('monitor.index') }}" class="text-sm font-semibold text-primary-ink hover:underline">← Monitor</a>
+                @endif
                 <h2 class="text-xl font-extrabold text-slate-900">Picking en vivo</h2>
                 <p class="text-sm text-slate-500">
                     {{ $cfg?->nombre }}<span x-show="hora"> · actualizado a las <span x-text="hora" class="tabular-nums"></span></span>
