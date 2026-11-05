@@ -84,7 +84,8 @@ class MenuPermisosTest extends TestCase
     public function test_modulos_opcionales_solo_aparecen_si_la_drogueria_los_tiene_activos(): void
     {
         $this->crearCfg([], ['batch']);
-        $usuario = $this->crearUsuario(array_merge($this->todosLosPermisos(), ['activarGuiaCarga' => 0, 'activarGuiaDescarga' => 0]));
+        // Sin «Administración»: ese permiso propio sí saca el módulo en el menú (AdministracionDrogueriaTest).
+        $usuario = $this->crearUsuario(array_merge($this->todosLosPermisos(), ['activarGuiaCarga' => 0, 'activarGuiaDescarga' => 0, 'activarAdmin' => 0]));
 
         $this->actingAs($usuario)->get('/home')
             ->assertSee('Batch Picking')

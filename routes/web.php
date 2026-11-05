@@ -113,7 +113,7 @@ Route::middleware('auth')->group(function () {
             Route::delete('pasillo', 'quitar')->name('.quitar');
         });
 
-    Route::prefix('admin')->name('admin.')->middleware('permiso:admin')
+    Route::prefix('admin')->name('admin.')->middleware(['permiso:admin', 'drogueria.propia'])
         ->controller(AdminController::class)
         ->group(function () {
             Route::get('/', 'index')->name('index');
@@ -127,7 +127,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('admin/auditoria', AuditoriaController::class)->name('auditoria.index')->middleware('permiso:auditoria');
 
-    Route::prefix('admin')->name('admin.webhooks.')->middleware('permiso:admin')
+    Route::prefix('admin')->name('admin.webhooks.')->middleware(['permiso:admin', 'drogueria.propia'])
         ->controller(WebhooksController::class)->whereNumber(['webhook', 'entrega'])
         ->group(function () {
             Route::get('droguerias/{codisb}/webhooks', 'index')->name('index');
@@ -139,7 +139,7 @@ Route::middleware('auth')->group(function () {
             Route::post('webhooks/entregas/{entrega}/reintentar', 'reintentar')->middleware('throttle:10,1')->name('reintentar');
         });
 
-    Route::prefix('admin/droguerias/{codisb}/almacen')->name('admin.almacen.')->middleware('permiso:admin')
+    Route::prefix('admin/droguerias/{codisb}/almacen')->name('admin.almacen.')->middleware(['permiso:admin', 'drogueria.propia'])
         ->controller(AdminAlmacenController::class)
         ->group(function () {
             Route::get('/', 'edit')->name('edit');

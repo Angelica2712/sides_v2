@@ -82,18 +82,22 @@
                         <legend class="text-xs font-bold uppercase tracking-wide text-slate-500">{{ $grupo }}</legend>
                         <div class="grid gap-2 sm:grid-cols-2">
                             @foreach ($permisos as $permiso => [$titulo, $ayuda])
-                                @php $bloqueado = $esYo && $permiso === 'activarUsuario'; @endphp
-                                <label class="flex cursor-pointer items-start gap-3 rounded-xl p-3 ring-1 ring-slate-200 has-checked:bg-primary-soft has-checked:ring-primary">
+                                @php
+                                    $bloqueado = $esYo && $permiso === 'activarUsuario';
+                                    // «Administración» solo lo da quien ya lo tiene (el servidor lo deja como estaba).
+                                    $sinPoderDarlo = $permiso === 'activarAdmin' && ! auth()->user()->puedeDarAdministracion();
+                                @endphp
+                                <label class="flex items-start gap-3 rounded-xl p-3 ring-1 ring-slate-200 has-checked:bg-primary-soft has-checked:ring-primary {{ $sinPoderDarlo ? 'cursor-not-allowed opacity-70' : 'cursor-pointer' }}">
                                     @if ($bloqueado)
                                         {{-- Un checkbox deshabilitado no se envía: el valor viaja oculto. --}}
                                         <input type="hidden" name="permisos[{{ $permiso }}]" value="1">
                                     @endif
                                     <input type="checkbox" name="permisos[{{ $permiso }}]" value="1"
-                                           @checked($bloqueado || $marcado($permiso)) @disabled($bloqueado)
+                                           @checked($bloqueado || $marcado($permiso)) @disabled($bloqueado || $sinPoderDarlo)
                                            class="mt-0.5 size-5 rounded border-slate-300 text-primary-ink focus:ring-primary">
                                     <span>
                                         <span class="block font-bold text-slate-900">{{ $titulo }}</span>
-                                        <span class="block text-sm text-slate-500">{{ $bloqueado ? 'No puedes quitarte este permiso a ti mismo.' : $ayuda }}</span>
+                                        <span class="block text-sm text-slate-500">{{ $bloqueado ? 'No puedes quitarte este permiso a ti mismo.' : ($sinPoderDarlo ? 'Solo lo puede dar o quitar quien ya tiene Administración.' : $ayuda) }}</span>
                                     </span>
                                 </label>
                             @endforeach

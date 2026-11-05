@@ -7,21 +7,29 @@
     <div class="mx-auto max-w-6xl space-y-4">
         <div class="flex flex-wrap items-end justify-between gap-3">
             <div>
-                <h2 class="text-xl font-extrabold text-slate-900">Droguerías</h2>
-                <p class="text-sm text-slate-500">Todas usan el mismo SIDES. Aquí decides qué módulos tiene cada una.</p>
+                @if ($esFulltech)
+                    <h2 class="text-xl font-extrabold text-slate-900">Droguerías</h2>
+                    <p class="text-sm text-slate-500">Todas usan el mismo SIDES. Aquí decides qué módulos tiene cada una.</p>
+                @else
+                    <h2 class="text-xl font-extrabold text-slate-900">Tu droguería</h2>
+                    <p class="text-sm text-slate-500">Los usuarios, el almacén y los webhooks de tu droguería. Los módulos, los datos y el logo los cambia FULLTECH360.</p>
+                @endif
             </div>
-            <div class="flex gap-2">
-                <a href="{{ route('auditoria.index') }}" class="rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50">Auditoría</a>
-                <a href="{{ route('admin.create') }}" class="rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-on-primary hover:bg-primary-dark">Nueva droguería</a>
-            </div>
+            @if ($esFulltech)
+                <div class="flex gap-2">
+                    <a href="{{ route('auditoria.index') }}" class="rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50">Auditoría</a>
+                    <a href="{{ route('admin.create') }}" class="rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-on-primary hover:bg-primary-dark">Nueva droguería</a>
+                </div>
+            @endif
         </div>
 
-        <ul class="grid gap-3 md:grid-cols-2">
+        <ul class="grid gap-3 {{ $droguerias->count() > 1 ? 'xl:grid-cols-2' : '' }}">
             @foreach ($droguerias as $drogueria)
                 @php $activos = $modulosActivos[$drogueria->codisb] ?? []; @endphp
                 <li class="flex flex-col gap-3 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
-                    <div class="flex items-start justify-between gap-3">
-                        <div class="flex min-w-0 items-center gap-3">
+                    {{-- Los botones bajan de línea si no caben: el nombre nunca queda aplastado. --}}
+                    <div class="flex flex-wrap items-start justify-between gap-3">
+                        <div class="flex min-w-48 flex-1 items-center gap-3">
                             @if ($drogueria->logo)
                                 <img src="{{ $drogueria->urlLogo() }}" alt="" class="{{ $drogueria->logoCircular() ? 'size-12 rounded-full object-cover' : 'h-12 w-16 rounded-lg object-contain p-1' }} shrink-0 bg-white ring-1 ring-slate-200">
                             @endif
@@ -37,10 +45,10 @@
                             </p>
                         </div>
                         </div>
-                        <div class="flex shrink-0 gap-2">
+                        <div class="flex flex-wrap gap-2">
                             <a href="{{ route('admin.almacen.edit', $drogueria->codisb) }}" class="rounded-xl bg-white px-3 py-2 text-sm font-semibold text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50">Almacén</a>
                             <a href="{{ route('admin.webhooks.index', $drogueria->codisb) }}" class="rounded-xl bg-white px-3 py-2 text-sm font-semibold text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50">Webhooks</a>
-                            <a href="{{ route('admin.edit', $drogueria->codisb) }}" class="rounded-xl bg-white px-3 py-2 text-sm font-semibold text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50">Configurar</a>
+                            <a href="{{ route('admin.edit', $drogueria->codisb) }}" class="rounded-xl bg-white px-3 py-2 text-sm font-semibold text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50">{{ $esFulltech ? 'Configurar' : 'Usuarios y datos' }}</a>
                         </div>
                     </div>
 

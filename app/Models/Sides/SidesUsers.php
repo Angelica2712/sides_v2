@@ -19,7 +19,7 @@ class SidesUsers extends Authenticatable
 
     protected $table = 'sides_users';
     protected $primaryKey = 'id';
-    protected $fillable = ['name', 'email', 'password', 'estado', 'clave', 'activarMonitor', 'activarPicking', 'activarPacking', 'activarUsuario', 'activarConfig', 'eliminarPedido', 'activarResetear', 'activarPedido', 'activarResumen', 'codisb', 'activarInformes', 'activarGuiaCarga', 'activarGuiaDescarga', 'activarLiberarAlcabala', 'activarUbicaciones', 'activarAlmacen', 'activarIndicadores', 'esAdmin'];
+    protected $fillable = ['name', 'email', 'password', 'estado', 'clave', 'activarMonitor', 'activarPicking', 'activarPacking', 'activarUsuario', 'activarConfig', 'eliminarPedido', 'activarResetear', 'activarPedido', 'activarResumen', 'codisb', 'activarInformes', 'activarGuiaCarga', 'activarGuiaDescarga', 'activarLiberarAlcabala', 'activarUbicaciones', 'activarAlmacen', 'activarIndicadores', 'activarAdmin', 'esAdmin'];
     protected $hidden = ['password', 'remember_token', 'clave'];
 
     protected function casts(): array
@@ -36,6 +36,21 @@ class SidesUsers extends Authenticatable
     public function scopeDeLaDrogueria(Builder $consulta): void
     {
         $consulta->whereNull($consulta->qualifyColumn('seped_user_id'));
+    }
+
+    /**
+     * Puede entrar a Administración de esa droguería: FULLTECH360 (esAdmin) a todas; quien tiene
+     * el permiso «Administración» (activarAdmin), solo a la suya.
+     */
+    public function administraDrogueria(string $codisb): bool
+    {
+        return (bool) $this->esAdmin || ($this->activarAdmin && $this->codisb === $codisb);
+    }
+
+    /** Puede dar o quitar el permiso «Administración» en Usuarios: quien ya lo tiene, o FULLTECH360. */
+    public function puedeDarAdministracion(): bool
+    {
+        return (bool) ($this->esAdmin || $this->activarAdmin);
     }
 
     /** Es el FT que viene de SEPED (puede pasar entre SEPED y SIDES con un botón). */

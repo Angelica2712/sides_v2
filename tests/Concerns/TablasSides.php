@@ -21,7 +21,7 @@ trait TablasSides
     private const FLAGS_USUARIO = [
         'activarMonitor', 'activarPicking', 'activarPacking', 'activarUsuario', 'activarConfig',
         'eliminarPedido', 'activarResetear', 'activarPedido', 'activarResumen', 'activarInformes',
-        'activarGuiaCarga', 'activarGuiaDescarga', 'activarLiberarAlcabala', 'activarUbicaciones', 'activarAlmacen', 'activarIndicadores',
+        'activarGuiaCarga', 'activarGuiaDescarga', 'activarLiberarAlcabala', 'activarUbicaciones', 'activarAlmacen', 'activarIndicadores', 'activarAdmin',
     ];
 
     protected function crearTablasSides(): void

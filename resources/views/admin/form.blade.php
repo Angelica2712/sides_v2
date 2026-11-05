@@ -1,6 +1,8 @@
 @php
     $nueva = ! $drogueria->exists;
-    $campo = 'mt-1.5 block w-full rounded-xl border-slate-300 px-3.5 py-2.5 shadow-sm focus:border-primary focus:ring-primary';
+    // Con el permiso «Administración» (no FULLTECH360): datos, logo y módulos solo se ven.
+    $esFulltech ??= true;
+    $campo = 'mt-1.5 block w-full rounded-xl border-slate-300 px-3.5 py-2.5 shadow-sm focus:border-primary focus:ring-primary disabled:bg-slate-100 disabled:text-slate-600';
     $activos = old('modulos', $activos);
     $aModulo = fn ($clave) => ['clave' => $clave, 'nombre' => \App\Support\MenuSides::MODULOS[$clave][0], 'descripcion' => \App\Support\MenuSides::MODULOS[$clave][3]];
     $grupos = [
@@ -11,7 +13,7 @@
 
 <x-layouts.app :titulo="$nueva ? 'Nueva droguería' : 'Configurar droguería'">
     <div class="mx-auto max-w-3xl space-y-4">
-        <a href="{{ route('admin.index') }}" class="text-sm font-semibold text-primary-ink hover:underline">← Volver a droguerías</a>
+        <a href="{{ route('admin.index') }}" class="text-sm font-semibold text-primary-ink hover:underline">{{ $esFulltech ? '← Volver a droguerías' : '← Volver a Administración' }}</a>
 
         @unless ($nueva)
             @php
@@ -42,7 +44,7 @@
             <section class="space-y-3 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
                 <div>
                     <h3 class="text-lg font-extrabold text-slate-900">Usuarios de la droguería</h3>
-                    <p class="text-sm text-slate-500">El encargado entra con todos los permisos de su droguería y desde Usuarios crea a los demás.</p>
+                    <p class="text-sm text-slate-500">{{ $esFulltech ? 'El encargado entra con todos los permisos de su droguería y desde Usuarios crea a los demás.' : 'Cambia aquí la contraseña de quien la olvidó. Los usuarios se crean y sus permisos se cambian desde Usuarios.' }}</p>
                 </div>
 
                 {{-- Por este enlace el login sale con el logo de la droguería (después el equipo lo recuerda). --}}
@@ -98,6 +100,7 @@
                     <p class="rounded-xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900 ring-1 ring-amber-200">Esta droguería todavía no tiene usuarios: nadie puede entrar. Crea su encargado.</p>
                 @endforelse
 
+                @if ($esFulltech)
                 <form method="POST" action="{{ route('admin.encargado', $drogueria->codisb) }}" class="grid gap-3 border-t border-slate-200 pt-4 sm:grid-cols-[1fr_1fr_1fr_auto] sm:items-end">
                     @csrf
                     <div>
@@ -115,6 +118,7 @@
                     </div>
                     <button type="submit" class="rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-on-primary hover:bg-primary-dark">Crear encargado</button>
                 </form>
+                @endif
             </section>
         @endunless
 
@@ -123,6 +127,14 @@
             @csrf
             @unless ($nueva) @method('PUT') @endunless
 
+            @unless ($esFulltech)
+                <p class="rounded-xl bg-slate-100 px-4 py-3 text-sm font-semibold text-slate-700 ring-1 ring-slate-200">
+                    Los datos, el logo y los módulos de la droguería los cambia FULLTECH360. Si necesitas un cambio, pídeselo a soporte.
+                </p>
+            @endunless
+
+            {{-- Sin ser FULLTECH360 todo se ve pero no se puede cambiar (el servidor tampoco lo acepta). --}}
+            <fieldset @disabled(! $esFulltech) class="contents">
             @if ($errors->any())
                 <div role="alert" class="rounded-xl bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800 ring-1 ring-rose-200">
                     @foreach ($errors->all() as $error)
@@ -187,9 +199,11 @@
                             <span x-show="!vista || quitar" class="text-center text-xs text-slate-400">Sin logo: se usa el de SIDES</span>
                         </div>
                         <div class="min-w-0 space-y-2 text-sm">
+                            @if ($esFulltech)
                             <input id="logo" name="logo" type="file" accept="image/png,image/jpeg,image/webp" @change="elegir($event)"
                                    class="block w-full text-sm text-slate-600 file:mr-3 file:rounded-xl file:border-0 file:bg-primary-soft file:px-4 file:py-2 file:font-bold file:text-primary-ink hover:file:bg-primary hover:file:text-white">
                             <p class="text-xs text-slate-500">PNG, JPG o WEBP de hasta 2 MB. Mejor horizontal y con fondo blanco o transparente: las etiquetas se imprimen en blanco y negro.</p>
+                            @endif
                             <fieldset>
                                 <legend class="font-semibold text-slate-700">Forma del logo</legend>
                                 <div class="mt-1 flex flex-wrap gap-x-5 gap-y-1">
@@ -326,11 +340,14 @@
                 @endforeach
                 @endforeach
             </section>
+            </fieldset>
 
-            <div class="flex justify-end gap-2">
-                <a href="{{ route('admin.index') }}" class="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-100">Cancelar</a>
-                <button type="submit" class="rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-on-primary hover:bg-primary-dark">{{ $nueva ? 'Crear droguería' : 'Guardar cambios' }}</button>
-            </div>
+            @if ($esFulltech)
+                <div class="flex justify-end gap-2">
+                    <a href="{{ route('admin.index') }}" class="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-100">Cancelar</a>
+                    <button type="submit" class="rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-on-primary hover:bg-primary-dark">{{ $nueva ? 'Crear droguería' : 'Guardar cambios' }}</button>
+                </div>
+            @endif
         </form>
     </div>
 </x-layouts.app>

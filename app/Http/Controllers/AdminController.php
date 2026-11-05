@@ -17,8 +17,12 @@ use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 /**
- * Administración de SIDES v2 (solo el usuario de FULLTECH360): los datos de cada droguería, su
- * logo y los módulos que usa. La droguería no cambia su nombre, RIF ni logo desde Configuración.
+ * Administración de SIDES v2: los datos de cada droguería, su logo y los módulos que usa. La
+ * droguería no cambia su nombre, RIF ni logo desde Configuración.
+ *
+ * FULLTECH360 (esAdmin) ve y cambia todas. Quien tiene el permiso «Administración» (activarAdmin)
+ * ve solo su droguería (middleware drogueria.propia): cambia contraseñas de sus usuarios, el
+ * almacén y los webhooks, y ve sus módulos, datos y logo sin poder cambiarlos (soloFulltech).
  */
 class AdminController extends Controller
 {
@@ -31,25 +35,33 @@ class AdminController extends Controller
     ) {
     }
 
-    public function index(): View
+    public function index(Request $request): View
     {
-        $droguerias = SidesCfg::query()->orderBy('nombre')->get();
+        $usuario = $request->user();
+        // Con el permiso «Administración» (sin ser FULLTECH360) se ve solo la propia droguería.
+        $droguerias = SidesCfg::query()
+            ->unless($usuario->esAdmin, fn ($consulta) => $consulta->where('codisb', $usuario->codisb))
+            ->orderBy('nombre')->get();
 
         return view('admin.index', [
+            'esFulltech' => (bool) $usuario->esAdmin,
             'droguerias' => $droguerias,
             'modulosActivos' => $droguerias->mapWithKeys(fn (SidesCfg $cfg) => [$cfg->codisb => $cfg->modulosEncendidos()]),
             'usuarios' => DB::table('sides_users')->whereNull('seped_user_id')->selectRaw('codisb, COUNT(*) as total')->groupBy('codisb')->pluck('total', 'codisb'),
         ]);
     }
 
-    public function create(): View
+    public function create(Request $request): View
     {
+        $this->soloFulltech($request);
+
         // Una droguería nueva arranca con los módulos básicos; los opcionales se encienden a mano.
         return view('admin.form', ['drogueria' => new SidesCfg(['activarPacking' => 1]), 'activos' => MenuSides::BASICOS]);
     }
 
     public function store(Request $request): RedirectResponse
     {
+        $this->soloFulltech($request);
         $datos = $request->validate([
             'codisb' => ['required', 'string', 'max:20', 'regex:/^[A-Za-z0-9_-]+$/', Rule::unique('sides_cfg', 'codisb')],
             ...$this->reglas(),
@@ -63,11 +75,12 @@ class AdminController extends Controller
             ->with('mensaje', "Droguería {$drogueria->nombre} creada. Ahora crea su usuario encargado para que pueda entrar.");
     }
 
-    public function edit(string $codisb): View
+    public function edit(Request $request, string $codisb): View
     {
         $drogueria = SidesCfg::query()->findOrFail($codisb);
 
         return view('admin.form', [
+            'esFulltech' => (bool) $request->user()->esAdmin,
             'drogueria' => $drogueria,
             'activos' => $drogueria->modulosEncendidos(),
             'usuarios' => SidesUsers::query()->deLaDrogueria()->where('codisb', $codisb)->orderByDesc('activarUsuario')->orderBy('name')->get(),
@@ -76,6 +89,7 @@ class AdminController extends Controller
 
     public function update(Request $request, string $codisb): RedirectResponse
     {
+        $this->soloFulltech($request);
         $drogueria = SidesCfg::query()->findOrFail($codisb);
         $datos = $request->validate($this->reglas(), $this->mensajes(), $this->atributos());
 
@@ -93,6 +107,7 @@ class AdminController extends Controller
      */
     public function encargado(Request $request, string $codisb): RedirectResponse
     {
+        $this->soloFulltech($request);
         $drogueria = SidesCfg::query()->findOrFail($codisb);
         $request->merge(['email' => Str::lower(trim((string) $request->input('email')))]);
         $datos = $request->validate([
@@ -138,6 +153,15 @@ class AdminController extends Controller
         return redirect()->route('admin.edit', $codisb)
             ->with('mensaje', "Contraseña nueva para {$registro->name}.")
             ->with('credenciales', ['correo' => $registro->email, 'clave' => $clave]);
+    }
+
+    /**
+     * Crear droguerías, cambiar sus datos, logo y módulos, y crear el encargado es solo de
+     * FULLTECH360; quien tiene el permiso «Administración» lo ve sin poder cambiarlo.
+     */
+    private function soloFulltech(Request $request): void
+    {
+        abort_unless($request->user()->esAdmin, 403, 'Los módulos, los datos y el logo de la droguería los cambia solo FULLTECH360.');
     }
 
     /** Contraseña escrita a mano: opcional, mismo mínimo que en Usuarios. */

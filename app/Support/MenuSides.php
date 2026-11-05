@@ -110,8 +110,11 @@ class MenuSides
             // Permiso propio de dromarko; droactiva y mastranto usaban activarUsuario.
             'informes' => (bool) $usuario->activarInformes,
             'despacho' => $usuario->activarGuiaCarga || $usuario->activarGuiaDescarga,
+            // Administración: FULLTECH360 con todas las droguerías; con el permiso «Administración»,
+            // solo la propia (lo limitan el middleware drogueria.propia y AdminController).
+            'admin' => $usuario->esAdmin || $usuario->activarAdmin,
             // La auditoría es de la empresa: solo el administrador de SIDES.
-            'admin', 'auditoria' => (bool) $usuario->esAdmin,
+            'auditoria' => (bool) $usuario->esAdmin,
             default => false,
         };
     }

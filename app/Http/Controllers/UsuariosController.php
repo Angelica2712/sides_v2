@@ -74,7 +74,7 @@ class UsuariosController extends Controller
             ...$this->reglas(),
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('sides_users', 'email')->ignore($registro->id)],
         ], $this->mensajes());
-        $datos = $this->datos($request, $datos);
+        $datos = $this->datos($request, $datos, $registro);
 
         if ($registro->is($request->user()) && ($datos['estado'] !== 'ACTIVO' || ! $datos['activarUsuario'])) {
             throw ValidationException::withMessages([
@@ -120,6 +120,8 @@ class UsuariosController extends Controller
 
         // Si un operario con permiso de Usuarios pudiera cambiarle la contraseña al administrador, entraría como él.
         abort_if($usuario->esAdmin && ! $request->user()->esAdmin, 403, 'Solo el administrador de SIDES puede modificar a otro administrador.');
+        // Igual con el permiso «Administración»: quien no lo tiene no le cambia la contraseña ni los permisos al que sí.
+        abort_if($usuario->activarAdmin && ! $request->user()->puedeDarAdministracion(), 403, 'Solo quien tiene el permiso Administración puede modificar a otro usuario con ese permiso.');
 
         return $usuario;
     }
@@ -153,7 +155,7 @@ class UsuariosController extends Controller
     }
 
     /** @return array<string, mixed> */
-    private function datos(Request $request, array $validados): array
+    private function datos(Request $request, array $validados, ?SidesUsers $registro = null): array
     {
         $datos = [
             'name' => trim($validados['name']),
@@ -162,6 +164,10 @@ class UsuariosController extends Controller
         ];
         foreach (PermisosUsuario::columnas() as $permiso) {
             $datos[$permiso] = $request->boolean("permisos.{$permiso}") ? 1 : 0;
+        }
+        // «Administración» lo da o lo quita solo quien ya lo tiene; para los demás queda como estaba.
+        if (! $request->user()->puedeDarAdministracion()) {
+            $datos['activarAdmin'] = (int) ($registro?->activarAdmin ?? 0);
         }
 
         return $datos;

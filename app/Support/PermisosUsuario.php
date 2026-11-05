@@ -33,6 +33,7 @@ class PermisosUsuario
             'activarInformes' => ['Informes', 'Ve los informes de picking y packing.'],
             'activarUsuario' => ['Usuarios', 'Crea usuarios y cambia sus permisos y contraseñas.'],
             'activarConfig' => ['Configuración', 'Cambia la configuración de la sucursal, rutas y guías.'],
+            'activarAdmin' => ['Administración', 'Para quien administra la droguería: entra a Administración, cambia contraseñas de los usuarios y maneja el almacén y los webhooks. Los módulos, los datos y el logo de la droguería los cambia solo FULLTECH360. Solo lo puede dar quien ya lo tiene.'],
         ],
     ];
 
