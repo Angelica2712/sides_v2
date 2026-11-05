@@ -98,6 +98,13 @@ export default function inicioIndicadores({ canal, url, periodos }) {
             return this.datos?.tiempos?.[tramo] ?? null;
         },
 
+        /** «Sin pedidos hoy» o «Sin pedidos en los últimos 7 días». */
+        sinPedidos() {
+            return this.periodo === 'hoy'
+                ? 'Sin pedidos hoy'
+                : `Sin pedidos en los ${(periodos[this.periodo] ?? '').toLowerCase()}`;
+        },
+
         /**
          * Comparado con el período anterior del mismo largo. En tiempos, menos es mejor.
          * @returns {{texto: string, mejor: boolean}|null}

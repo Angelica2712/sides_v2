@@ -59,7 +59,11 @@ class DesempenoAlmacen
             if ($tramo === 'packing' && ! $conPacking) {
                 continue;
             }
-            $tiempos[$tramo] = [...$valor, 'anterior' => $anterior[$tramo]['segundos']];
+            $tiempos[$tramo] = [
+                ...$valor,
+                'anterior' => $anterior[$tramo]['segundos'],
+                'referencia' => $valor['pedidos'] === 0 ? $this->ultimoDia($codisb, $tramo, $desde) : null,
+            ];
         }
 
         return [
@@ -101,6 +105,35 @@ class DesempenoAlmacen
         }
 
         return $resultado;
+    }
+
+    /**
+     * Si en el período no terminó ningún pedido (un domingo, o a primera hora), el promedio del
+     * último día en que sí hubo, para que la tarjeta no quede en blanco.
+     *
+     * @return array{fecha: string, segundos: int, pedidos: int}|null
+     */
+    private function ultimoDia(string $codisb, string $tramo, Carbon $antesDe): ?array
+    {
+        [$inicio, $fin] = self::TRAMOS[$tramo];
+        // El último pedido con un tiempo que sí entra al promedio (los de más de 24 horas no).
+        $ultimo = DB::table('pedido')
+            ->where('codisb', $codisb)
+            ->where('estado', '<>', 'ANULADO')
+            ->where($inicio, '>', FechaSeped::VACIA)
+            ->where($fin, '>', FechaSeped::VACIA)
+            ->where($fin, '<', $antesDe)
+            ->orderByDesc($fin)
+            ->limit(500)
+            ->get([$inicio, $fin])
+            ->first(fn ($fila) => ($s = Carbon::parse($fila->{$fin})->getTimestamp() - Carbon::parse($fila->{$inicio})->getTimestamp()) >= 0 && $s <= self::MAXIMO_SEGUNDOS);
+        if (! $ultimo) {
+            return null;
+        }
+        $dia = Carbon::parse($ultimo->{$fin})->startOfDay();
+        $valor = $this->tiempos($codisb, $dia, $dia->copy()->addDay())[$tramo];
+
+        return $valor['segundos'] === null ? null : ['fecha' => $dia->format('d/m/Y'), ...$valor];
     }
 
     /** Lo que hay en el almacén ahora mismo, y desde cuándo espera el pedido más viejo sin tomar. */

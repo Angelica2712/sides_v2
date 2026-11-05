@@ -50,8 +50,20 @@
                     @foreach ($tramos as $clave => [$titulo, $descripcion])
                         <article class="rounded-2xl bg-white p-4 shadow-sm ring-1 {{ $clave === 'total' ? 'ring-primary/40' : 'ring-slate-200' }}">
                             <p class="text-xs font-bold uppercase tracking-wide {{ $clave === 'total' ? 'text-primary-ink' : 'text-slate-500' }}">{{ $titulo }}</p>
-                            <p class="mt-1 text-3xl font-black tabular-nums text-slate-900"
-                               x-text="cargando ? '…' : duracion(tiempo('{{ $clave }}')?.segundos ?? null)">…</p>
+                            <template x-if="cargando || tiempo('{{ $clave }}')?.pedidos">
+                                <p class="mt-1 text-3xl font-black tabular-nums text-slate-900"
+                                   x-text="cargando ? '…' : duracion(tiempo('{{ $clave }}')?.segundos ?? null)">…</p>
+                            </template>
+                            {{-- Sin pedidos en el período: se dice, y se muestra el último día que sí tuvo (no una raya sola). --}}
+                            <template x-if="!cargando && !tiempo('{{ $clave }}')?.pedidos">
+                                <div class="mt-1">
+                                    <p class="text-lg font-extrabold leading-9 text-slate-400" x-text="sinPedidos()"></p>
+                                    <p x-show="tiempo('{{ $clave }}')?.referencia" class="text-sm text-slate-600">
+                                        Último día con pedidos (<span x-text="tiempo('{{ $clave }}')?.referencia?.fecha"></span>):
+                                        <span class="font-extrabold tabular-nums text-slate-900" x-text="duracion(tiempo('{{ $clave }}')?.referencia?.segundos)"></span>
+                                    </p>
+                                </div>
+                            </template>
                             <p class="mt-1 text-xs text-slate-500">{{ $descripcion }}</p>
                             <div class="mt-3 flex flex-wrap items-center gap-2 text-xs">
                                 <span class="rounded-full bg-slate-100 px-2 py-0.5 font-semibold text-slate-600"
@@ -109,8 +121,9 @@
                     @if ($vivo)
                         {{-- Los mismos despachadores y el mismo Almacén 3D de «Picking en vivo» (resources/js/picking-vivo.js). --}}
                         <div x-data="pickingVivo({ canal: @js('sides-monitor.'.auth()->user()->codisb), urls: @js($vivo) })"
-                             class="grid items-start gap-4 {{ $vivo['plano'] ? 'lg:grid-cols-[20rem_1fr]' : '' }}">
-                            <div class="space-y-2 lg:max-h-[min(40rem,75vh)] lg:overflow-y-auto lg:pr-1">
+                             class="grid grid-cols-1 items-start gap-4 {{ $vivo['plano'] ? 'lg:grid-cols-[20rem_minmax(0,1fr)]' : '' }}">
+                            {{-- grid-cols-1 y min-w-0: sin eso el texto largo de «Buscando…» estira la columna y en el teléfono la página se sale de la pantalla. --}}
+                            <div class="min-w-0 space-y-2 lg:max-h-[min(40rem,75vh)] lg:overflow-y-auto lg:pr-1">
                                 <p x-show="cargando" class="text-sm text-slate-500">Cargando…</p>
                                 <p x-show="!cargando && operarios.length === 0" x-cloak class="rounded-xl bg-slate-50 p-4 text-center text-sm text-slate-500">
                                     Nadie está haciendo picking ahora.

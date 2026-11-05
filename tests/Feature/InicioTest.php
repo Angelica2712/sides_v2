@@ -42,7 +42,7 @@ class InicioTest extends TestCase
 
         $datos = $this->actingAs($this->supervisor())->getJson('/home/indicadores?periodo=hoy')->assertOk()->json();
 
-        $this->assertSame(['segundos' => 900, 'pedidos' => 2, 'anterior' => null], $datos['tiempos']['aceptar']);
+        $this->assertSame(['segundos' => 900, 'pedidos' => 2, 'anterior' => null, 'referencia' => null], $datos['tiempos']['aceptar']);
         $this->assertSame(1800, $datos['tiempos']['picking']['segundos']);
         $this->assertSame(600, $datos['tiempos']['packing']['segundos']);
         $this->assertSame(3300, $datos['tiempos']['total']['segundos']);
@@ -67,6 +67,24 @@ class InicioTest extends TestCase
         $this->assertEquals(90.0, $datos['desempeno']['servicio']);
         $this->assertEquals(4.0, $datos['desempeno']['renglonesHoraPicking']);
         $this->assertSame([['nombre' => 'Jefe', 'pedidos' => 1, 'renglones' => 2, 'unidades' => 9]], $datos['despachadores']);
+    }
+
+    public function test_sin_pedidos_en_el_periodo_da_el_promedio_del_ultimo_dia_con_pedidos(): void
+    {
+        $this->crearCfg();
+        // Último día con actividad: 30/10, aceptar de 10 y 30 min.
+        $this->crearPedido(['id' => 1, 'estado' => 'FACTURADO', 'fecrecibido' => '2026-10-30 08:00:00', 'fecpicking' => '2026-10-30 08:10:00']);
+        $this->crearPedido(['id' => 2, 'estado' => 'FACTURADO', 'fecrecibido' => '2026-10-30 09:00:00', 'fecpicking' => '2026-10-30 09:30:00']);
+        // Más nuevo pero de más de 24 horas: no sirve de referencia, se busca el anterior.
+        $this->crearPedido(['id' => 4, 'estado' => 'FACTURADO', 'fecrecibido' => '2026-10-28 08:00:00', 'fecpicking' => '2026-11-02 08:00:00']);
+        // Un día antes no cuenta para la referencia.
+        $this->crearPedido(['id' => 3, 'estado' => 'FACTURADO', 'fecrecibido' => '2026-10-29 08:00:00', 'fecpicking' => '2026-10-29 10:00:00']);
+
+        $datos = $this->actingAs($this->supervisor())->getJson('/home/indicadores?periodo=hoy')->assertOk()->json();
+
+        $this->assertSame(0, $datos['tiempos']['aceptar']['pedidos']);
+        $this->assertSame(['fecha' => '30/10/2026', 'segundos' => 1200, 'pedidos' => 2], $datos['tiempos']['aceptar']['referencia']);
+        $this->assertNull($datos['tiempos']['picking']['referencia']);
     }
 
     public function test_el_inicio_muestra_los_indicadores_al_supervisor_y_no_al_operario(): void
