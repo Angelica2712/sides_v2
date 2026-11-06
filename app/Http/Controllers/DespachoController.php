@@ -63,6 +63,21 @@ class DespachoController extends Controller
         return $this->volver($registro->id, 'carga', 'exito', "Bulto {$bulto->etiqueta} cargado ({$bulto->nomcli}).");
     }
 
+    /** El camión salió de la droguería: deja el andén del Almacén 3D en vivo. */
+    public function salir(Request $request, int $guia): RedirectResponse
+    {
+        $this->exigirPermiso($request, 'carga');
+        $registro = $this->guia($request, $guia);
+
+        try {
+            $this->guias->salir($registro);
+        } catch (GuiasException $e) {
+            return $this->volver($registro->id, 'carga', 'error', $e->getMessage());
+        }
+
+        return redirect()->route('despacho.index')->with('mensaje', "Guía #{$registro->id}: el camión salió de la droguería.");
+    }
+
     /** Entrega un bulto escaneado o, con codcli, todos los bultos cargados del cliente. */
     public function entregar(Request $request, int $guia): RedirectResponse
     {

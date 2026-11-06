@@ -214,6 +214,20 @@ class GuiasController extends Controller
         });
     }
 
+    /** El camión salió de la droguería: guarda la hora de salida y deja el andén del Almacén 3D en vivo. */
+    public function salir(Request $request, int $guia): RedirectResponse
+    {
+        $registro = $this->guia($request, $guia);
+
+        try {
+            $this->guias->salir($registro);
+        } catch (GuiasException $e) {
+            return back()->withErrors(['guia' => $e->getMessage()]);
+        }
+
+        return redirect()->route('guias.show', $registro->id)->with('mensaje', "Guía #{$registro->id}: el camión salió de la droguería.");
+    }
+
     public function reiniciar(Request $request, int $guia): RedirectResponse
     {
         $registro = $this->guia($request, $guia);

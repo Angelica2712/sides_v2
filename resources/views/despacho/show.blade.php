@@ -41,9 +41,17 @@
         @if ($pendientes->isEmpty())
             <section class="rounded-2xl bg-emerald-50 p-8 text-center ring-1 ring-emerald-200">
                 <h3 class="text-lg font-bold text-emerald-900">{{ $carga ? 'Todos los bultos están cargados' : 'No quedan entregas pendientes' }}</h3>
-                @if ($carga && auth()->user()->activarGuiaDescarga)
-                    <a href="{{ route('despacho.show', [$guia->id, 'descarga']) }}" class="mt-3 inline-block rounded-xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white hover:bg-emerald-700">Empezar la entrega</a>
-                @endif
+                <div class="mt-3 flex flex-wrap justify-center gap-2">
+                    @if ($carga && $guia->fecha_salida === null)
+                        <form method="POST" action="{{ route('despacho.salir', $guia->id) }}" onsubmit="return confirm('¿El camión ya salió de la droguería? Deja el andén del almacén en vivo.')">
+                        @csrf
+                        <button type="submit" class="rounded-xl bg-slate-800 px-5 py-3 text-sm font-bold text-white hover:bg-slate-900">Salió de la droguería</button>
+                    </form>
+                    @endif
+                    @if ($carga && auth()->user()->activarGuiaDescarga)
+                        <a href="{{ route('despacho.show', [$guia->id, 'descarga']) }}" class="inline-block rounded-xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white hover:bg-emerald-700">Empezar la entrega</a>
+                    @endif
+                </div>
             </section>
         @endif
 

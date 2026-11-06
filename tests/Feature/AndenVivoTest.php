@@ -88,4 +88,37 @@ class AndenVivoTest extends TestCase
         Event::assertDispatched(MonitorActualizado::class, fn ($evento) => $evento->motivo === 'anden' && $evento->codisb === '505094939');
         $this->assertSame('CARGADO', SidesGuia::query()->find(7)->estado);
     }
+
+    public function test_al_salir_de_la_drogueria_el_camion_deja_el_anden(): void
+    {
+        $this->crearCfg([], ['guias']);
+        $this->guia(7, 'CARGANDO', [[100, 'FARMACIA UNO', true], [101, 'FARMACIA DOS', false]]);
+        $this->actingAs($this->admin);
+
+        // Con bultos sin cargar no sale.
+        $this->from('/guias/7')->post('/guias/7/salida')->assertRedirect('/guias/7')->assertSessionHasErrors('guia');
+        $this->assertNull(SidesGuia::query()->find(7)->fecha_salida);
+
+        app(GuiasService::class)->cargar(SidesGuia::query()->find(7), '101-1');
+        $this->get('/guias/7')->assertSee('Salió de la droguería');
+        $this->post('/guias/7/salida')->assertRedirect('/guias/7')->assertSessionHas('mensaje');
+
+        $this->assertNotNull(SidesGuia::query()->find(7)->fecha_salida);
+        $this->getJson('/monitor/picking/datos')->assertJsonPath('camiones', []);
+        $this->from('/guias/7')->post('/guias/7/salida')->assertSessionHasErrors('guia');
+    }
+
+    public function test_el_cargador_marca_la_salida_desde_carga_y_descarga(): void
+    {
+        $this->crearCfg([], ['guias']);
+        $this->guia(7, 'CARGADO', [[100, 'FARMACIA UNO', true]]);
+        $cargador = $this->crearUsuario(['email' => 'carga@example.com', 'activarGuiaCarga' => 1]);
+
+        $this->actingAs($cargador)->get('/despacho/7/carga')->assertOk()->assertSee('Salió de la droguería');
+        $this->post('/despacho/7/salida')->assertRedirect(route('despacho.index'));
+        $this->assertNotNull(SidesGuia::query()->find(7)->fecha_salida);
+
+        $soloDescarga = $this->crearUsuario(['email' => 'chofer@example.com', 'activarGuiaDescarga' => 1]);
+        $this->actingAs($soloDescarga)->post('/despacho/7/salida')->assertForbidden();
+    }
 }

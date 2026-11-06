@@ -102,7 +102,7 @@ class PickingVivoController extends Controller
     }
 
     /**
-     * Camiones en el andén: las guías que todavía no salen (NUEVO, CARGANDO o CARGADO) con sus
+     * Camiones en el andén: las guías que todavía no salen (NUEVO, CARGANDO o CARGADO, sin hora de salida) con sus
      * pedidos y cuántos bultos de cada uno ya se montaron (sides_etiqueta_pedido.feccargado, lo
      * marca el escaneo en «Carga y descarga»). Un pedido está montado cuando subieron todos sus bultos.
      *
@@ -113,6 +113,8 @@ class PickingVivoController extends Controller
         $guias = DB::table('sides_guia')
             ->where('codisb', $codisb)
             ->whereIn('estado', ['NUEVO', 'CARGANDO', 'CARGADO'])
+            // El camión deja el andén cuando sale de la droguería (GuiasService::salir).
+            ->where(fn ($q) => $q->whereNull('fecha_salida')->orWhere('fecha_salida', '>', now()))
             ->orderBy('id')
             ->get(['id', 'unidad', 'nomchofer', 'ruta', 'estado']);
         if ($guias->isEmpty()) {

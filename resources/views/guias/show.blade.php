@@ -24,6 +24,12 @@
                     <p class="text-sm text-slate-500">Ruta <span class="font-semibold text-slate-700">{{ $guia->ruta }}</span> · {{ $fecha($guia->fecha, 'd-m-Y H:i') }}</p>
                 </div>
                 <div class="flex flex-wrap gap-2">
+                    @if ($guia->fecha_salida === null && $guia->estado === 'CARGADO')
+                        <form method="POST" action="{{ route('guias.salir', $guia->id) }}" onsubmit="return confirm('¿El camión ya salió de la droguería? Deja el andén del almacén en vivo.')">
+                        @csrf
+                        <button type="submit" class="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-700">Salió de la droguería</button>
+                    </form>
+                    @endif
                     <a href="{{ route('guias.imprimir', $guia->id) }}" class="rounded-xl bg-white px-4 py-2 text-sm font-bold text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50">Imprimir</a>
                     <a href="{{ route('guias.excel', $guia->id) }}" class="rounded-xl bg-white px-4 py-2 text-sm font-bold text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50">Excel</a>
                     <a href="{{ route('guias.edit', $guia->id) }}" class="rounded-xl bg-slate-800 px-4 py-2 text-sm font-bold text-white hover:bg-slate-900">Modificar</a>

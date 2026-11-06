@@ -195,8 +195,8 @@ export default function almacenConfig({ plano, config, guardado = null, conError
             visor?.destruir();
             visor = nuevo;
             visor.editar({ alElegir: (clave) => this.elegir3d(clave), alMover: (dx, dz) => this.mover3d(dx, dz) });
-            // Un camión vacío en cada puesto, para ver cómo queda estacionado.
-            visor.camiones(this.config.camiones.map((c, i) => ({ guia: -1 - i, placa: c.nombre || `Camión ${i + 1}`, chofer: '', bultos: 0, cargados: 0 })));
+            // Sin guías, cada puesto muestra la silueta de su camión («libre»), como en el 3D en vivo.
+            visor.camiones([]);
             this.marcar3d();
             this.resaltar();
         },

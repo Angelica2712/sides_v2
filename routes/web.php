@@ -306,6 +306,7 @@ Route::middleware('auth')->group(function () {
             Route::delete('{guia}/clientes', 'quitarCliente')->name('clientes.destroy');
             Route::post('{guia}/entregar', 'entregar')->name('entregar');
             Route::post('{guia}/reiniciar', 'reiniciar')->name('reiniciar');
+            Route::post('{guia}/salida', 'salir')->name('salir');
             Route::get('{guia}/imprimir', 'imprimir')->name('imprimir');
             Route::get('{guia}/excel', 'excel')->name('excel');
         });
@@ -317,6 +318,7 @@ Route::middleware('auth')->group(function () {
             Route::get('{guia}/{fase}', 'show')->name('show');
             Route::post('{guia}/carga', 'cargar')->name('cargar');
             Route::post('{guia}/descarga', 'entregar')->name('entregar');
+            Route::post('{guia}/salida', 'salir')->name('salir');
         });
 
     // Módulos aún no portados: al portar uno, se registra arriba con su controlador real

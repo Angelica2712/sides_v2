@@ -400,6 +400,9 @@ export async function crearVisor(contenedor, plano, { vista: vistaInicial = null
     const camionesGrupo = new THREE.Group();
     escena.add(camionesGrupo);
     const rotulosCamion = [];
+    // Números de pedido sobre sus cajas: se ven solo con la cámara cerca (ver animar).
+    const numerosPedido = [];
+    const VER_NUMEROS = 14;
     const camionPorGuia = new Map();
     const rueda = new THREE.CylinderGeometry(0.42, 0.42, 0.3, 20);
     rueda.rotateZ(Math.PI / 2);
@@ -412,10 +415,14 @@ export async function crearVisor(contenedor, plano, { vista: vistaInicial = null
         linea: new THREE.LineBasicMaterial({ color: 0x0369a1 }),
         vidrio: material(0x1e3a8a),
         bulto: material(0xc08a4e),
+        bultoOscuro: material(0x9a6b3a),
         hueco: material(0xffffff, { transparent: true, opacity: 0.18, depthWrite: false }),
         nuevo: material(0x94a3b8),
         cargando: material(0xf59e0b),
         listo: material(0x16a34a),
+        // Puesto libre: la silueta del camión, transparente.
+        libre: material(0x94a3b8, { transparent: true, opacity: 0.5, depthWrite: false }),
+        libreLinea: new THREE.LineBasicMaterial({ color: 0x475569 }),
     };
     desechables.push(rueda, bordes, ...Object.values(mat));
     const puesto = (i) => (i % 2 === 0 ? -1 : 1) * (Math.floor(i / 2) + 0.5) * ANDEN_PUESTO;
@@ -468,37 +475,74 @@ export async function crearVisor(contenedor, plano, { vista: vistaInicial = null
         aristas.scale.set(2.3, 2.3, 4.4);
         grupo.add(aristas);
 
-        // Bultos: con más de 128, cada lugar dibujado representa varios.
+        // Pedidos: cada uno es un bloque de cajas (un bulto por caja; con más de 128 bultos, cada caja
+        // representa varios) que se apila desde la cabina hacia la puerta, en el orden de la guía.
+        // Las montadas son de cartón (dos tonos para distinguir un pedido del de al lado) y las que
+        // faltan subir, blancas y transparentes. Encima de cada bloque, el número del pedido.
         const lugares = (CARGA.ancho / CARGA.bulto | 0) * (CARGA.alto / CARGA.bulto | 0) * (CARGA.fondo / CARGA.bulto | 0);
         const porLugar = Math.max(1, Math.ceil(c.bultos / lugares));
-        const total = Math.ceil(c.bultos / porLugar);
-        const llenos = listo ? total : Math.floor(c.cargados / porLugar);
         const ancho = CARGA.ancho / CARGA.bulto | 0;
         const alto = CARGA.alto / CARGA.bulto | 0;
         const lado = CARGA.bulto * 0.92;
-        const llenar = (m, desde, hasta) => {
-            if (hasta <= desde) {
+        const centroDe = (k) => new THREE.Vector3(
+            -0.75 + (k % ancho) * CARGA.bulto,
+            0.73 + CARGA.bulto / 2 + (Math.floor(k / ancho) % alto) * CARGA.bulto,
+            -5.05 + CARGA.bulto / 2 + Math.floor(k / (ancho * alto)) * CARGA.bulto,
+        );
+        const pedidos = c.pedidos?.length ? c.pedidos : (c.bultos ? [{ pedido: null, bultos: c.bultos, cargados: c.cargados }] : []);
+        const cajas = { bulto: [], bultoOscuro: [], hueco: [] };
+        let siguiente = 0;
+        pedidos.forEach((p, n) => {
+            const suyas = Math.min(Math.max(1, Math.round(p.bultos / porLugar)), lugares - siguiente);
+            if (suyas <= 0) {
                 return;
             }
-            const malla = new THREE.InstancedMesh(cubo, m, hasta - desde);
-            for (let k = desde; k < hasta; k++) {
-                const w = k % ancho;
-                const h = Math.floor(k / ancho) % alto;
-                const d = Math.floor(k / (ancho * alto));
-                malla.setMatrixAt(k - desde, new THREE.Matrix4().compose(
-                    new THREE.Vector3(-0.75 + w * CARGA.bulto, 0.73 + CARGA.bulto / 2 + h * CARGA.bulto, -5.05 + CARGA.bulto / 2 + d * CARGA.bulto),
-                    new THREE.Quaternion(),
-                    new THREE.Vector3(lado, lado, lado),
-                ));
+            const montadas = p.cargados >= p.bultos ? suyas : Math.min(suyas, Math.floor(p.cargados / porLugar));
+            const tono = n % 2 ? 'bultoOscuro' : 'bulto';
+            const centros = [];
+            for (let k = 0; k < suyas; k++) {
+                const centro = centroDe(siguiente + k);
+                centros.push(centro);
+                cajas[k < montadas ? tono : 'hueco'].push(centro);
             }
+            siguiente += suyas;
+            if (p.pedido !== null) {
+                const encima = centros.reduce((suma, v) => suma.add(v), new THREE.Vector3()).divideScalar(centros.length);
+                encima.y = Math.max(...centros.map((v) => v.y)) + CARGA.bulto / 2 + 0.18;
+                const numero = etiqueta(`#${p.pedido}`, {
+                    tamano: 0.2,
+                    color: montadas === suyas ? '#422006' : '#475569',
+                    fondo: montadas === suyas ? 'rgba(254,243,199,0.95)' : 'rgba(255,255,255,0.85)',
+                    lista: rotulosCamion,
+                });
+                numero.position.copy(encima);
+                numero.visible = false;
+                grupo.add(numero);
+                numerosPedido.push(numero);
+            }
+        });
+        for (const [tipo, centros] of Object.entries(cajas)) {
+            if (!centros.length) {
+                continue;
+            }
+            const malla = new THREE.InstancedMesh(cubo, mat[tipo], centros.length);
+            centros.forEach((centro, i) => malla.setMatrixAt(i, new THREE.Matrix4().compose(centro, new THREE.Quaternion(), new THREE.Vector3(lado, lado, lado))));
             grupo.add(malla);
-        };
-        llenar(mat.bulto, 0, llenos);
-        llenar(mat.hueco, llenos, total);
+        }
 
-        const fondo = { listo: 'rgba(21,128,61,0.95)', cargando: 'rgba(180,83,9,0.95)', nuevo: 'rgba(51,65,85,0.92)' }[estado];
+        if (c.libre) {
+            // Sin guía en el puesto: todo el camión en gris transparente, sin bultos.
+            grupo.traverse((objeto) => {
+                if (objeto.isLineSegments) {
+                    objeto.material = mat.libreLinea;
+                } else if (objeto.isMesh) {
+                    objeto.material = mat.libre;
+                }
+            });
+        }
+        const fondo = c.libre ? 'rgba(100,116,139,0.85)' : { listo: 'rgba(21,128,61,0.95)', cargando: 'rgba(180,83,9,0.95)', nuevo: 'rgba(51,65,85,0.92)' }[estado];
         // Sin bultos ni chofer es el camión de muestra del acomodo: solo el nombre del puesto.
-        const texto = c.bultos || c.chofer ? `${c.placa} · ${c.cargados}/${c.bultos} bultos` : c.placa;
+        const texto = c.libre ? `${c.placa} · libre` : `${c.placa} · ${c.cargados}/${c.bultos} bultos`;
         const cartel = etiqueta(texto, { tamano: 0.42, color: '#ffffff', fondo, lista: rotulosCamion });
         cartel.position.set(0, 3.7, -3.4);
         grupo.add(cartel);
@@ -516,8 +560,13 @@ export async function crearVisor(contenedor, plano, { vista: vistaInicial = null
         camionesGrupo.traverse((objeto) => objeto.isInstancedMesh && objeto.dispose());
         camionesGrupo.clear();
         camionPorGuia.clear();
+        numerosPedido.splice(0);
         rotulosCamion.splice(0).forEach((recurso) => recurso.dispose());
         lista.slice(0, capacidad).forEach((c, i) => dibujarCamion(c, lugarCamion(i)));
+        // Los puestos marcados a mano que quedan sin guía muestran la silueta del camión, «libre».
+        for (let i = lista.length; i < puestosAMano.length; i++) {
+            dibujarCamion({ guia: -1 - i, placa: puestosAMano[i].nombre || `Camión ${i + 1}`, chofer: '', bultos: 0, cargados: 0, libre: true }, lugarCamion(i));
+        }
         return Math.max(0, lista.length - capacidad);
     };
 
@@ -616,6 +665,7 @@ export async function crearVisor(contenedor, plano, { vista: vistaInicial = null
 
     let cuadro = 0;
     let reloj = 0;
+    const posicionNumero = new THREE.Vector3();
     const animar = () => {
         cuadro = requestAnimationFrame(animar);
         reloj += 0.05;
@@ -636,6 +686,10 @@ export async function crearVisor(contenedor, plano, { vista: vistaInicial = null
         }
         if (proxima) {
             proxima.scale.setScalar(1 + 0.04 * Math.sin(reloj * 2 + Math.PI));
+        }
+        // Los números de pedido aparecen al acercarse a un camión; de lejos serían un enjambre.
+        for (const numero of numerosPedido) {
+            numero.visible = camara.position.distanceTo(numero.getWorldPosition(posicionNumero)) < VER_NUMEROS;
         }
         controles.update();
         if (!vuelo) {

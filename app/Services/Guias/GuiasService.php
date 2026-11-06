@@ -290,6 +290,29 @@ class GuiasService
         });
     }
 
+    /**
+     * El camión salió de la droguería con todo cargado: guarda la hora de salida (la «H. SALIDA» de
+     * la guía impresa) y el camión deja el andén del Almacén 3D en vivo. Se deshace borrando la
+     * salida en «Modificar» guía.
+     */
+    public function salir(SidesGuia $guia): void
+    {
+        if ($guia->fecha_salida !== null && Carbon::parse($guia->fecha_salida)->lte(Carbon::now())) {
+            throw new GuiasException("La guía #{$guia->id} ya salió a las ".Carbon::parse($guia->fecha_salida)->format('H:i').'.');
+        }
+        $bultos = DB::table('sides_etiqueta_pedido')->where('guia', $guia->id);
+        if (! (clone $bultos)->exists()) {
+            throw new GuiasException("La guía #{$guia->id} no tiene bultos.");
+        }
+        $faltan = (clone $bultos)->whereNull('feccargado')->count();
+        if ($faltan > 0) {
+            throw new GuiasException("Faltan {$faltan} bultos por cargar: cárgalos o quita sus pedidos de la guía antes de que salga el camión.");
+        }
+
+        $guia->update(['fecha_salida' => Carbon::now()]);
+        NotificarMonitor::anden($guia->codisb);
+    }
+
     /** Devuelve un bulto a EN GUIA (deshace carga y entrega). */
     public function reiniciar(SidesGuia $guia, string $codigo): void
     {
