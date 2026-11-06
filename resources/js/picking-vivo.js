@@ -10,6 +10,10 @@
  * movimiento para la lista; «actualizado» (MonitorActualizado) cuando un pedido entra o sale
  * del picking. En los dos casos se vuelve a pedir el avance de todos. Con el socket caído se
  * consulta cada 30 segundos.
+ *
+ * Con el módulo Guías, en el andén del Almacén 3D están los camiones que todavía no salen, con
+ * los bultos que ya se montaron (los marca el escaneo en «Carga y descarga»; cada carga avisa por
+ * el mismo canal, NotificarMonitor::anden).
  */
 import { crearVisor } from './almacen-3d';
 import { describir, todas } from './ubicacion';
@@ -44,6 +48,10 @@ export default function pickingVivo({ canal, urls }) {
         mensajeMapa: '',
         planoAlmacen: null,
         conMapa: Boolean(urls.plano),
+        // Camiones en el andén (guías que no han salido); null si la droguería no tiene Guías.
+        camiones: null,
+        camionElegido: null,
+        camionesFuera: 0,
 
         get seleccion() {
             return this.operarios.find((o) => o.pedido === this.elegido) ?? null;
@@ -118,6 +126,10 @@ export default function pickingVivo({ canal, urls }) {
                     o.color = colores.get(o.despachador);
                 }
                 this.operarios = data.operarios;
+                this.camiones = data.camiones ?? null;
+                if (this.camionElegido !== null && !this.camiones?.some((c) => c.guia === this.camionElegido)) {
+                    this.camionElegido = null;
+                }
                 this.hora = data.hora;
                 if (this.elegido !== null && !this.seleccion) {
                     this.elegido = null;
@@ -143,7 +155,7 @@ export default function pickingVivo({ canal, urls }) {
                 creando ??= (async () => {
                     const { data } = await window.axios.get(urls.plano);
                     this.planoAlmacen = data;
-                    visor = await crearVisor(this.$refs.visor, data);
+                    visor = await crearVisor(this.$refs.visor, data, { anden: this.camiones !== null });
                 })();
                 try {
                     await creando;
@@ -161,6 +173,7 @@ export default function pickingVivo({ canal, urls }) {
                     color: o.color,
                     soloNombre: o.pedido === this.elegido,
                 })));
+            this.camionesFuera = visor.camiones(JSON.parse(JSON.stringify(this.camiones ?? [])));
             this.enfocar();
         },
 
@@ -198,13 +211,41 @@ export default function pickingVivo({ canal, urls }) {
 
         elegir(o) {
             this.elegido = this.elegido === o.pedido ? null : o.pedido;
+            this.camionElegido = null;
             if (this.elegido !== null) {
                 this.$nextTick(() => this.$refs.mapa?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
             }
         },
 
+        /** Toca un camión: la cámara va al andén a mirar su carga. */
+        elegirCamion(c) {
+            this.camionElegido = this.camionElegido === c.guia ? null : c.guia;
+            if (this.camionElegido === null) {
+                visor?.vistaGeneral();
+                return;
+            }
+            this.elegido = null;
+            this.$nextTick(() => {
+                this.$refs.mapa?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                if (visor && !visor.verCamion(c.guia)) {
+                    this.mensajeMapa = `El camión ${c.placa} no cabe en los puestos del almacén 3D: agrega más con «+ Camión» en el acomodo.`;
+                }
+            });
+        },
+
+        estadoCamion(c) {
+            if (c.bultos > 0 && c.cargados >= c.bultos) {
+                return { texto: 'Listo para salir', clase: 'bg-emerald-50 text-emerald-800 ring-emerald-200', barra: '#16a34a' };
+            }
+            if (c.cargados > 0) {
+                return { texto: 'Cargando', clase: 'bg-amber-50 text-amber-800 ring-amber-200', barra: '#f59e0b' };
+            }
+            return { texto: 'Sin cargar', clase: 'bg-slate-100 text-slate-700 ring-slate-200', barra: '#94a3b8' };
+        },
+
         verTodo() {
             this.elegido = null;
+            this.camionElegido = null;
             visor?.vistaGeneral();
         },
 

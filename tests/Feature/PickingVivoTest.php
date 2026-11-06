@@ -25,6 +25,9 @@ class PickingVivoTest extends TestCase
         $this->withoutVite();
         $this->crearTablasSides();
         $this->crearTablasPedidos();
+        // El almacén en vivo trae los camiones del andén (módulo Guías).
+        $this->crearTablasRutas();
+        $this->crearTablasGuias();
         Carbon::setTestNow('2026-09-15 10:00:00');
 
         $this->crearCfg(['ordenPedSides' => 'UBICACION']);

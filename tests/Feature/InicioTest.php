@@ -18,6 +18,9 @@ class InicioTest extends TestCase
         $this->withoutVite();
         $this->crearTablasSides();
         $this->crearTablasPedidos();
+        // El almacén en vivo trae los camiones del andén (módulo Guías).
+        $this->crearTablasRutas();
+        $this->crearTablasGuias();
         Carbon::setTestNow('2026-11-04 15:00:00');
     }
 

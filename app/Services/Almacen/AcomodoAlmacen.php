@@ -59,6 +59,8 @@ class AcomodoAlmacen
             'extras' => ['nullable', 'json', 'max:100000'],
             // Puertas del almacén: [{"x": 0, "z": 5, "giro": 0, "nombre": "Carga"}, ...]
             'entradas' => ['nullable', 'json', 'max:10000'],
+            // Puestos de camión del andén: [{"x": 0, "z": -8, "giro": 0, "nombre": "Andén 1"}, ...]
+            'camiones' => ['nullable', 'json', 'max:10000'],
         ], [], [
             'numeracion' => 'numeración de anaqueles',
             'estanteA' => 'estante A',
@@ -68,7 +70,7 @@ class AcomodoAlmacen
             'pasillos' => 'pasillos',
             'disposicion' => 'ubicación de los anaqueles',
         ]);
-        foreach (['pasillos' => '{}', 'disposicion' => '{}', 'quitados' => '[]', 'extras' => '[]', 'entradas' => '[]'] as $campo => $vacio) {
+        foreach (['pasillos' => '{}', 'disposicion' => '{}', 'quitados' => '[]', 'extras' => '[]', 'entradas' => '[]', 'camiones' => '[]'] as $campo => $vacio) {
             $datos[$campo] = json_decode($datos[$campo] ?? $vacio, true) ?: [];
         }
         // El formato de las ubicaciones se cambia en «Registrar ubicaciones», no aquí.

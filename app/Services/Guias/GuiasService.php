@@ -8,6 +8,7 @@ use App\Models\Sides\SidesGuiaRen;
 use App\Models\Sides\SidesRuta;
 use App\Models\Sides\SidesRutaren;
 use App\Models\Sides\SidesVehiculo;
+use App\Support\Monitor\NotificarMonitor;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -323,6 +324,7 @@ class GuiasService
             'id_vehiculo' => $vehiculo?->id ?? $guia->id_vehiculo,
             'unidad' => $vehiculo?->etiqueta() ?? $guia->unidad,
         ]);
+        NotificarMonitor::anden($guia->codisb);
     }
 
     public function eliminar(SidesGuia $guia): void
@@ -336,6 +338,7 @@ class GuiasService
             $this->liberarBultos($bultos);
             SidesGuiaRen::query()->where('id', $guia->id)->delete();
             $guia->delete();
+            NotificarMonitor::anden($guia->codisb);
         });
     }
 
@@ -401,6 +404,8 @@ class GuiasService
             default => 'NUEVO',
         };
         $guia->update(['estado' => $estado]);
+        // El camión del Almacén 3D en vivo (PickingVivoController::camiones).
+        NotificarMonitor::anden($guia->codisb);
     }
 
     /**

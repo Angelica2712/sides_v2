@@ -95,7 +95,67 @@ class PickingVivoController extends Controller
 
         return response()->json([
             'operarios' => $operarios,
+            // null: la droguería no tiene Guías y el Almacén 3D va sin andén de carga.
+            'camiones' => $cfg?->tieneModulo('guias') ? $this->camiones((string) $usuario->codisb) : null,
             'hora' => now()->format('H:i:s'),
         ]);
+    }
+
+    /**
+     * Camiones en el andén: las guías que todavía no salen (NUEVO, CARGANDO o CARGADO) con sus
+     * pedidos y cuántos bultos de cada uno ya se montaron (sides_etiqueta_pedido.feccargado, lo
+     * marca el escaneo en «Carga y descarga»). Un pedido está montado cuando subieron todos sus bultos.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function camiones(string $codisb): array
+    {
+        $guias = DB::table('sides_guia')
+            ->where('codisb', $codisb)
+            ->whereIn('estado', ['NUEVO', 'CARGANDO', 'CARGADO'])
+            ->orderBy('id')
+            ->get(['id', 'unidad', 'nomchofer', 'ruta', 'estado']);
+        if ($guias->isEmpty()) {
+            return [];
+        }
+
+        $bultos = DB::table('sides_etiqueta_pedido')
+            ->whereIn('guia', $guias->pluck('id'))
+            ->groupBy('guia', 'numepedi')
+            ->orderBy('guia')
+            ->orderByRaw('MIN(id)')
+            ->get([
+                'guia', 'numepedi',
+                DB::raw('MAX(nomcli) as cliente'),
+                DB::raw('COUNT(*) as bultos'),
+                DB::raw('SUM(CASE WHEN feccargado IS NULL THEN 0 ELSE 1 END) as cargados'),
+            ])
+            ->groupBy('guia');
+
+        return $guias
+            ->filter(fn ($guia) => $bultos->has($guia->id))
+            ->map(function ($guia) use ($bultos) {
+                $pedidos = $bultos[$guia->id]->map(fn ($p) => [
+                    'pedido' => (int) $p->numepedi,
+                    'cliente' => (string) $p->cliente,
+                    'bultos' => (int) $p->bultos,
+                    'cargados' => (int) $p->cargados,
+                ])->values();
+
+                return [
+                    'guia' => (int) $guia->id,
+                    // La placa es lo primero de sides_guia.unidad («ABC123 - Camión blanco»).
+                    'placa' => trim(explode(' - ', (string) $guia->unidad)[0]) ?: 'Sin placa',
+                    'unidad' => (string) $guia->unidad,
+                    'chofer' => (string) $guia->nomchofer,
+                    'ruta' => (string) $guia->ruta,
+                    'estado' => (string) $guia->estado,
+                    'bultos' => $pedidos->sum('bultos'),
+                    'cargados' => $pedidos->sum('cargados'),
+                    'pedidos' => $pedidos->all(),
+                ];
+            })
+            ->values()
+            ->all();
     }
 }

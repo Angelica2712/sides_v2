@@ -42,6 +42,26 @@ class NotificarMonitor
     }
 
     /**
+     * Cambió algo en el andén (se montó un bulto, se armó o se quitó una guía): «Picking en vivo»
+     * y el Inicio redibujan los camiones del Almacén 3D. Solo WebSocket, sin webhooks (ningún
+     * pedido cambió de estado), y después del commit: dentro de la transacción la pantalla leería lo viejo.
+     */
+    public static function anden(?string $codisb): void
+    {
+        if (! $codisb) {
+            return;
+        }
+
+        DB::afterCommit(function () use ($codisb) {
+            try {
+                event(new MonitorActualizado($codisb, 'anden'));
+            } catch (Throwable $e) {
+                Log::warning('MONITOR -> NO SE PUDO AVISAR EL CAMBIO DEL ANDÉN: '.$e->getMessage());
+            }
+        });
+    }
+
+    /**
      * Un despachador guardó la cantidad de un producto: lo anota la pantalla «Picking en vivo».
      * Solo WebSocket; no es un cambio de estado del pedido, así que no va a los webhooks.
      */

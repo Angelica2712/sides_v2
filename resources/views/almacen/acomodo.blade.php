@@ -142,6 +142,7 @@
                 <input type="hidden" name="quitados" :value="JSON.stringify(config.quitados)">
                 <input type="hidden" name="extras" :value="JSON.stringify(config.extras)">
                 <input type="hidden" name="entradas" :value="JSON.stringify(config.entradas)">
+                <input type="hidden" name="camiones" :value="JSON.stringify(config.camiones)">
                 <p x-show="movidos" x-cloak class="rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-900 ring-1 ring-amber-200">
                     <span class="font-bold" x-text="movidos"></span> anaqueles ubicados a mano en el plano.
                 </p>
@@ -201,17 +202,20 @@
                         Toda la fila
                     </label>
                     <span class="mx-1 h-6 w-px bg-slate-200" aria-hidden="true"></span>
-                    <button type="button" @click="girar()" :disabled="!elegido && !entradaElegida" class="{{ $boton }}">Girar 90°</button>
+                    <button type="button" @click="girar()" :disabled="!elegido && !entradaElegida && !camionElegido" class="{{ $boton }}">Girar 90°</button>
                     <button type="button" @click="abrirRenumerar()" :disabled="!elegido" class="{{ $boton }}">Asignar pasillo</button>
                     <button type="button" @click="restaurar()" :disabled="!elegido" class="{{ $boton }}">Devolver a su lugar</button>
-                    <button type="button" @click="borrar()" :disabled="!entradaElegida && !elegido"
+                    <button type="button" @click="borrar()" :disabled="!entradaElegida && !camionElegido && !elegido"
                             class="min-h-11 md:min-h-0 rounded-lg bg-white px-3 py-1.5 text-sm font-semibold text-rose-700 ring-1 ring-rose-200 hover:bg-rose-50 disabled:opacity-40"
-                            x-text="entradaElegida ? 'Quitar entrada' : (moverPasillo ? 'Borrar la fila' : 'Borrar anaquel')"></button>
+                            x-text="entradaElegida ? 'Quitar entrada' : (camionElegido ? 'Quitar camión' : (moverPasillo ? 'Borrar la fila' : 'Borrar anaquel'))"></button>
                     <span class="mx-1 h-6 w-px bg-slate-200" aria-hidden="true"></span>
                     <button type="button" @click="abrirNuevoPasillo()"
                             class="min-h-11 md:min-h-0 rounded-lg bg-primary-soft px-3 py-1.5 text-sm font-bold text-primary-ink ring-1 ring-primary hover:bg-white">+ Pasillo</button>
                     <button type="button" @click="agregarEntrada()" :disabled="config.entradas.length >= {{ ConfigAlmacen::MAXIMO_ENTRADAS }}"
                             class="min-h-11 md:min-h-0 rounded-lg bg-emerald-50 px-3 py-1.5 text-sm font-bold text-emerald-800 ring-1 ring-emerald-300 hover:bg-emerald-100 disabled:opacity-40">+ Entrada</button>
+                    <button type="button" @click="agregarCamion(); vista = 'plano'" :disabled="config.camiones.length >= {{ ConfigAlmacen::MAXIMO_CAMIONES }}"
+                            title="Puesto donde se estaciona un camión de las guías en el Almacén 3D en vivo"
+                            class="min-h-11 md:min-h-0 rounded-lg bg-amber-50 px-3 py-1.5 text-sm font-bold text-amber-800 ring-1 ring-amber-300 hover:bg-amber-100 disabled:opacity-40">+ Camión</button>
                     <template x-if="vista === 'plano'">
                         <div class="ml-auto flex items-center gap-2">
                             <button type="button" @click="acercar(0.8)" aria-label="Acercar" class="size-11 md:size-8 rounded-lg bg-white text-lg font-bold text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50">+</button>
@@ -271,6 +275,15 @@
                                class="min-w-0 flex-1 rounded-lg border-emerald-300 py-1 text-base md:text-sm focus:border-emerald-500 focus:ring-emerald-500">
                     </label>
                     <span class="text-xs text-emerald-800">giro <span x-text="entradaElegida?.giro"></span>°</span>
+                </div>
+                <div x-show="camionElegido" x-cloak class="flex flex-wrap items-center gap-2 rounded-xl bg-amber-50 px-3 py-2 ring-1 ring-amber-200" :class="enfocado && 'absolute inset-x-1.5 bottom-1.5 z-10'">
+                    <label class="flex flex-1 items-center gap-2 text-sm font-semibold text-amber-900">
+                        Nombre del puesto
+                        <input type="text" maxlength="30" :placeholder="'Camión ' + ((camion ?? 0) + 1)" :value="camionElegido?.nombre ?? ''"
+                               @input="camionElegido && (camionElegido.nombre = $event.target.value)"
+                               class="min-w-0 flex-1 rounded-lg border-amber-300 py-1 text-base md:text-sm focus:border-amber-500 focus:ring-amber-500">
+                    </label>
+                    <span class="text-xs text-amber-800">giro <span x-text="camionElegido?.giro"></span>° · la raya naranja es la puerta de la carga</span>
                 </div>
                 <p x-show="elegido && !enfocado" class="text-sm text-slate-700">
                     Elegido: <span class="font-mono font-bold" x-text="moverPasillo ? 'fila del pasillo ' + elegido?.clave.slice(0, 5) : elegido?.clave"></span>

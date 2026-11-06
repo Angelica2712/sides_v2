@@ -158,6 +158,7 @@ class UbicacionAlmacenTest extends TestCase
             'extras' => [],
             'disposicion' => [],
             'entradas' => [],
+            'camiones' => [],
             'formato' => UbicacionAlmacen::FORMATO_SIDES,
         ], $config);
     }

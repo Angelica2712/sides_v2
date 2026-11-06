@@ -58,6 +58,7 @@ export default function almacenConfig({ plano, config, guardado = null, conError
     config.quitados = Array.isArray(config.quitados) ? config.quitados : [];
     config.extras = Array.isArray(config.extras) ? config.extras : [];
     config.entradas = Array.isArray(config.entradas) ? config.entradas : [];
+    config.camiones = Array.isArray(config.camiones) ? config.camiones : [];
     // Desde Administración se edita el almacén de otra droguería, con su propio formato.
     usarFormato(config.formato);
 
@@ -79,6 +80,8 @@ export default function almacenConfig({ plano, config, guardado = null, conError
         // si se trabaja con todo su pasillo, arrastre en curso en el plano y lo que se ve del plano.
         seleccionado: null,
         entrada: null,
+        // Puesto de camión elegido, por su índice en config.camiones.
+        camion: null,
         moverPasillo: false,
         arrastre: null,
         caja: [0, 0, 10, 10],
@@ -120,6 +123,14 @@ export default function almacenConfig({ plano, config, guardado = null, conError
         get entradasPlano() {
             const { tipo, indice, dx = 0, dz = 0 } = this.arrastre ?? {};
             return this.config.entradas.map((e, i) => (tipo === 'entrada' && indice === i ? { ...e, x: e.x + dx, z: e.z + dz } : e));
+        },
+        get camionElegido() {
+            return this.camion === null ? null : (this.config.camiones[this.camion] ?? null);
+        },
+        /** Puestos de camión como se ven en el plano, con el que se está arrastrando corrido. */
+        get camionesPlano() {
+            const { tipo, indice, dx = 0, dz = 0 } = this.arrastre ?? {};
+            return this.config.camiones.map((c, i) => (tipo === 'camion' && indice === i ? { ...c, x: c.x + dx, z: c.z + dz } : c));
         },
         /** El anaquel elegido tiene productos ubicados: no se puede borrar. */
         get elegidoOcupado() {
@@ -184,6 +195,8 @@ export default function almacenConfig({ plano, config, guardado = null, conError
             visor?.destruir();
             visor = nuevo;
             visor.editar({ alElegir: (clave) => this.elegir3d(clave), alMover: (dx, dz) => this.mover3d(dx, dz) });
+            // Un camión vacío en cada puesto, para ver cómo queda estacionado.
+            visor.camiones(this.config.camiones.map((c, i) => ({ guia: -1 - i, placa: c.nombre || `Camión ${i + 1}`, chofer: '', bultos: 0, cargados: 0 })));
             this.marcar3d();
             this.resaltar();
         },
@@ -233,6 +246,7 @@ export default function almacenConfig({ plano, config, guardado = null, conError
 
         elegir3d(clave) {
             this.entrada = null;
+            this.camion = null;
             this.avisoPlano = '';
             this.seleccionado = clave;
             this.abrirRenumerar();
@@ -301,7 +315,24 @@ export default function almacenConfig({ plano, config, guardado = null, conError
                           fill="#14532d" font-weight="800" pointer-events="none">${texto(e.nombre || 'Entrada')}</text>
                 </g>`;
             });
-            return [...zonas, ...anaqueles, ...entradas].join('');
+            // Puestos de camión: el lugar del camión, con la cabina (oscura) del lado de afuera y la
+            // puerta de la carga (raya naranja) hacia +z del puesto, girado como él.
+            const camiones = this.camionesPlano.map((c, i) => {
+                const elegido = i === this.camion;
+                return `
+                <g data-camion="${i}" style="cursor: grab">
+                    <g transform="translate(${c.x} ${c.z}) rotate(${-c.giro})">
+                        <rect x="-1.3" y="-3.9" width="2.6" height="7.8" rx="0.15"
+                              fill="${elegido ? '#fed7aa' : '#e2e8f0'}" stroke="${elegido ? '#ea580c' : '#ca8a04'}" stroke-width="${elegido ? 0.12 : 0.08}" stroke-dasharray="0.3 0.15"></rect>
+                        <rect x="-1.1" y="-3.7" width="2.2" height="1.6" rx="0.15" fill="#475569"></rect>
+                        <rect x="-1.15" y="-1.9" width="2.3" height="4.6" rx="0.08" fill="#ffffff" stroke="#64748b" stroke-width="0.05"></rect>
+                        <line x1="-1.15" x2="1.15" y1="2.7" y2="2.7" stroke="#f97316" stroke-width="0.14" stroke-linecap="round"></line>
+                    </g>
+                    <text x="${c.x}" y="${c.z}" font-size="0.4" text-anchor="middle" dominant-baseline="middle"
+                          fill="#0f172a" font-weight="800" pointer-events="none">${texto(c.nombre || `Camión ${i + 1}`)}</text>
+                </g>`;
+            });
+            return [...zonas, ...anaqueles, ...entradas, ...camiones].join('');
         },
 
         /** El plano sigue recibiendo el puntero aunque salga del SVG mientras se arrastra. */
@@ -322,6 +353,10 @@ export default function almacenConfig({ plano, config, guardado = null, conError
                 this.arrastre = { tipo: 'pellizco', distancia: distanciaDedos(), caja: [...this.caja] };
                 return;
             }
+            const puesto = evento.target.closest('[data-camion]')?.dataset.camion;
+            if (puesto !== undefined) {
+                return this.tomarCamion(evento, Number(puesto));
+            }
             const puerta = evento.target.closest('[data-entrada]')?.dataset.entrada;
             if (puerta !== undefined) {
                 return this.tomarEntrada(evento, Number(puerta));
@@ -341,11 +376,12 @@ export default function almacenConfig({ plano, config, guardado = null, conError
                 limites[2] = Math.max(limites[2], z.x + z.ancho / 2 + 2);
                 limites[3] = Math.max(limites[3], z.z + z.fondo / 2 + 2);
             }
-            for (const e of this.config.entradas) {
-                limites[0] = Math.min(limites[0], e.x - 2);
-                limites[1] = Math.min(limites[1], e.z - 2);
-                limites[2] = Math.max(limites[2], e.x + 2);
-                limites[3] = Math.max(limites[3], e.z + 2);
+            for (const e of [...this.config.entradas, ...this.config.camiones]) {
+                const margen = this.config.camiones.includes(e) ? 5 : 2;
+                limites[0] = Math.min(limites[0], e.x - margen);
+                limites[1] = Math.min(limites[1], e.z - margen);
+                limites[2] = Math.max(limites[2], e.x + margen);
+                limites[3] = Math.max(limites[3], e.z + margen);
             }
             this.caja = [limites[0], limites[1], limites[2] - limites[0], limites[3] - limites[1]];
         },
@@ -387,8 +423,29 @@ export default function almacenConfig({ plano, config, guardado = null, conError
             return this.disposicion.anaqueles.filter((b) => b.zona === a.zona && b.pasillo === a.pasillo);
         },
 
+        tomarCamion(evento, indice) {
+            this.camion = indice;
+            this.entrada = null;
+            this.seleccionado = null;
+            this.capturar(evento);
+            this.arrastre = { tipo: 'camion', indice, inicio: this.puntoEnPlano(evento), dx: 0, dz: 0, ...this.inicioDedo(evento) };
+        },
+
+        /** Pone un puesto de camión en el centro de lo que se está viendo y lo deja elegido. */
+        agregarCamion() {
+            if (this.config.camiones.length >= 20) {
+                return;
+            }
+            const [x, y, ancho, alto] = this.caja;
+            this.config.camiones.push({ x: redondear(x + ancho / 2), z: redondear(y + alto / 2), giro: 0, nombre: '' });
+            this.camion = this.config.camiones.length - 1;
+            this.entrada = null;
+            this.seleccionado = null;
+        },
+
         tomarEntrada(evento, indice) {
             this.entrada = indice;
+            this.camion = null;
             this.seleccionado = null;
             this.capturar(evento);
             this.arrastre = { tipo: 'entrada', indice, inicio: this.puntoEnPlano(evento), dx: 0, dz: 0, ...this.inicioDedo(evento) };
@@ -402,11 +459,13 @@ export default function almacenConfig({ plano, config, guardado = null, conError
             const [x, y, ancho, alto] = this.caja;
             this.config.entradas.push({ x: redondear(x + ancho / 2), z: redondear(y + alto / 2), giro: 0, nombre: '' });
             this.entrada = this.config.entradas.length - 1;
+            this.camion = null;
             this.seleccionado = null;
         },
 
         tomar(evento, a) {
             this.entrada = null;
+            this.camion = null;
             this.avisoPlano = '';
             this.seleccionado = a.clave;
             this.abrirRenumerar();
@@ -425,6 +484,7 @@ export default function almacenConfig({ plano, config, guardado = null, conError
             this.seleccionado = null;
             this.renumero = null;
             this.entrada = null;
+            this.camion = null;
         },
 
         /** Arrastrar el fondo desplaza la vista; con el dedo, solo un toque sin arrastre suelta lo elegido. */
@@ -490,11 +550,11 @@ export default function almacenConfig({ plano, config, guardado = null, conError
                 // El cuadro de números va debajo del plano: se trae a la vista ya soltado el anaquel.
                 this.$nextTick(() => this.$refs.renumero?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
             }
-            if (!['anaquel', 'entrada'].includes(arrastre?.tipo) || (!arrastre.dx && !arrastre.dz)) {
+            if (!['anaquel', 'entrada', 'camion'].includes(arrastre?.tipo) || (!arrastre.dx && !arrastre.dz)) {
                 return;
             }
-            if (arrastre.tipo === 'entrada') {
-                const e = this.config.entradas[arrastre.indice];
+            if (arrastre.tipo === 'entrada' || arrastre.tipo === 'camion') {
+                const e = (arrastre.tipo === 'camion' ? this.config.camiones : this.config.entradas)[arrastre.indice];
                 e.x = redondear(e.x + arrastre.dx);
                 e.z = redondear(e.z + arrastre.dz);
                 return;
@@ -510,8 +570,9 @@ export default function almacenConfig({ plano, config, guardado = null, conError
 
         /** Gira 90° el anaquel elegido, o su fila alrededor de su centro. */
         girar() {
-            if (this.entradaElegida) {
-                this.entradaElegida.giro = (this.entradaElegida.giro + 90) % 360;
+            const lugar = this.entradaElegida ?? this.camionElegido;
+            if (lugar) {
+                lugar.giro = (lugar.giro + 90) % 360;
                 return;
             }
             const a = this.elegido;
@@ -561,6 +622,13 @@ export default function almacenConfig({ plano, config, guardado = null, conError
                 if (confirm(`¿Quitar la entrada «${this.entradaElegida.nombre || 'Entrada'}»?`)) {
                     this.config.entradas.splice(this.entrada, 1);
                     this.entrada = null;
+                }
+                return;
+            }
+            if (this.camionElegido) {
+                if (confirm(`¿Quitar el puesto «${this.camionElegido.nombre || `Camión ${this.camion + 1}`}»?`)) {
+                    this.config.camiones.splice(this.camion, 1);
+                    this.camion = null;
                 }
                 return;
             }
@@ -668,6 +736,7 @@ export default function almacenConfig({ plano, config, guardado = null, conError
             this.nuevo = null;
             this.avisoPlano = '';
             this.entrada = null;
+            this.camion = null;
             this.moverPasillo = true;
             this.seleccionado = claveAnaquel(zona, numero, anaquelesDe(this.config.pasillos[clave])[0]);
         },
@@ -867,7 +936,7 @@ export default function almacenConfig({ plano, config, guardado = null, conError
         teclado(evento) {
             const a = this.elegido;
             const pasos = { ArrowLeft: [-0.1, 0], ArrowRight: [0.1, 0], ArrowUp: [0, -0.1], ArrowDown: [0, 0.1] };
-            const e = this.entradaElegida;
+            const e = this.entradaElegida ?? this.camionElegido;
             if (e && pasos[evento.key]) {
                 evento.preventDefault();
                 e.x = redondear(e.x + pasos[evento.key][0]);

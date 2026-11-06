@@ -150,6 +150,7 @@
                                         </p>
                                     </button>
                                 </template>
+                                <div class="pt-2">@include('monitor.partials.camiones')</div>
                             </div>
 
                             @if ($vivo['plano'])

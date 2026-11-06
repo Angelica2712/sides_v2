@@ -393,6 +393,29 @@ class UbicacionesTest extends TestCase
         $this->actingAs($this->registrador)->get('/almacen/acomodo')->assertOk()->assertSee('+ Entrada');
     }
 
+    public function test_guarda_los_puestos_de_camion_puestos_a_mano(): void
+    {
+        $this->actingAs($this->registrador)->put('/almacen/acomodo', [
+            'numeracion' => 'alternada', 'estanteA' => 'abajo', 'posicion1' => 'izquierda', 'estantes' => 4, 'posiciones' => 4,
+            'camiones' => json_encode([
+                ['x' => 4.123, 'z' => -9, 'giro' => 270, 'nombre' => ' Andén 1 '],
+                ['x' => 'aquí', 'z' => 0],
+                ['x' => 8, 'z' => -9, 'giro' => 0],
+            ]),
+        ])->assertSessionHasNoErrors();
+
+        $this->assertSame([
+            ['x' => 4.12, 'z' => -9.0, 'giro' => 270, 'nombre' => 'Andén 1'],
+            ['x' => 8.0, 'z' => -9.0, 'giro' => 0, 'nombre' => ''],
+        ], ConfigAlmacen::de('505094939')['camiones']);
+
+        // El 3D los recibe en el plano para estacionar ahí los camiones de las guías.
+        $plano = $this->actingAs($this->registrador)->getJson('/almacen/plano')->json();
+        $this->assertSame('Andén 1', $plano['config']['camiones'][0]['nombre']);
+
+        $this->actingAs($this->registrador)->get('/almacen/acomodo')->assertOk()->assertSee('+ Camión');
+    }
+
     public function test_el_asistente_arma_el_almacen_pasillo_por_pasillo(): void
     {
         // Tenía otra numeración: el asistente deja la de SIDES y lo avisa.

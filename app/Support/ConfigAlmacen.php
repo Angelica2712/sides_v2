@@ -42,6 +42,7 @@ class ConfigAlmacen
         'extras' => [],
         'disposicion' => [],
         'entradas' => [],
+        'camiones' => [],
         'formato' => UbicacionAlmacen::FORMATO_SIDES,
     ];
 
@@ -58,6 +59,9 @@ class ConfigAlmacen
 
     /** Puertas que se pueden marcar en el plano, como máximo. */
     public const MAXIMO_ENTRADAS = 20;
+
+    /** Puestos de camión que se pueden marcar en el plano, como máximo. */
+    public const MAXIMO_CAMIONES = 20;
 
     /**
      * pasillos: pasillos registrados a mano por "ZONA-PASILLO" (PK-03) => cuántos anaqueles hay a
@@ -79,10 +83,14 @@ class ConfigAlmacen
      * entradas: puertas del almacén puestas en el plano, con su centro (x, z), su giro (0 = se
      * entra caminando hacia +z) y un nombre opcional ("Carga", "Principal").
      *
+     * camiones: puestos donde se estacionan los camiones de las guías en el Almacén 3D en vivo, con
+     * su centro (x, z), su giro (0 = la puerta de la carga mira hacia +z) y un nombre opcional
+     * ("Andén 1"). Sin ninguno, el 3D arma solo un andén junto a la primera entrada.
+     *
      * formato: cómo escribe la droguería sus ubicaciones (UbicacionAlmacen::FORMATO_SIDES si no
      * armó uno propio en «Registrar ubicaciones»).
      *
-     * @return array{numeracion: string, estanteA: string, posicion1: string, estantes: int, posiciones: int, zonas: array<string, string>, pasillos: array<string, array{izquierda: int, derecha: int, estantes: ?int, posiciones: ?int}>, quitados: list<string>, extras: list<string>, disposicion: array<string, array{x: float, z: float, giro: int}>, entradas: list<array{x: float, z: float, giro: int, nombre: string}>, formato: array{separador: string, partes: list<array{rol: string, nombre: string, tipo: string, largo: int}>}}
+     * @return array{numeracion: string, estanteA: string, posicion1: string, estantes: int, posiciones: int, zonas: array<string, string>, pasillos: array<string, array{izquierda: int, derecha: int, estantes: ?int, posiciones: ?int}>, quitados: list<string>, extras: list<string>, disposicion: array<string, array{x: float, z: float, giro: int}>, entradas: list<array{x: float, z: float, giro: int, nombre: string}>, camiones: list<array{x: float, z: float, giro: int, nombre: string}>, formato: array{separador: string, partes: list<array{rol: string, nombre: string, tipo: string, largo: int}>}}
      */
     public static function de(string $codisb): array
     {
@@ -159,20 +167,25 @@ class ConfigAlmacen
         }
         ksort($disposicion);
 
-        $entradas = [];
-        foreach (array_values((array) ($config['entradas'] ?? [])) as $lugar) {
-            if (count($entradas) >= self::MAXIMO_ENTRADAS) {
-                break;
+        // Entradas y puestos de camión: lugar, giro y un nombre opcional.
+        $lugares = function (string $campo, int $maximo) use ($config, $esLugar, $metros, $giro): array {
+            $lista = [];
+            foreach (array_values((array) ($config[$campo] ?? [])) as $lugar) {
+                if (count($lista) >= $maximo) {
+                    break;
+                }
+                if ($esLugar($lugar)) {
+                    $lista[] = [
+                        'x' => $metros($lugar['x']),
+                        'z' => $metros($lugar['z']),
+                        'giro' => $giro($lugar),
+                        'nombre' => mb_substr(trim((string) ($lugar['nombre'] ?? '')), 0, 30),
+                    ];
+                }
             }
-            if ($esLugar($lugar)) {
-                $entradas[] = [
-                    'x' => $metros($lugar['x']),
-                    'z' => $metros($lugar['z']),
-                    'giro' => $giro($lugar),
-                    'nombre' => mb_substr(trim((string) ($lugar['nombre'] ?? '')), 0, 30),
-                ];
-            }
-        }
+
+            return $lista;
+        };
 
         return [
             'numeracion' => $opcion('numeracion', self::NUMERACIONES),
@@ -185,7 +198,8 @@ class ConfigAlmacen
             'quitados' => $quitados,
             'extras' => $extras,
             'disposicion' => $disposicion,
-            'entradas' => $entradas,
+            'entradas' => $lugares('entradas', self::MAXIMO_ENTRADAS),
+            'camiones' => $lugares('camiones', self::MAXIMO_CAMIONES),
             'formato' => UbicacionAlmacen::formato($config['formato'] ?? null),
         ];
     }

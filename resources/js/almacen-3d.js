@@ -35,8 +35,41 @@ function azar(...semillas) {
     return ((h >>> 0) % 1000) / 1000;
 }
 
-/** opciones.vista: { posicion, objetivo } de una vista anterior (ver vista()), para no mover la cámara al redibujar. */
-export async function crearVisor(contenedor, plano, { vista: vistaInicial = null } = {}) {
+// Andén de carga: puestos, ancho de cada puesto y fondo (largo del camión con margen), en metros.
+const ANDEN_PUESTOS = 6;
+const ANDEN_PUESTO = 3.4;
+const ANDEN_FONDO = 8.5;
+// Caja de carga del camión: hueco por dentro y lado de cada bulto dibujado (4 × 4 × 8 = 128 lugares).
+const CARGA = { ancho: 2.1, alto: 2.1, fondo: 4.2, bulto: 0.5 };
+
+/**
+ * Dónde va el andén: { x, z, giro } en el borde del almacén, con el eje local -z hacia afuera (como
+ * enPlano). Se elige el lado del rectángulo del almacén más cercano a la entrada y, sobre ese lado,
+ * el punto frente a ella.
+ */
+function lugarDelAnden(edificio, entrada) {
+    if (edificio.isEmpty()) {
+        return { x: 0, z: 3, giro: 180 };
+    }
+    const { min, max } = edificio;
+    const punto = entrada ?? { x: (min.x + max.x) / 2, z: max.z };
+    const sobre = (valor, desde, hasta) => Math.min(Math.max(valor, desde), hasta);
+    const margen = 1;
+    const lados = [
+        { distancia: Math.abs(punto.z - max.z), x: sobre(punto.x, min.x, max.x), z: max.z + margen, giro: 180 },
+        { distancia: Math.abs(punto.z - min.z), x: sobre(punto.x, min.x, max.x), z: min.z - margen, giro: 0 },
+        { distancia: Math.abs(punto.x - max.x), x: max.x + margen, z: sobre(punto.z, min.z, max.z), giro: -90 },
+        { distancia: Math.abs(punto.x - min.x), x: min.x - margen, z: sobre(punto.z, min.z, max.z), giro: 90 },
+    ];
+    const { x, z, giro } = lados.reduce((mejor, lado) => (lado.distancia < mejor.distancia ? lado : mejor));
+    return { x, z, giro };
+}
+
+/**
+ * opciones.vista: { posicion, objetivo } de una vista anterior (ver vista()), para no mover la cámara al redibujar.
+ * opciones.anden: dibuja el andén de carga para los camiones de las guías (ver camiones()).
+ */
+export async function crearVisor(contenedor, plano, { vista: vistaInicial = null, anden: conAnden = false } = {}) {
     const [THREE, { MapControls }] = await Promise.all([
         import('three'),
         import('three/examples/jsm/controls/MapControls.js'),
@@ -174,6 +207,9 @@ export async function crearVisor(contenedor, plano, { vista: vistaInicial = null
         limites.expandByPoint(new THREE.Vector3(x2, 3, z2));
     }
 
+    // Lo que ocupan los anaqueles y las zonas, sin las entradas: el andén va del lado de afuera.
+    const edificio = limites.clone();
+
     // Entradas del almacén (config.entradas): marco verde de la puerta, una alfombra hacia adentro y su nombre.
     const materialEntrada = material(COLORES.entrada);
     const materialAlfombra = material(COLORES.entrada, { transparent: true, opacity: 0.35 });
@@ -194,6 +230,66 @@ export async function crearVisor(contenedor, plano, { vista: vistaInicial = null
         rotular(e.nombre || 'Entrada', [e.x, 2.6, e.z], { tamano: 0.4, color: '#ffffff', fondo: 'rgba(21,128,61,0.9)' });
         limites.expandByPoint(new THREE.Vector3(e.x - 2.5, 0, e.z - 2.5));
         limites.expandByPoint(new THREE.Vector3(e.x + 2.5, 3, e.z + 2.5));
+    }
+
+    // Andén de carga (opciones.anden): afuera del almacén, en el lado más cercano a la primera entrada
+    // (o al frente si no hay ninguna), con puestos para ANDEN_PUESTOS camiones que retroceden hacia el
+    // almacén. Las entradas pueden estar dentro del plano: por eso se usa el borde y no la puerta.
+    // Los camiones los pone camiones(); el piso del andén está siempre para que la cámara no salte.
+    // Puestos de camión marcados a mano en el acomodo (config.camiones): reemplazan al andén automático.
+    const puestosAMano = Array.isArray(config.camiones) ? config.camiones : [];
+    const anden = conAnden && !puestosAMano.length ? lugarDelAnden(edificio, config.entradas?.[0]) : null;
+    if (puestosAMano.length) {
+        const materialPuesto = material(0x64748b);
+        const materialRaya = material(0xfacc15);
+        desechables.push(materialPuesto, materialRaya);
+        puestosAMano.forEach((p, i) => {
+            const losa = (mat, [lx, lz], [w, d], y) => {
+                const [x, z] = enPlano(p, lx, lz);
+                const malla = new THREE.Mesh(cubo, mat);
+                malla.position.set(x, y, z);
+                malla.quaternion.copy(giroY(p.giro));
+                malla.scale.set(w, 0.02, d);
+                escena.add(malla);
+            };
+            losa(materialPuesto, [0, 0], [3, 8.4], 0.012);
+            for (const lx of [-1.5, 1.5]) {
+                losa(materialRaya, [lx, 0], [0.08, 8.4], 0.03);
+            }
+            losa(materialRaya, [0, 4.2], [3, 0.12], 0.03);
+            const [rx, rz] = enPlano(p, 0, -4.9);
+            rotular(p.nombre || `Camión ${i + 1}`, [rx, 0.5, rz], { tamano: 0.36, color: '#ffffff', fondo: 'rgba(51,65,85,0.9)' });
+            for (const [lx, lz] of [[-2, -5.5], [2, -5.5], [-2, 4.5], [2, 4.5]]) {
+                const [x, z] = enPlano(p, lx, lz);
+                limites.expandByPoint(new THREE.Vector3(x, 3.5, z));
+            }
+        });
+    }
+    if (anden) {
+        const largo = ANDEN_FONDO + 1;
+        const ancho = ANDEN_PUESTOS * ANDEN_PUESTO;
+        const enAnden = (lx, lz) => enPlano(anden, lx, lz);
+        const materialAsfalto = material(0x64748b);
+        const materialRaya = material(0xfacc15);
+        desechables.push(materialAsfalto, materialRaya);
+        const losa = (mat, [lx, lz], [w, d], y) => {
+            const [x, z] = enAnden(lx, lz);
+            const malla = new THREE.Mesh(cubo, mat);
+            malla.position.set(x, y, z);
+            malla.quaternion.copy(giroY(anden.giro));
+            malla.scale.set(w, 0.02, d);
+            escena.add(malla);
+        };
+        losa(materialAsfalto, [0, -largo / 2], [ancho, largo], 0.012);
+        for (let i = 0; i <= ANDEN_PUESTOS; i++) {
+            losa(materialRaya, [-ancho / 2 + i * ANDEN_PUESTO, -largo / 2 - 0.5], [0.08, largo - 1], 0.03);
+        }
+        const [rx, rz] = enAnden(0, -largo - 0.6);
+        rotular('Andén de carga', [rx, 0.6, rz], { tamano: 0.45, color: '#ffffff', fondo: 'rgba(51,65,85,0.9)' });
+        for (const [lx, lz] of [[-ancho / 2, 0], [ancho / 2, 0], [-ancho / 2, -largo - 1.2], [ancho / 2, -largo - 1.2]]) {
+            const [x, z] = enAnden(lx, lz);
+            limites.expandByPoint(new THREE.Vector3(x, 3.5, z));
+        }
     }
 
     // Volumen de cada anaquel, sin dibujarse: sirve para saber qué hueco hay bajo el puntero.
@@ -295,6 +391,134 @@ export async function crearVisor(contenedor, plano, { vista: vistaInicial = null
             cartel.position.set(x, y + datos.tamano[1] / 2 + 0.45 + piso * 0.4, z);
             equipo.add(cartel);
         }
+    };
+
+    // Camiones del andén: uno por guía que todavía no sale, de retroceso hacia la puerta y con la
+    // caja de carga transparente. Adentro, los bultos montados (cartón) se apilan desde la cabina
+    // hacia la puerta; los huecos claros son los que faltan subir. La cabina dice cómo va: gris sin
+    // cargar, ámbar cargando y verde con todo arriba.
+    const camionesGrupo = new THREE.Group();
+    escena.add(camionesGrupo);
+    const rotulosCamion = [];
+    const camionPorGuia = new Map();
+    const rueda = new THREE.CylinderGeometry(0.42, 0.42, 0.3, 20);
+    rueda.rotateZ(Math.PI / 2);
+    const bordes = new THREE.EdgesGeometry(cubo);
+    const mat = {
+        chasis: material(0x334155),
+        rueda: material(0x111827),
+        piso: material(0x78716c),
+        paredes: material(0xe0f2fe, { transparent: true, opacity: 0.16, depthWrite: false }),
+        linea: new THREE.LineBasicMaterial({ color: 0x0369a1 }),
+        vidrio: material(0x1e3a8a),
+        bulto: material(0xc08a4e),
+        hueco: material(0xffffff, { transparent: true, opacity: 0.18, depthWrite: false }),
+        nuevo: material(0x94a3b8),
+        cargando: material(0xf59e0b),
+        listo: material(0x16a34a),
+    };
+    desechables.push(rueda, bordes, ...Object.values(mat));
+    const puesto = (i) => (i % 2 === 0 ? -1 : 1) * (Math.floor(i / 2) + 0.5) * ANDEN_PUESTO;
+
+    // El camión se arma con la puerta de la carga en z = -0.8 y la cabina hacia -z; su centro queda en z = -3.85.
+    const CENTRO_CAMION = 3.85;
+    /** Dónde va cada camión: en un puesto a mano (centrado en él) o en el puesto i del andén automático. */
+    const lugarCamion = (i) => {
+        if (puestosAMano.length) {
+            const p = puestosAMano[i];
+            const [x, z] = enPlano(p, 0, CENTRO_CAMION);
+            return { x, z, giro: p.giro };
+        }
+        const [x, z] = enPlano(anden, puesto(i), 0);
+        return { x, z, giro: anden.giro };
+    };
+    const capacidad = puestosAMano.length || (anden ? ANDEN_PUESTOS : 0);
+
+    const dibujarCamion = (c, lugar) => {
+        const grupo = new THREE.Group();
+        grupo.position.set(lugar.x, 0, lugar.z);
+        grupo.quaternion.copy(giroY(lugar.giro));
+        const pieza = (m, [x, y, z], [w, h, d]) => {
+            const malla = new THREE.Mesh(cubo, m);
+            malla.position.set(x, y, z);
+            malla.scale.set(w, h, d);
+            grupo.add(malla);
+            return malla;
+        };
+        const listo = c.bultos > 0 && c.cargados >= c.bultos;
+        const estado = listo ? 'listo' : c.cargados > 0 ? 'cargando' : 'nuevo';
+
+        // Chasis, ruedas y cabina (hacia afuera, lejos de la puerta).
+        pieza(mat.chasis, [0, 0.55, -4.1], [2.2, 0.25, 6.6]);
+        for (const z of [-1.6, -2.6, -6.2]) {
+            for (const x of [-1, 1]) {
+                const r = new THREE.Mesh(rueda, mat.rueda);
+                r.position.set(x, 0.42, z);
+                grupo.add(r);
+            }
+        }
+        pieza(mat[estado], [0, 1.63, -6.1], [2.2, 1.9, 1.6]);
+        pieza(mat.vidrio, [0, 2.05, -6.91], [1.9, 0.7, 0.04]);
+
+        // Caja de carga: piso, paredes transparentes y sus aristas.
+        pieza(mat.piso, [0, 0.7, -3.0], [2.3, 0.06, 4.4]);
+        pieza(mat.paredes, [0, 1.85, -3.0], [2.3, 2.3, 4.4]);
+        const aristas = new THREE.LineSegments(bordes, mat.linea);
+        aristas.position.set(0, 1.85, -3.0);
+        aristas.scale.set(2.3, 2.3, 4.4);
+        grupo.add(aristas);
+
+        // Bultos: con más de 128, cada lugar dibujado representa varios.
+        const lugares = (CARGA.ancho / CARGA.bulto | 0) * (CARGA.alto / CARGA.bulto | 0) * (CARGA.fondo / CARGA.bulto | 0);
+        const porLugar = Math.max(1, Math.ceil(c.bultos / lugares));
+        const total = Math.ceil(c.bultos / porLugar);
+        const llenos = listo ? total : Math.floor(c.cargados / porLugar);
+        const ancho = CARGA.ancho / CARGA.bulto | 0;
+        const alto = CARGA.alto / CARGA.bulto | 0;
+        const lado = CARGA.bulto * 0.92;
+        const llenar = (m, desde, hasta) => {
+            if (hasta <= desde) {
+                return;
+            }
+            const malla = new THREE.InstancedMesh(cubo, m, hasta - desde);
+            for (let k = desde; k < hasta; k++) {
+                const w = k % ancho;
+                const h = Math.floor(k / ancho) % alto;
+                const d = Math.floor(k / (ancho * alto));
+                malla.setMatrixAt(k - desde, new THREE.Matrix4().compose(
+                    new THREE.Vector3(-0.75 + w * CARGA.bulto, 0.73 + CARGA.bulto / 2 + h * CARGA.bulto, -5.05 + CARGA.bulto / 2 + d * CARGA.bulto),
+                    new THREE.Quaternion(),
+                    new THREE.Vector3(lado, lado, lado),
+                ));
+            }
+            grupo.add(malla);
+        };
+        llenar(mat.bulto, 0, llenos);
+        llenar(mat.hueco, llenos, total);
+
+        const fondo = { listo: 'rgba(21,128,61,0.95)', cargando: 'rgba(180,83,9,0.95)', nuevo: 'rgba(51,65,85,0.92)' }[estado];
+        // Sin bultos ni chofer es el camión de muestra del acomodo: solo el nombre del puesto.
+        const texto = c.bultos || c.chofer ? `${c.placa} · ${c.cargados}/${c.bultos} bultos` : c.placa;
+        const cartel = etiqueta(texto, { tamano: 0.42, color: '#ffffff', fondo, lista: rotulosCamion });
+        cartel.position.set(0, 3.7, -3.4);
+        grupo.add(cartel);
+        if (c.chofer) {
+            const chofer = etiqueta(c.chofer, { tamano: 0.3, color: '#0f172a', lista: rotulosCamion });
+            chofer.position.set(0, 3.25, -3.4);
+            grupo.add(chofer);
+        }
+        camionesGrupo.add(grupo);
+        camionPorGuia.set(c.guia, grupo);
+    };
+
+    /** Reemplaza los camiones del andén: [{ guia, placa, chofer, bultos, cargados }]. Devuelve cuántos no cupieron. */
+    const ponerCamiones = (lista) => {
+        camionesGrupo.traverse((objeto) => objeto.isInstancedMesh && objeto.dispose());
+        camionesGrupo.clear();
+        camionPorGuia.clear();
+        rotulosCamion.splice(0).forEach((recurso) => recurso.dispose());
+        lista.slice(0, capacidad).forEach((c, i) => dibujarCamion(c, lugarCamion(i)));
+        return Math.max(0, lista.length - capacidad);
     };
 
     // Vuelo suave de la cámara hacia un punto.
@@ -791,6 +1015,22 @@ export async function crearVisor(contenedor, plano, { vista: vistaInicial = null
         vistaGeneral: () => vistaGeneral(),
         /** Marca a cada despachador en su ubicación: [{ ubicacion, nombre, color, soloNombre? }]. Reemplaza la marca anterior. */
         equipo: marcarEquipo,
+        /**
+         * Camiones en los puestos marcados en el acomodo o, sin ninguno y con opciones.anden, en el andén
+         * automático: [{ guia, placa, chofer, bultos, cargados }]. Devuelve cuántos no cupieron.
+         */
+        camiones: ponerCamiones,
+        /** Lleva la cámara por encima y al costado del camión de esa guía, mirando su carga desde arriba. false si no está. */
+        verCamion(guia) {
+            const camion = camionPorGuia.get(guia);
+            if (!camion) {
+                return false;
+            }
+            camion.updateWorldMatrix(true, false);
+            const objetivo = camion.localToWorld(new THREE.Vector3(0, 1.2, -3.2));
+            volar(camion.localToWorld(new THREE.Vector3(6.5, 9, -1.5)), objetivo);
+            return true;
+        },
         /** Vuelve la cámara a la ubicación resaltada. */
         verAhora: () => vistaAhora && volar(...vistaAhora.map((v) => v.clone())),
         /** Aleja la cámara para ver juntas la ubicación resaltada y la siguiente; false si no hay siguiente. */
@@ -811,7 +1051,7 @@ export async function crearVisor(contenedor, plano, { vista: vistaInicial = null
             }
             controles.dispose();
             escena.traverse((objeto) => objeto.isInstancedMesh && objeto.dispose());
-            [...desechables, ...rotulos, ...rotulosEquipo].forEach((recurso) => recurso.dispose());
+            [...desechables, ...rotulos, ...rotulosEquipo, ...rotulosCamion].forEach((recurso) => recurso.dispose());
             render.dispose();
             render.domElement.remove();
         },

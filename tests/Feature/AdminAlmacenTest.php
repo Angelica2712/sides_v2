@@ -71,6 +71,7 @@ class AdminAlmacenTest extends TestCase
             'extras' => [],
             'disposicion' => [],
             'entradas' => [],
+            'camiones' => [],
             'formato' => UbicacionAlmacen::FORMATO_SIDES,
         ], SidesAlmacenCfg::query()->find('DROMARKO')->config);
         $this->assertSame('admin@example.com', SidesAlmacenCfg::query()->find('DROMARKO')->actualizado_por);

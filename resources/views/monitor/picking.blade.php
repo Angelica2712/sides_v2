@@ -94,7 +94,7 @@
                                     class="rounded-xl bg-white/95 px-3 py-2 text-sm font-bold text-slate-700 shadow ring-1 ring-slate-300 hover:bg-white">Ver todo el almacén</button>
                         </div>
                         <p class="pointer-events-none absolute bottom-2 left-3 right-44 text-xs text-slate-500"
-                           x-text="elegido !== null ? 'Naranja: lo que busca ahora · morado: lo que sigue' : 'Cada color es un despachador · toca uno para seguirlo'"></p>
+                           x-text="elegido !== null ? 'Naranja: lo que busca ahora · morado: lo que sigue' : (camiones?.length ? 'Cada color es un despachador · en el andén, los camiones con sus bultos montados' : 'Cada color es un despachador · toca uno para seguirlo')"></p>
                         @include('almacen.partials.controles-3d')
                     </div>
                     <div x-show="seleccion" x-cloak class="flex flex-wrap items-center gap-2 border-t border-slate-200 px-4 py-3">
@@ -105,6 +105,8 @@
                         </template>
                     </div>
                 </section>
+
+                <div x-show="camiones !== null" x-cloak class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">@include('monitor.partials.camiones')</div>
 
                 {{-- Últimos movimientos: llegan por el WebSocket y no se guardan; al abrir la pantalla empieza vacía. --}}
                 <section class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
