@@ -99,13 +99,6 @@
                                 @endforeach
                             </select>
                         </div>
-                        <a href="{{ route('televisores.index') }}" class="flex items-center justify-between gap-3 rounded-xl p-3 ring-1 ring-slate-200 hover:bg-slate-50">
-                            <span>
-                                <span class="block font-bold text-slate-900">Televisores</span>
-                                <span class="block text-sm text-slate-500">Vincula la app de TV de la droguería y elige qué muestra cada televisor.</span>
-                            </span>
-                            <span class="text-sm font-bold text-primary-ink">Abrir →</span>
-                        </a>
                     @elseif ($titulo === 'Picking')
                         <div>
                             <label for="ordenPedSides" class="block text-sm font-semibold text-slate-700">Orden de los productos</label>
@@ -143,24 +136,6 @@
                     @endif
                 </section>
             @endforeach
-
-            {{-- Vista «Alertas» de los televisores (Televisores → Qué muestra). --}}
-            <section class="space-y-3 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
-                <div>
-                    <h3 class="text-lg font-extrabold text-slate-900">Alertas en los televisores</h3>
-                    <p class="text-sm text-slate-500">Cuándo un pedido se marca en retraso y cuándo un despachador sale en amarillo o rojo frente a su propio promedio.</p>
-                </div>
-                <div class="grid gap-4 sm:grid-cols-3">
-                    @foreach (ConfiguracionController::ALERTAS as $nombre => [$minimo, $maximo, $etiqueta, $ayuda])
-                        <div>
-                            <label for="{{ $nombre }}" class="block text-sm font-semibold text-slate-700">{{ $etiqueta }}</label>
-                            <input id="{{ $nombre }}" name="{{ $nombre }}" type="number" required min="{{ $minimo }}" max="{{ $maximo }}"
-                                   value="{{ $valor($nombre) }}" class="{{ $campo }}">
-                            <p class="mt-1 text-xs text-slate-500">{{ $ayuda }}</p>
-                        </div>
-                    @endforeach
-                </div>
-            </section>
 
             <section class="space-y-3 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
                 <h3 class="text-lg font-extrabold text-slate-900">Etiquetas</h3>

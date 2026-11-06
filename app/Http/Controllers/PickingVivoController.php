@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 /**
- * «Picking en vivo» (desde el Monitor quien administra la droguería, o el televisor con «Pantalla de TV»): cada despachador con su pedido, su avance, el producto
+ * «Picking en vivo» (desde el Monitor, solo quien administra la droguería): cada despachador con su pedido, su avance, el producto
  * que está buscando y el que sigue, y en el Almacén 3D dónde está cada uno.
  *
  * Igual que el monitor, la pantalla no se refresca por tiempo: escucha el canal
@@ -32,7 +32,7 @@ class PickingVivoController extends Controller
         return view('monitor.picking', [
             'codisb' => $usuario->codisb,
             'cfg' => $usuario->cfg,
-            // El televisor («Pantalla de TV») no entra al Monitor: sin el enlace de regreso.
+            // El jefe con solo «Indicadores del almacén» no entra al Monitor: sin el enlace de regreso.
             'conMonitor' => MenuSides::puede($usuario, $usuario->cfg, 'monitor'),
             'urls' => [
                 'datos' => route('monitor.picking.datos'),

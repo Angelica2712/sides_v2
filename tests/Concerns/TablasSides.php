@@ -21,7 +21,7 @@ trait TablasSides
     private const FLAGS_USUARIO = [
         'activarMonitor', 'activarPicking', 'activarPacking', 'activarUsuario', 'activarConfig',
         'eliminarPedido', 'activarResetear', 'activarPedido', 'activarResumen', 'activarInformes',
-        'activarGuiaCarga', 'activarGuiaDescarga', 'activarLiberarAlcabala', 'activarEtiquetas', 'activarUbicaciones', 'activarAlmacen', 'activarTv', 'activarIndicadores', 'activarAdmin',
+        'activarGuiaCarga', 'activarGuiaDescarga', 'activarLiberarAlcabala', 'activarEtiquetas', 'activarUbicaciones', 'activarAlmacen', 'activarIndicadores', 'activarAdmin',
     ];
 
     protected function crearTablasSides(): void
@@ -74,14 +74,6 @@ trait TablasSides
             $table->string('logoForma', 10)->default('cuadro');
             $table->string('logoTamano', 10)->default('mediano');
             $table->tinyInteger('pickingSiguienteParte')->default(0);
-            // Vista «Alertas» de los televisores (MonitorAlertasService).
-            foreach ([
-                'alertaLimiteEsperaMin' => 0, 'alertaLimitePickingMin' => 0, 'alertaLimitePackingMin' => 0,
-                'alertaTolerancia' => 50, 'alertaUmbralAviso' => 10, 'alertaUmbralAlerta' => 20,
-                'alertaVentanaDias' => 30, 'alertaMuestraMinima' => 20, 'alertaMuestraMinimaHoy' => 3,
-            ] as $columna => $defecto) {
-                $table->integer($columna)->default($defecto);
-            }
         });
 
         Schema::create('sides_users', function (Blueprint $table) {
@@ -141,36 +133,6 @@ trait TablasSides
             $table->string('usuario', 150)->nullable();
             $table->timestamps();
             $table->unique(['codisb', 'codprod']);
-        });
-
-        Schema::create('sides_monitor_tv', function (Blueprint $table) {
-            $table->id();
-            $table->string('app_uuid', 36)->unique();
-            $table->string('estado', 20)->default('PENDIENTE');
-            $table->string('codigo', 6)->nullable();
-            $table->dateTime('codigo_expira')->nullable();
-            $table->string('plataforma', 64)->nullable();
-            $table->string('app_version', 32)->nullable();
-            $table->string('codisb', 20)->nullable();
-            $table->string('alias', 100)->nullable();
-            $table->unsignedBigInteger('usuario_id')->nullable();
-            $table->tinyInteger('vistaMonitor')->default(1);
-            $table->tinyInteger('vistaAlertas')->default(0);
-            $table->tinyInteger('vistaPicking')->default(0);
-            $table->string('token_hash', 64)->nullable()->unique();
-            $table->text('token_entrega')->nullable();
-            $table->unsignedBigInteger('aprobado_por')->nullable();
-            $table->dateTime('aprobado_at')->nullable();
-            $table->dateTime('last_seen_at')->nullable();
-            $table->timestamps();
-        });
-
-        Schema::create('sides_monitor_tv_log', function (Blueprint $table) {
-            $table->id();
-            $table->unsignedBigInteger('monitor_tv_id')->nullable();
-            $table->string('ip', 45)->nullable();
-            $table->smallInteger('status_code');
-            $table->dateTime('created_at');
         });
 
         Schema::create('sides_monitor', function (Blueprint $table) {

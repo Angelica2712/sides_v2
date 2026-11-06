@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Broadcast;
  * REVERB_APP_SECRET, que las dos aplicaciones comparten.
  *
  * Misma regla que protege las rutas /monitor (`permiso:monitor`) y /monitor/picking
- * (`permiso:pickingvivo`, también el televisor con «Pantalla de TV»), más la sucursal: un
+ * (`permiso:pickingvivo`, también el jefe con «Indicadores del almacén»), más la sucursal: un
  * usuario solo escucha los pedidos de su propia droguería.
  */
 Broadcast::channel('sides-monitor.{codisb}', function ($usuario, string $codisb) {

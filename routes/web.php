@@ -26,7 +26,6 @@ use App\Http\Controllers\ResumenController;
 use App\Http\Controllers\RetenidosController;
 use App\Http\Controllers\RutasController;
 use App\Http\Controllers\SsoController;
-use App\Http\Controllers\TelevisoresController;
 use App\Http\Controllers\UbicacionesController;
 use App\Http\Controllers\UsuariosController;
 use App\Http\Controllers\VehiculosController;
@@ -64,12 +63,12 @@ Route::middleware('auth')->group(function () {
     });
 
     // Picking en vivo: cada despachador con su avance y su lugar en el Almacén 3D. Quien administra
-    // la droguería (Monitor + Configuración) o el televisor con «Pantalla de TV», que no entra al
-    // Monitor; los demás usuarios del monitor no lo ven. Todo es de lectura.
+    // la droguería (Monitor + Configuración) o el jefe con «Indicadores del almacén», desde el Inicio;
+    // los demás usuarios del monitor no lo ven. Todo es de lectura.
     Route::middleware('permiso:pickingvivo')->group(function () {
         Route::get('monitor/picking', [PickingVivoController::class, 'index'])->name('monitor.picking');
         Route::get('monitor/picking/datos', [PickingVivoController::class, 'datos'])->name('monitor.picking.datos');
-        // El plano del Almacén 3D para esta pantalla, sin pedir el permiso del Almacén 3D al televisor.
+        // El plano del Almacén 3D para esta pantalla, sin pedir el permiso del Almacén 3D.
         Route::get('monitor/picking/plano', [PickingVivoController::class, 'plano'])->middleware('permiso:mapavivo')->name('monitor.picking.plano');
     });
 
@@ -220,20 +219,6 @@ Route::middleware('auth')->group(function () {
             Route::get('{filtro}', 'edit')->name('edit');
             Route::put('{filtro}', 'update')->name('update');
             Route::delete('{filtro}', 'destroy')->name('destroy');
-        });
-
-    // Televisores de la droguería (app de TV): los vincula quien administra la droguería.
-    // La API que usan las TVs está en routes/api.php.
-    Route::prefix('televisores')->name('televisores.')->middleware('permiso:configuracion')
-        ->controller(TelevisoresController::class)->whereNumber('tv')
-        ->group(function () {
-            Route::get('/', 'index')->name('index');
-            Route::get('vincular', 'create')->middleware('throttle:30,1')->name('create');
-            Route::post('/', 'store')->middleware('throttle:30,1')->name('store');
-            Route::post('purgar', 'purgar')->name('purgar');
-            Route::get('{tv}', 'edit')->name('edit');
-            Route::put('{tv}', 'update')->name('update');
-            Route::delete('{tv}', 'destroy')->name('destroy');
         });
 
     // Reportes de operaciones, para el jefe de operaciones o del almacén (Informes o «Indicadores del almacén»).

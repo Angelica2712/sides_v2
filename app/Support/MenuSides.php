@@ -85,11 +85,10 @@ class MenuSides
         return match ($clave) {
             'monitor' => (bool) $usuario->activarMonitor,
             // «Picking en vivo» (no sale en el menú, se entra desde el Monitor): quien administra la
-            // droguería, o el usuario del televisor con «Pantalla de TV», que solo ve esa pantalla.
-            // El jefe con «Indicadores del almacén» lo ve en el Inicio.
-            'pickingvivo' => ($usuario->activarMonitor && $usuario->activarConfig) || $usuario->activarTv || $usuario->activarIndicadores,
-            // El Almacén 3D dentro de «Picking en vivo»: el televisor y el jefe lo traen sin el permiso del Almacén 3D.
-            'mapavivo' => $usuario->activarAlmacen || $usuario->activarTv || $usuario->activarIndicadores,
+            // droguería. El jefe con «Indicadores del almacén» lo ve en el Inicio.
+            'pickingvivo' => ($usuario->activarMonitor && $usuario->activarConfig) || $usuario->activarIndicadores,
+            // El Almacén 3D dentro de «Picking en vivo»: el jefe lo trae sin el permiso del Almacén 3D.
+            'mapavivo' => $usuario->activarAlmacen || $usuario->activarIndicadores,
             // El Inicio con los tiempos promedio, el almacén en vivo y el desempeño de la droguería.
             'indicadores' => (bool) $usuario->activarIndicadores,
             'picking', 'batch' => (bool) $usuario->activarPicking,

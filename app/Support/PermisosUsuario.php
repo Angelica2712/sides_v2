@@ -18,7 +18,6 @@ class PermisosUsuario
             'activarEtiquetas' => ['Etiquetas', 'Imprime las etiquetas de los bultos.'],
             'activarAlmacen' => ['Almacén 3D', 'Ve el almacén en 3D y dónde está cada producto, también como mapa en el picking.'],
             'activarUbicaciones' => ['Registrar ubicaciones', 'Registra desde el teléfono dónde está cada producto y numera los pasillos y anaqueles del almacén. Necesita también Almacén 3D.'],
-            'activarTv' => ['Pantalla de TV', 'Para el televisor de la droguería: ve «Picking en vivo» con el Almacén 3D y no puede cambiar nada. Dale solo este permiso. La app de TV se vincula a este usuario en Configuración → Televisores.'],
         ],
         'Pedidos' => [
             'activarPedido' => ['Pedidos', 'Consulta y modifica pedidos.'],

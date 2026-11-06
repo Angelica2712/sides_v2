@@ -17,12 +17,6 @@ class HomeController extends Controller
         $cfg = $usuario->cfg;
         $modulos = MenuSides::visibles($usuario, $cfg);
 
-        // El televisor («Pantalla de TV») no tiene módulos en el menú: entra directo a su pantalla.
-        // El jefe con solo «Indicadores del almacén» tampoco tiene módulos, pero se queda en el Inicio.
-        if (! $modulos && ! self::veIndicadores($request) && MenuSides::puede($usuario, $cfg, 'pickingvivo')) {
-            return redirect()->route('monitor.picking');
-        }
-
         $conVivo = MenuSides::puede($usuario, $cfg, 'pickingvivo');
 
         return view('home', [
