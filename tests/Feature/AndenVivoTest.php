@@ -69,6 +69,17 @@ class AndenVivoTest extends TestCase
             ->assertJsonPath('camiones.1.cargados', 0);
     }
 
+    public function test_la_guia_sin_carro_sale_en_el_anden_con_su_numero(): void
+    {
+        $this->crearCfg([], ['guias']);
+        $this->guia(7, 'NUEVO', [[100, 'FARMACIA UNO', false]]);
+        SidesGuia::query()->whereKey(7)->update(['unidad' => null]);
+
+        $this->actingAs($this->admin)->getJson('/monitor/picking/datos')
+            ->assertJsonPath('camiones.0.placa', 'Guía #7')
+            ->assertJsonPath('camiones.0.unidad', '');
+    }
+
     public function test_sin_el_modulo_guias_no_hay_anden(): void
     {
         $this->crearCfg([], []);

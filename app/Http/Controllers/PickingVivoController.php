@@ -146,8 +146,8 @@ class PickingVivoController extends Controller
 
                 return [
                     'guia' => (int) $guia->id,
-                    // La placa es lo primero de sides_guia.unidad («ABC123 - Camión blanco»).
-                    'placa' => trim(explode(' - ', (string) $guia->unidad)[0]) ?: 'Sin placa',
+                    // La placa es lo primero de sides_guia.unidad («ABC123 - Camión blanco»); sin carro, la guía.
+                    'placa' => trim(explode(' - ', (string) $guia->unidad)[0]) ?: "Guía #{$guia->id}",
                     'unidad' => (string) $guia->unidad,
                     'chofer' => (string) $guia->nomchofer,
                     'ruta' => (string) $guia->ruta,

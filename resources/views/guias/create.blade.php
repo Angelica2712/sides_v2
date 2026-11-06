@@ -24,16 +24,13 @@
                 </div>
             @endif
 
-            @if ($choferes->isEmpty() || $rutas->isEmpty() || $vehiculos->isEmpty())
+            @if ($choferes->isEmpty() || $rutas->isEmpty())
                 <p class="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900 ring-1 ring-amber-200">
                     @if ($choferes->isEmpty())
                         La sucursal no tiene choferes: se cargan en SEPED.
                     @endif
                     @if ($rutas->isEmpty())
                         La sucursal no tiene rutas. <a href="{{ route('rutas.index') }}" class="font-semibold underline">Crea una en Rutas</a>.
-                    @endif
-                    @if ($vehiculos->isEmpty())
-                        La sucursal no tiene carros. <a href="{{ route('vehiculos.index') }}" class="font-semibold underline">Regístralos en Carros</a>.
                     @endif
                 </p>
             @endif
@@ -62,13 +59,16 @@
                     <input id="fecha" name="fecha" type="datetime-local" required value="{{ old('fecha', now()->format('Y-m-d\TH:i')) }}" class="{{ $campo }}">
                 </div>
                 <div class="sm:col-span-2">
-                    <label for="vehiculo" class="block text-sm font-semibold text-slate-700">Carro</label>
-                    <select id="vehiculo" name="vehiculo" required class="{{ $campo }}">
-                        <option value="">Elige el carro</option>
+                    <label for="vehiculo" class="block text-sm font-semibold text-slate-700">Carro <span class="font-normal text-slate-500">(opcional)</span></label>
+                    <select id="vehiculo" name="vehiculo" class="{{ $campo }}">
+                        <option value="">Sin carro</option>
                         @foreach ($vehiculos as $vehiculo)
                             <option value="{{ $vehiculo->id }}" @selected((string) old('vehiculo') === (string) $vehiculo->id)>{{ $vehiculo->etiqueta() }}</option>
                         @endforeach
                     </select>
+                    @if ($vehiculos->isEmpty())
+                        <p class="mt-1 text-xs text-slate-500">No hay carros registrados. Si la droguería los asigna a la guía, <a href="{{ route('vehiculos.index') }}" class="font-semibold underline">regístralos en Carros</a>.</p>
+                    @endif
                 </div>
             </div>
 

@@ -90,7 +90,20 @@ class GuiasTest extends TestCase
         return SidesVehiculo::query()->create(array_merge(['codisb' => '505094939', 'placa' => 'XYZ789'], $atributos));
     }
 
-    public function test_la_guia_exige_un_carro_de_la_sucursal_y_lo_imprime(): void
+    public function test_la_guia_sin_carro_para_las_droguerias_que_no_lo_asignan(): void
+    {
+        $this->actingAs($this->usuario)->get('/guias/nueva')->assertOk()->assertSee('Sin carro');
+
+        $this->post('/guias', ['fecha' => '2026-09-16T08:00', 'chofer' => 'CH1', 'ruta' => $this->ruta->id, 'vehiculo' => ''])
+            ->assertSessionHasNoErrors()->assertRedirect();
+
+        $guia = SidesGuia::query()->latest('id')->firstOrFail();
+        $this->assertSame([null, null], [$guia->id_vehiculo, $guia->unidad]);
+        $this->get("/guias/{$guia->id}")->assertOk();
+        $this->get("/guias/{$guia->id}/imprimir")->assertOk();
+    }
+
+    public function test_si_se_elige_carro_es_de_la_sucursal_y_se_imprime(): void
     {
         $ajeno = $this->otroCarro(['codisb' => 'OTRA', 'placa' => 'AJENO1']);
         $inactivo = $this->otroCarro(['placa' => 'VIEJO1', 'activo' => 0]);
@@ -99,7 +112,6 @@ class GuiasTest extends TestCase
         $this->actingAs($this->usuario)->get('/guias/nueva')->assertOk()
             ->assertSee('ABC123 - NPR BLANCO')->assertDontSee('AJENO1')->assertDontSee('VIEJO1');
 
-        $this->post('/guias', $base)->assertSessionHasErrors(['vehiculo' => 'Elige el carro.']);
         $this->post('/guias', $base + ['vehiculo' => $ajeno->id])->assertSessionHas('error', 'Elige un carro de la lista.');
         $this->post('/guias', $base + ['vehiculo' => $inactivo->id])->assertSessionHas('error', 'Elige un carro de la lista.');
         $this->assertSame(0, SidesGuia::query()->count());

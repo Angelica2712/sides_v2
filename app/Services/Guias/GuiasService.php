@@ -86,13 +86,16 @@ class GuiasService
             ->orderBy('placa')->get();
     }
 
-    /** Crea la guía de una ruta con los pedidos facturados (y etiquetados) de sus clientes. */
-    public function crear(string $codisb, string $fecha, string $chofer, int $rutaId, int $vehiculoId): SidesGuia
+    /**
+     * Crea la guía de una ruta con los pedidos facturados (y etiquetados) de sus clientes. El carro
+     * es opcional: hay droguerías que no lo asignan a la guía.
+     */
+    public function crear(string $codisb, string $fecha, string $chofer, int $rutaId, ?int $vehiculoId = null): SidesGuia
     {
         $ruta = SidesRuta::query()->where('codisb', $codisb)->find($rutaId)
             ?? throw new GuiasException('Elige una ruta de la lista.');
         $datosChofer = $this->chofer($codisb, $chofer);
-        $vehiculo = $this->vehiculo($codisb, $vehiculoId);
+        $vehiculo = $vehiculoId !== null ? $this->vehiculo($codisb, $vehiculoId) : null;
 
         // Los clientes que retiran en local no van en la guía.
         $clientes = SidesRutaren::query()->where('id', $ruta->id)->where('retiraLocal', 0)->get()->keyBy('codcli');
@@ -109,8 +112,8 @@ class GuiasService
                 'codisb' => $codisb,
                 'estado' => 'NUEVO',
                 'ruta' => $ruta->nombre,
-                'id_vehiculo' => $vehiculo->id,
-                'unidad' => $vehiculo->etiqueta(),
+                'id_vehiculo' => $vehiculo?->id,
+                'unidad' => $vehiculo?->etiqueta(),
             ]);
 
             $this->asignarPedidos($guia, $pedidos, $clientes);

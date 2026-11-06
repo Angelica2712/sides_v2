@@ -60,7 +60,8 @@ class GuiasController extends Controller
             'fecha' => ['required', 'date'],
             'chofer' => ['required', 'string'],
             'ruta' => ['required', 'integer'],
-            'vehiculo' => ['required', 'integer'],
+            // Opcional: hay droguerías que no asignan el carro a la guía.
+            'vehiculo' => ['nullable', 'integer'],
         ], [
             'fecha.*' => 'Escribe la fecha de la guía.',
             'chofer.required' => 'Elige el chofer.',
@@ -69,7 +70,8 @@ class GuiasController extends Controller
         ]);
 
         try {
-            $guia = $this->guias->crear($request->user()->codisb, $datos['fecha'], $datos['chofer'], (int) $datos['ruta'], (int) $datos['vehiculo']);
+            $vehiculo = filled($datos['vehiculo'] ?? null) ? (int) $datos['vehiculo'] : null;
+            $guia = $this->guias->crear($request->user()->codisb, $datos['fecha'], $datos['chofer'], (int) $datos['ruta'], $vehiculo);
         } catch (GuiasException $e) {
             return back()->withInput()->with('error', $e->getMessage());
         }
