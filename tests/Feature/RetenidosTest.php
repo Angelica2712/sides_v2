@@ -183,6 +183,55 @@ class RetenidosTest extends TestCase
         $this->assertSame('LIBERADA', $retencion->fresh()->estado);
     }
 
+    public function test_los_pedidos_unidos_pueden_ir_en_un_solo_bulto(): void
+    {
+        $this->pedidoListo(800);
+        $this->pedidoListo(801);
+        $this->pedidoListo(802);
+        $this->terminarRetenido(800);
+        $this->terminarRetenido(801);
+        $this->terminarRetenido(802);
+        $retencion = SidesRetencion::query()->firstOrFail();
+
+        $this->get('/retenidos')->assertOk()->assertSee('un solo pedido');
+
+        // Todo en 0 no sale.
+        $this->post("/retenidos/{$retencion->id}/liberar", ['bultos' => [800 => 0, 801 => 0, 802 => 0]])
+            ->assertSessionHas('error', 'Los pedidos unidos tienen que salir con al menos 1 bulto en total.');
+        $this->assertSame('PACKING', Pedido::query()->find(800)->estado);
+
+        // Solo uno, tampoco con 0.
+        $this->post("/retenidos/{$retencion->id}/liberar", ['pedido' => 801, 'bultos' => [801 => 0]])
+            ->assertSessionHas('error', 'El pedido #801 tiene que salir con al menos 1 bulto.');
+
+        $this->post("/retenidos/{$retencion->id}/liberar", ['bultos' => [800 => 1, 801 => 0, 802 => 0]])
+            ->assertSessionHas('mensaje', 'Los pedidos #801, #802 se unieron al #800, que se envió a facturar.');
+
+        $this->assertSame(['PEND-FACTURA', 'ANULADO', 'ANULADO'], Pedido::query()->orderBy('id')->pluck('estado')->all());
+        $this->assertSame('1', DB::table('sides_pedido_operacion')->where('id_pedido', 800)->value('cantBultos'));
+    }
+
+    public function test_unificar_bultos_deja_el_pedido_unido_con_esa_cantidad(): void
+    {
+        $this->pedidoListo(800);
+        $this->pedidoListo(801);
+        $this->pedidoListo(802);
+        $this->terminarRetenido(800);
+        $this->terminarRetenido(801);
+        $this->terminarRetenido(802);
+        $retencion = SidesRetencion::query()->firstOrFail();
+
+        $this->get('/retenidos')->assertOk()->assertSee('Unificar bultos');
+
+        $this->post("/retenidos/{$retencion->id}/liberar", ['total' => 0])->assertSessionHasErrors('total');
+
+        // Con «Unificar bultos» los bultos por pedido no se envían: manda el total.
+        $this->post("/retenidos/{$retencion->id}/liberar", ['total' => 1])
+            ->assertSessionHas('mensaje', 'Los pedidos #801, #802 se unieron al #800, que se envió a facturar.');
+
+        $this->assertSame('1', DB::table('sides_pedido_operacion')->where('id_pedido', 800)->value('cantBultos'));
+    }
+
     public function test_el_pedido_que_cambia_de_estado_sale_de_la_retencion(): void
     {
         $this->pedidoListo(800);

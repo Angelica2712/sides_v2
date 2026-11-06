@@ -33,14 +33,18 @@ class RetenidosController extends Controller
         $datos = $request->validate([
             'pedido' => ['nullable', 'integer'],
             'bultos' => ['nullable', 'array'],
-            'bultos.*' => ['nullable', 'integer', 'min:1', 'max:'.EtiquetasService::MAX_BULTOS],
-        ], ['bultos.*' => 'Los bultos deben ser un número entre 1 y '.EtiquetasService::MAX_BULTOS.'.']);
+            // «Unificar bultos»: todos los pedidos que se unen van juntos en esta cantidad.
+            'total' => ['nullable', 'integer', 'min:1', 'max:'.EtiquetasService::MAX_BULTOS],
+            // 0 vale: los pedidos que se unen pueden ir en el bulto de otro. El total lo revisa RetencionService.
+            'bultos.*' => ['nullable', 'integer', 'min:0', 'max:'.EtiquetasService::MAX_BULTOS],
+        ], ['total' => 'Los bultos deben ser un número entre 1 y '.EtiquetasService::MAX_BULTOS.'.', 'bultos.*' => 'Los bultos deben ser un número entre 0 y '.EtiquetasService::MAX_BULTOS.'.']);
 
         $usuario = $request->user();
 
         try {
             $liberado = $this->retencion->liberar(
-                $usuario, $retencion, $datos['bultos'] ?? [], isset($datos['pedido']) ? (int) $datos['pedido'] : null
+                $usuario, $retencion, $datos['bultos'] ?? [], isset($datos['pedido']) ? (int) $datos['pedido'] : null,
+                isset($datos['total']) ? (int) $datos['total'] : null,
             );
         } catch (PackingException $e) {
             return back()->with('error', $e->getMessage());

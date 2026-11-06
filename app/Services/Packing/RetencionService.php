@@ -7,6 +7,7 @@ use App\Models\Sides\SidesRetencion;
 use App\Models\Sides\SidesRetencionRen;
 use App\Models\Sides\SidesUsers;
 use App\Services\Despacho\DespachoSeped;
+use App\Services\Etiquetas\EtiquetasService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -152,11 +153,12 @@ class RetencionService
      * retenidos; si salen dos o más a la vez se funden en uno.
      *
      * @param  array<int|string, string|null>  $bultos  bultos por pedido: al anexar suelen cambiar
+     * @param  int|null  $bultosUnificados  «Unificar bultos»: los pedidos van juntos en esta cantidad, en vez de sumar $bultos
      * @return array{pedido: int, unidos: list<int>} el pedido que sale a facturar y los que se fundieron en él
      */
-    public function liberar(SidesUsers $usuario, int $retencionId, array $bultos = [], ?int $pedidoId = null): array
+    public function liberar(SidesUsers $usuario, int $retencionId, array $bultos = [], ?int $pedidoId = null, ?int $bultosUnificados = null): array
     {
-        return DB::transaction(function () use ($usuario, $retencionId, $bultos, $pedidoId) {
+        return DB::transaction(function () use ($usuario, $retencionId, $bultos, $pedidoId, $bultosUnificados) {
             $retencion = SidesRetencion::query()->where('codisb', $usuario->codisb)->whereKey($retencionId)->lockForUpdate()->first();
             if (! $retencion || $retencion->estado !== 'ABIERTA') {
                 throw new PackingException('Esa retención ya no está abierta.');
@@ -177,7 +179,16 @@ class RetencionService
             $ids = $pedidos->pluck('id')->map(fn ($id) => (int) $id)->values()->all();
             $final = $pedidos->first();
             $unidos = $pedidos->slice(1)->values();
-            $totalBultos = $this->totalBultos($ids, $bultos);
+            // Al enviar uno solo no hay nada que unificar: cuentan sus propios bultos.
+            $totalBultos = $bultosUnificados !== null && $pedidoId === null ? $bultosUnificados : $this->totalBultos($ids, $bultos);
+            if ($totalBultos < 1) {
+                throw new PackingException($unidos->isEmpty()
+                    ? "El pedido #{$final->id} tiene que salir con al menos 1 bulto."
+                    : 'Los pedidos unidos tienen que salir con al menos 1 bulto en total.');
+            }
+            if ($totalBultos > EtiquetasService::MAX_BULTOS) {
+                throw new PackingException('Los pedidos unidos suman '.$totalBultos.' bultos y el máximo es '.EtiquetasService::MAX_BULTOS.'.');
+            }
 
             foreach ($unidos as $unido) {
                 $this->fundir($final, $unido, $usuario, $ahora);
@@ -186,9 +197,7 @@ class RetencionService
             Pedido::query()->whereKey($final->id)->update(['estado' => 'PEND-FACTURA', 'feccompletado' => $ahora]);
             $this->despachoSeped->escribir($final->id);
 
-            if ($totalBultos > 0) {
-                DB::table('sides_pedido_operacion')->where('id_pedido', $final->id)->update(['cantBultos' => (string) $totalBultos]);
-            }
+            DB::table('sides_pedido_operacion')->where('id_pedido', $final->id)->update(['cantBultos' => (string) $totalBultos]);
 
             SidesRetencionRen::query()->where('id_retencion', $retencion->id)->whereIn('id_pedido', $ids)->whereNull('fec_liberado')->update(['fec_liberado' => $ahora]);
 
@@ -249,7 +258,8 @@ class RetencionService
     }
 
     /**
-     * Bultos del pedido fundido: los que escribieron al liberar o, si no, los de su packing.
+     * Bultos del pedido fundido: los que escribieron al liberar o, si no, los de su packing. Un 0 es
+     * válido: ese pedido va dentro del bulto de otro del mismo cliente.
      *
      * @param  list<int>  $ids
      */
@@ -257,7 +267,11 @@ class RetencionService
     {
         $guardados = DB::table('sides_pedido_operacion')->whereIn('id_pedido', $ids)->pluck('cantBultos', 'id_pedido');
 
-        return (int) collect($ids)->sum(fn (int $id) => (int) (trim((string) ($bultos[$id] ?? '')) ?: $guardados->get($id)));
+        return (int) collect($ids)->sum(function (int $id) use ($bultos, $guardados) {
+            $escrito = trim((string) ($bultos[$id] ?? ''));
+
+            return max(0, (int) ($escrito !== '' ? $escrito : $guardados->get($id)));
+        });
     }
 
     /** Pasa los renglones de $unido a $final, suma la cabecera y deja a $unido anulado con la referencia. */

@@ -14,7 +14,8 @@
         </div>
 
         @forelse ($retenciones as $retencion)
-            <form method="POST" action="{{ route('retenidos.liberar', $retencion->id) }}" class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 sm:p-5">
+            <form method="POST" action="{{ route('retenidos.liberar', $retencion->id) }}" class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 sm:p-5"
+                  x-data="{ bultos: {{ Js::from($retencion->pedidos->mapWithKeys(fn ($p) => [$p->id => (int) $p->cantBultos ?: 1])) }}, unificado: false, unico: 1, get total() { return Object.values(this.bultos).reduce((s, n) => s + (parseInt(n, 10) || 0), 0) } }">
                 @csrf
                 <div class="flex flex-wrap items-start justify-between gap-3">
                     <div class="min-w-0">
@@ -58,13 +59,13 @@
                                     <td class="py-2 pr-3 whitespace-nowrap">{{ $fecha($pedido->retenido_desde) }}</td>
                                     <td class="py-2 pr-3">
                                         <label for="bultos-{{ $pedido->id }}" class="sr-only">Bultos del pedido {{ $pedido->id }}</label>
-                                        <input id="bultos-{{ $pedido->id }}" name="bultos[{{ $pedido->id }}]" type="number" min="1" max="999" inputmode="numeric"
-                                               value="{{ (int) $pedido->cantBultos ?: 1 }}"
-                                               class="w-20 rounded-lg border-slate-300 px-2 py-1 text-sm shadow-sm focus:border-primary focus:ring-primary">
+                                        <input id="bultos-{{ $pedido->id }}" name="bultos[{{ $pedido->id }}]" type="number" min="{{ $retencion->pedidos->count() > 1 ? 0 : 1 }}" max="999" inputmode="numeric"
+                                               value="{{ (int) $pedido->cantBultos ?: 1 }}" x-model="bultos[{{ $pedido->id }}]" :disabled="unificado"
+                                               class="w-20 rounded-lg disabled:bg-slate-100 disabled:text-slate-400 border-slate-300 px-2 py-1 text-sm shadow-sm focus:border-primary focus:ring-primary">
                                     </td>
                                     <td class="py-2 text-right">
                                         @if ($retencion->pedidos->count() > 1)
-                                            <button type="submit" name="pedido" value="{{ $pedido->id }}" class="whitespace-nowrap rounded-lg px-2 py-1 text-xs font-semibold text-primary-ink hover:bg-slate-100">Enviar solo este</button>
+                                            <button type="submit" name="pedido" value="{{ $pedido->id }}" x-show="!unificado" class="whitespace-nowrap rounded-lg px-2 py-1 text-xs font-semibold text-primary-ink hover:bg-slate-100">Enviar solo este</button>
                                         @endif
                                     </td>
                                 </tr>
@@ -72,6 +73,31 @@
                         </tbody>
                     </table>
                 </div>
+
+                @if ($retencion->pedidos->count() > 1)
+                    <div x-show="!unificado" class="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-slate-50 px-3 py-2 ring-1 ring-slate-200">
+                        <p class="text-sm text-slate-600">
+                            Al unirlos salen como <strong>un solo pedido</strong> con
+                            <strong class="tabular-nums" x-text="total + (total === 1 ? ' bulto' : ' bultos')"></strong>.
+                            <span x-show="total < 1" x-cloak class="font-semibold text-red-700">Tiene que salir con al menos 1 bulto.</span>
+                        </p>
+                        <button type="button" @click="unificado = true; $nextTick(() => $refs.unico.select())"
+                                class="whitespace-nowrap rounded-lg bg-white px-3 py-1.5 text-sm font-bold text-primary-ink ring-1 ring-slate-300 hover:bg-slate-100">
+                            Unificar bultos
+                        </button>
+                    </div>
+                    <div x-show="unificado" x-cloak class="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-emerald-50 px-3 py-2 ring-1 ring-emerald-200">
+                        <label class="flex flex-wrap items-center gap-2 text-sm font-semibold text-emerald-900">
+                            Todos los pedidos van juntos en
+                            <input x-ref="unico" name="total" type="number" min="1" max="999" inputmode="numeric" x-model="unico" :disabled="!unificado"
+                                   class="w-20 rounded-lg border-emerald-300 px-2 py-1 text-sm shadow-sm focus:border-primary focus:ring-primary">
+                            <span x-text="parseInt(unico, 10) === 1 ? 'bulto' : 'bultos'"></span>
+                        </label>
+                        <button type="button" @click="unificado = false" class="whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-semibold text-slate-600 hover:bg-white">
+                            Deshacer
+                        </button>
+                    </div>
+                @endif
             </form>
         @empty
             <div class="rounded-2xl bg-white p-8 text-center shadow-sm ring-1 ring-slate-200">
