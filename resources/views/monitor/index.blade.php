@@ -52,7 +52,7 @@
                     </div>
                 @endif
 
-                {{-- Picking en vivo: quien administra la droguería (Monitor + Configuración). --}}
+                {{-- Picking en vivo: quien administra la droguería (permiso de Configuración) o la Pantalla de TV. --}}
                 @if (\App\Support\MenuSides::puede(auth()->user(), $cfg, 'pickingvivo'))
                     <a href="{{ route('monitor.picking') }}"
                        class="flex items-center gap-1.5 rounded-xl bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50">

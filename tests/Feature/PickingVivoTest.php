@@ -60,6 +60,58 @@ class PickingVivoTest extends TestCase
             ->assertSee('sides-monitor.505094939');
     }
 
+    public function test_el_televisor_solo_ve_picking_en_vivo_con_el_mapa(): void
+    {
+        $tv = $this->crearUsuario(['name' => 'TV Almacén', 'email' => 'tv@example.com', 'activarTv' => 1]);
+
+        // Entra directo a su pantalla, sin el enlace al Monitor y con el plano propio de la pantalla.
+        $this->actingAs($tv)->get('/home')->assertRedirect('/monitor/picking');
+        $this->actingAs($tv)->get('/monitor/picking')
+            ->assertOk()
+            ->assertSee('sides-monitor.505094939')
+            ->assertViewHas('urls', fn (array $urls) => $urls['plano'] === route('monitor.picking.plano'))
+            ->assertDontSee('← Monitor');
+        $this->actingAs($tv)->getJson('/monitor/picking/datos')->assertOk()->assertJsonPath('operarios.0.pedido', 500);
+        $this->actingAs($tv)->getJson('/monitor/picking/plano')->assertOk()->assertJsonStructure(['zonas', 'config']);
+
+        // Nada más: ni el Monitor, ni el Almacén 3D, ni cambiar la letra del monitor.
+        $this->actingAs($tv)->get('/monitor')->assertForbidden();
+        $this->actingAs($tv)->get('/almacen')->assertForbidden();
+        $this->actingAs($tv)->getJson('/almacen/plano')->assertForbidden();
+        $this->actingAs($tv)->get('/picking')->assertForbidden();
+        $this->actingAs($tv)->put('/monitor/letra', ['letra' => 16])->assertForbidden();
+    }
+
+    public function test_el_plano_de_la_pantalla_pide_el_almacen_3d_o_la_pantalla_de_tv(): void
+    {
+        $this->actingAs($this->admin)->getJson('/monitor/picking/plano')->assertForbidden();
+        $this->actingAs($this->admin)->get('/monitor/picking')->assertOk()->assertViewHas('urls', fn (array $urls) => $urls['plano'] === null);
+
+        $this->admin->forceFill(['activarAlmacen' => 1])->save();
+        $this->actingAs($this->admin)->getJson('/monitor/picking/plano')->assertOk();
+    }
+
+    public function test_el_televisor_escucha_el_canal_de_su_drogueria(): void
+    {
+        $tv = $this->crearUsuario(['name' => 'TV Almacén', 'email' => 'tv@example.com', 'activarTv' => 1]);
+
+        // Como en MonitorTest: el broadcaster de verdad, para que se consulte routes/channels.php.
+        config(['broadcasting.default' => 'reverb']);
+        config(['broadcasting.connections.reverb' => [
+            'driver' => 'reverb',
+            'key' => 'clave-de-prueba',
+            'secret' => 'secreto-de-prueba',
+            'app_id' => '1',
+            'options' => ['host' => 'localhost', 'port' => 8080, 'scheme' => 'http', 'useTLS' => false],
+        ]]);
+        require base_path('routes/channels.php');
+
+        $this->actingAs($tv)->post('/broadcasting/auth', ['channel_name' => 'private-sides-monitor.505094939', 'socket_id' => '1234.5678'])
+            ->assertOk();
+        $this->actingAs($tv)->post('/broadcasting/auth', ['channel_name' => 'private-sides-monitor.999999999', 'socket_id' => '1234.5678'])
+            ->assertForbidden();
+    }
+
     public function test_el_boton_del_monitor_solo_sale_para_el_administrador(): void
     {
         $this->actingAs($this->supervisor)->get('/monitor')->assertOk()->assertDontSee('/monitor/picking');

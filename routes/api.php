@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\MonitorTvApiController;
 use App\Http\Controllers\SiadApiController;
 use Illuminate\Support\Facades\Route;
 
@@ -18,3 +19,23 @@ $rutasSiad = function (string $nombre) {
 
 Route::middleware('siad.token')->prefix('siad/{token}')->group(fn () => $rutasSiad('siad'));
 Route::middleware('siad.abierta')->group(fn () => $rutasSiad('siadAbierta'));
+
+/*
+ * API de los televisores de la droguería (la app de TV del compañero, otra aplicación), con el
+ * contrato que tenía en el SIDES de mastranto. La TV se vincula con un código de 6 caracteres que
+ * se aprueba en SIDES → Televisores; después entra con `Authorization: Bearer {token}`.
+ * Ver App\Http\Controllers\MonitorTvApiController.
+ */
+Route::controller(MonitorTvApiController::class)->name('monitorTv.')->group(function () {
+    Route::post('/monitor_solicitar_codigo', 'solicitarCodigo')->name('solicitarCodigo');
+    Route::post('/monitor_estado', 'estado')->middleware('throttle:60,1')->name('estado');
+
+    Route::middleware(['monitor.tv', 'throttle:monitor-tv'])->group(function () {
+        Route::get('/monitor', 'monitor')->name('monitor');
+        Route::get('/monitor_config', 'config')->name('config');
+        Route::get('/monitor_alertas', 'alertas')->name('alertas');
+        Route::get('/monitor_picking', 'picking')->name('picking');
+        Route::get('/monitor_plano', 'plano')->name('plano');
+        Route::post('/monitor_canal', 'canal')->name('canal');
+    });
+});

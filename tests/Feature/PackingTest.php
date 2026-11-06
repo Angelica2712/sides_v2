@@ -30,7 +30,7 @@ class PackingTest extends TestCase
         Carbon::setTestNow('2026-09-15 10:00:00');
 
         $this->crearCfg();
-        $this->empacador = $this->crearUsuario(['name' => 'Eva Empaca', 'email' => 'eva@example.com', 'activarPacking' => 1]);
+        $this->empacador = $this->crearUsuario(['name' => 'Eva Empaca', 'email' => 'eva@example.com', 'activarPacking' => 1, 'activarEtiquetas' => 1]);
     }
 
     protected function tearDown(): void

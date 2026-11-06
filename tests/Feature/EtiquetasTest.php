@@ -27,7 +27,7 @@ class EtiquetasTest extends TestCase
         Carbon::setTestNow('2026-09-15 10:00:00');
 
         $this->crearCfg();
-        $this->usuario = $this->crearUsuario(['name' => 'Eli Etiqueta', 'email' => 'eli@example.com', 'activarMonitor' => 1]);
+        $this->usuario = $this->crearUsuario(['name' => 'Eli Etiqueta', 'email' => 'eli@example.com', 'activarMonitor' => 1, 'activarEtiquetas' => 1]);
     }
 
     protected function tearDown(): void

@@ -14,4 +14,13 @@ return [
     // los más antiguos (sides:depurar-auditoria). 0 = sin máximo, no se borra nada.
     'auditoria_maximo' => (int) env('SIDES_AUDITORIA_MAXIMO', 50000),
 
+    // Servidor Reverb como lo ve un cliente de afuera (el mismo que usa el navegador, VITE_REVERB_*),
+    // que la API del televisor le pasa a la app del TV para conectarse al canal en vivo.
+    'reverb_publico' => [
+        'key' => env('VITE_REVERB_APP_KEY', env('REVERB_APP_KEY')),
+        'host' => env('VITE_REVERB_HOST', env('REVERB_HOST')),
+        'port' => (int) env('VITE_REVERB_PORT', env('REVERB_PORT', 443)),
+        'scheme' => env('VITE_REVERB_SCHEME', env('REVERB_SCHEME', 'https')),
+    ],
+
 ];

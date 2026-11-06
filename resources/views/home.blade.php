@@ -172,9 +172,14 @@
 
                 {{-- Desempeño del almacén --}}
                 <section class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 space-y-4" aria-labelledby="desempeno">
-                    <div>
-                        <h2 id="desempeno" class="text-lg font-extrabold text-slate-900">Desempeño del almacén</h2>
-                        <p class="text-xs text-slate-500" x-text="datos?.etiqueta"></p>
+                    <div class="flex flex-wrap items-start justify-between gap-2">
+                        <div>
+                            <h2 id="desempeno" class="text-lg font-extrabold text-slate-900">Desempeño del almacén</h2>
+                            <p class="text-xs text-slate-500" x-text="datos?.etiqueta"></p>
+                        </div>
+                        @if (\App\Support\MenuSides::puede(auth()->user(), $cfg, 'operaciones'))
+                            <a href="{{ route('operaciones.index') }}" class="text-sm font-bold text-primary-ink hover:underline">Ver reportes de operaciones →</a>
+                        @endif
                     </div>
 
                     <dl class="grid gap-3 grid-cols-2 md:grid-cols-3 {{ $conPacking ? 'xl:grid-cols-6' : 'xl:grid-cols-5' }}">

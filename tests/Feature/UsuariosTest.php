@@ -99,6 +99,28 @@ class UsuariosTest extends TestCase
         ]);
     }
 
+    public function test_el_permiso_de_etiquetas_se_pone_y_se_quita_por_usuario(): void
+    {
+        $nuevo = ['name' => 'Eli', 'email' => 'eli@example.com', 'estado' => 'ACTIVO', 'password' => 'secreta1', 'password_confirmation' => 'secreta1'];
+
+        $this->actingAs($this->jefe)->get('/usuarios/nuevo')->assertSee('name="permisos[activarEtiquetas]"', false);
+
+        // Un usuario nuevo no ve Etiquetas si no se le marca.
+        $this->post('/usuarios', [...$nuevo, 'permisos' => $this->permisos('activarPacking')])->assertRedirect(route('usuarios.index'));
+        $eli = SidesUsers::query()->where('email', 'eli@example.com')->firstOrFail();
+        $this->assertSame(0, (int) $eli->activarEtiquetas);
+        $this->actingAs($eli)->get('/etiquetas')->assertForbidden();
+
+        $datos = ['name' => 'Eli', 'email' => 'eli@example.com', 'estado' => 'ACTIVO'];
+        $this->actingAs($this->jefe)->put("/usuarios/{$eli->id}", [...$datos, 'permisos' => $this->permisos('activarPacking', 'activarEtiquetas')]);
+        $this->assertSame(1, (int) $eli->refresh()->activarEtiquetas);
+        $this->actingAs($eli)->get('/etiquetas')->assertOk();
+
+        $this->actingAs($this->jefe)->put("/usuarios/{$eli->id}", [...$datos, 'permisos' => $this->permisos('activarPacking')]);
+        $this->assertSame(0, (int) $eli->refresh()->activarEtiquetas);
+        $this->actingAs($eli->refresh())->get('/etiquetas')->assertForbidden();
+    }
+
     public function test_nadie_se_deja_sin_acceso_a_si_mismo(): void
     {
         $this->actingAs($this->jefe)->get("/usuarios/{$this->jefe->id}")->assertOk()->assertDontSee('Eliminar usuario');

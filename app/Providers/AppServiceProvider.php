@@ -7,7 +7,10 @@ use App\Services\Auditoria\Auditoria;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -25,6 +28,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // API de los televisores: el límite es por TV (su token), no por IP, porque todas las TVs
+        // de una droguería salen a internet por la misma IP. 240 por minuto = 4 por segundo.
+        RateLimiter::for('monitor-tv', fn (Request $request) => Limit::perMinute(240)
+            ->by('monitor-tv:'.hash('sha256', (string) $request->bearerToken()))
+            ->response(fn () => response()->json(['status' => 429, 'msg' => 'DEMASIADAS SOLICITUDES'], 429)));
+
         // Auditoría de sesiones: entradas, salidas e intentos fallidos (sin guardar la contraseña).
         Event::listen(Login::class, fn (Login $evento) => app(Auditoria::class)->registrar([
             'usuario' => $evento->user,

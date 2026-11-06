@@ -19,6 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'permiso' => \App\Http\Middleware\EnsureSidesPermiso::class,
             'siad.token' => \App\Http\Middleware\VerifySiadApiToken::class,
             'siad.abierta' => \App\Http\Middleware\VerifySiadApiAbierta::class,
+            'monitor.tv' => \App\Http\Middleware\VerifyMonitorTv::class,
             'drogueria.propia' => \App\Http\Middleware\SoloSuDrogueria::class,
         ]);
         $middleware->web(append: [

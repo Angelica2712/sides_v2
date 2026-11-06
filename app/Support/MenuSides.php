@@ -32,6 +32,7 @@ class MenuSides
         'resumen' => ['Resumen', 'resumen', 'chart', 'Resumen de la operación del día.'],
         'usuarios' => ['Usuarios', 'usuarios', 'users', 'Usuarios de SIDES y sus permisos.'],
         'informes' => ['Informes', 'informes', 'invoice', 'Informes de picking y packing.'],
+        'operaciones' => ['Reportes de operaciones', 'reportes', 'barchart', 'Tiempos por día y hora, clientes y rutas, pedidos demorados y el resumen del mes.'],
         'configuracion' => ['Configuración', 'configuracion', 'settings', 'Parámetros de la sucursal.'],
         'guias' => ['Guías', 'guias', 'clipboard', 'Guías de despacho y choferes.'],
         'despacho' => ['Carga y descarga', 'despacho', 'package', 'Carga de bultos al camión y entrega a los clientes.'],
@@ -44,7 +45,7 @@ class MenuSides
     public const SECCIONES = [
         'Operación' => ['monitor', 'picking', 'batch', 'packing', 'retenidos', 'etiquetas', 'almacen'],
         'Despacho' => ['guias', 'despacho', 'rutas'],
-        'Consultas' => ['pedidos', 'resumen', 'informes'],
+        'Consultas' => ['pedidos', 'resumen', 'informes', 'operaciones'],
         'Ajustes' => ['filtromonitor', 'configuracion', 'usuarios', 'admin', 'auditoria'],
     ];
 
@@ -69,7 +70,7 @@ class MenuSides
      * Módulos que dependen de otro con otra clave. "ubicaciones" no sale en el menú: son las
      * pestañas del Almacén 3D para registrar ubicaciones y numerar los anaqueles.
      */
-    private const DEPENDE_DE = ['despacho' => 'guias', 'ubicaciones' => 'almacen', 'pickingvivo' => 'monitor', 'mapavivo' => 'almacen'];
+    private const DEPENDE_DE = ['despacho' => 'guias', 'ubicaciones' => 'almacen', 'pickingvivo' => 'monitor', 'mapavivo' => 'almacen', 'operaciones' => 'informes'];
 
     public static function puede(SidesUsers $usuario, ?SidesCfg $cfg, string $clave): bool
     {
@@ -81,17 +82,14 @@ class MenuSides
             return false;
         }
 
-        // Legacy: un usuario con solo Picking no ve Etiquetas.
-        $soloPicking = ! $usuario->activarMonitor && $usuario->activarPicking && ! $usuario->activarPacking
-            && ! $usuario->activarPedido && ! $usuario->activarUsuario && ! $usuario->activarConfig;
-
         return match ($clave) {
             'monitor' => (bool) $usuario->activarMonitor,
             // «Picking en vivo» (no sale en el menú, se entra desde el Monitor): quien administra la
-            // droguería. El jefe con «Indicadores del almacén» lo ve en el Inicio.
-            'pickingvivo' => ($usuario->activarMonitor && $usuario->activarConfig) || $usuario->activarIndicadores,
-            // El Almacén 3D dentro de «Picking en vivo»: el jefe lo trae sin el permiso del Almacén 3D.
-            'mapavivo' => $usuario->activarAlmacen || $usuario->activarIndicadores,
+            // droguería, o el usuario del televisor con «Pantalla de TV», que solo ve esa pantalla.
+            // El jefe con «Indicadores del almacén» lo ve en el Inicio.
+            'pickingvivo' => ($usuario->activarMonitor && $usuario->activarConfig) || $usuario->activarTv || $usuario->activarIndicadores,
+            // El Almacén 3D dentro de «Picking en vivo»: el televisor y el jefe lo traen sin el permiso del Almacén 3D.
+            'mapavivo' => $usuario->activarAlmacen || $usuario->activarTv || $usuario->activarIndicadores,
             // El Inicio con los tiempos promedio, el almacén en vivo y el desempeño de la droguería.
             'indicadores' => (bool) $usuario->activarIndicadores,
             'picking', 'batch' => (bool) $usuario->activarPicking,
@@ -101,14 +99,17 @@ class MenuSides
             // Registran ubicaciones y numeran el almacén quienes tienen el permiso y quien administra la droguería.
             'ubicaciones' => $usuario->activarUbicaciones || $usuario->activarConfig,
             'packing', 'retenidos' => $usuario->activarPacking && $cfg?->activarPacking,
-            // El interruptor de la droguería (legacy activarEtiPacking) es ahora el módulo opcional.
-            'etiquetas' => ! $usuario->activarGuiaCarga && ! $usuario->activarGuiaDescarga && ! $soloPicking,
+            // El interruptor de la droguería (legacy activarEtiPacking) es ahora el módulo opcional;
+            // quién lo usa lo decide quien administra los usuarios de la droguería.
+            'etiquetas' => (bool) $usuario->activarEtiquetas,
             'pedidos' => (bool) $usuario->activarPedido,
             'filtromonitor', 'configuracion', 'guias', 'rutas' => (bool) $usuario->activarConfig,
             'resumen' => (bool) $usuario->activarResumen,
             'usuarios' => (bool) $usuario->activarUsuario,
             // Permiso propio de dromarko; droactiva y mastranto usaban activarUsuario.
             'informes' => (bool) $usuario->activarInformes,
+            // Los reportes para el jefe de operaciones: quien ve Informes o los indicadores del Inicio.
+            'operaciones' => $usuario->activarInformes || $usuario->activarIndicadores,
             'despacho' => $usuario->activarGuiaCarga || $usuario->activarGuiaDescarga,
             // Administración: FULLTECH360 con todas las droguerías; con el permiso «Administración»,
             // solo la propia (lo limitan el middleware drogueria.propia y AdminController).

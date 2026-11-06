@@ -5,20 +5,29 @@ namespace App\Http\Controllers;
 use App\Services\Inicio\DesempenoAlmacen;
 use App\Support\MenuSides;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class HomeController extends Controller
 {
-    public function __invoke(Request $request): View
+    public function __invoke(Request $request): View|RedirectResponse
     {
         $usuario = $request->user();
         $cfg = $usuario->cfg;
+        $modulos = MenuSides::visibles($usuario, $cfg);
+
+        // El televisor («Pantalla de TV») no tiene módulos en el menú: entra directo a su pantalla.
+        // El jefe con solo «Indicadores del almacén» tampoco tiene módulos, pero se queda en el Inicio.
+        if (! $modulos && ! self::veIndicadores($request) && MenuSides::puede($usuario, $cfg, 'pickingvivo')) {
+            return redirect()->route('monitor.picking');
+        }
+
         $conVivo = MenuSides::puede($usuario, $cfg, 'pickingvivo');
 
         return view('home', [
             'cfg' => $cfg,
-            'modulos' => MenuSides::visibles($usuario, $cfg),
+            'modulos' => $modulos,
             'secciones' => MenuSides::porSeccion($usuario, $cfg),
             'conIndicadores' => self::veIndicadores($request),
             'periodos' => DesempenoAlmacen::PERIODOS,

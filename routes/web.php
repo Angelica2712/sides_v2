@@ -1,11 +1,11 @@
 <?php
 
-use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\AdminAlmacenController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AlmacenController;
 use App\Http\Controllers\ArmarAlmacenController;
 use App\Http\Controllers\AuditoriaController;
+use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\BatchPickingController;
 use App\Http\Controllers\CestasController;
 use App\Http\Controllers\ConfiguracionController;
@@ -16,15 +16,17 @@ use App\Http\Controllers\GuiasController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\InformesController;
 use App\Http\Controllers\ModuloPendienteController;
+use App\Http\Controllers\OperacionesController;
 use App\Http\Controllers\MonitorController;
-use App\Http\Controllers\PickingVivoController;
 use App\Http\Controllers\PackingController;
 use App\Http\Controllers\PedidosController;
 use App\Http\Controllers\PickingController;
+use App\Http\Controllers\PickingVivoController;
 use App\Http\Controllers\ResumenController;
 use App\Http\Controllers\RetenidosController;
 use App\Http\Controllers\RutasController;
 use App\Http\Controllers\SsoController;
+use App\Http\Controllers\TelevisoresController;
 use App\Http\Controllers\UbicacionesController;
 use App\Http\Controllers\UsuariosController;
 use App\Http\Controllers\VehiculosController;
@@ -62,12 +64,12 @@ Route::middleware('auth')->group(function () {
     });
 
     // Picking en vivo: cada despachador con su avance y su lugar en el Almacén 3D. Quien administra
-    // la droguería (Monitor + Configuración) o el jefe con «Indicadores del almacén», desde el Inicio;
-    // los demás usuarios del monitor no lo ven. Todo es de lectura.
+    // la droguería (Monitor + Configuración) o el televisor con «Pantalla de TV», que no entra al
+    // Monitor; los demás usuarios del monitor no lo ven. Todo es de lectura.
     Route::middleware('permiso:pickingvivo')->group(function () {
         Route::get('monitor/picking', [PickingVivoController::class, 'index'])->name('monitor.picking');
         Route::get('monitor/picking/datos', [PickingVivoController::class, 'datos'])->name('monitor.picking.datos');
-        // El plano del Almacén 3D para esta pantalla, sin pedir el permiso del Almacén 3D.
+        // El plano del Almacén 3D para esta pantalla, sin pedir el permiso del Almacén 3D al televisor.
         Route::get('monitor/picking/plano', [PickingVivoController::class, 'plano'])->middleware('permiso:mapavivo')->name('monitor.picking.plano');
     });
 
@@ -220,6 +222,34 @@ Route::middleware('auth')->group(function () {
             Route::delete('{filtro}', 'destroy')->name('destroy');
         });
 
+    // Televisores de la droguería (app de TV): los vincula quien administra la droguería.
+    // La API que usan las TVs está en routes/api.php.
+    Route::prefix('televisores')->name('televisores.')->middleware('permiso:configuracion')
+        ->controller(TelevisoresController::class)->whereNumber('tv')
+        ->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('vincular', 'create')->middleware('throttle:30,1')->name('create');
+            Route::post('/', 'store')->middleware('throttle:30,1')->name('store');
+            Route::post('purgar', 'purgar')->name('purgar');
+            Route::get('{tv}', 'edit')->name('edit');
+            Route::put('{tv}', 'update')->name('update');
+            Route::delete('{tv}', 'destroy')->name('destroy');
+        });
+
+    // Reportes de operaciones, para el jefe de operaciones o del almacén (Informes o «Indicadores del almacén»).
+    Route::prefix('reportes')->name('operaciones.')->middleware('permiso:operaciones')
+        ->controller(OperacionesController::class)
+        ->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('tiempos', 'tiempos')->name('tiempos');
+            Route::get('tiempos/excel', 'excelTiempos')->name('tiempos.excel');
+            Route::get('clientes', 'clientes')->name('clientes');
+            Route::get('clientes/excel', 'excelClientes')->name('clientes.excel');
+            Route::get('demorados', 'demorados')->name('demorados');
+            Route::get('demorados/excel', 'excelDemorados')->name('demorados.excel');
+            Route::get('mensual', 'mensual')->name('mensual');
+        });
+
     Route::prefix('informes')->name('informes.')->middleware('permiso:informes')
         ->controller(InformesController::class)
         ->where(['tipo' => 'picking|packing', 'vista' => 'productividad|inactividad'])
@@ -323,7 +353,7 @@ Route::middleware('auth')->group(function () {
 
     // Módulos aún no portados: al portar uno, se registra arriba con su controlador real
     // (mismo nombre "{clave}.index" y middleware permiso:{clave}) y se agrega a $portados.
-    $portados = ['monitor', 'picking', 'packing', 'batch', 'admin', 'etiquetas', 'pedidos', 'configuracion', 'usuarios', 'rutas', 'guias', 'despacho', 'resumen', 'filtromonitor', 'informes', 'auditoria', 'almacen', 'retenidos'];
+    $portados = ['monitor', 'picking', 'packing', 'batch', 'admin', 'etiquetas', 'pedidos', 'configuracion', 'usuarios', 'rutas', 'guias', 'despacho', 'resumen', 'filtromonitor', 'informes', 'auditoria', 'almacen', 'retenidos', 'operaciones'];
     foreach (MenuSides::MODULOS as $clave => [, $uri]) {
         if (in_array($clave, $portados, true)) {
             continue;

@@ -33,6 +33,22 @@ class ConfiguracionController extends Controller
         'MARCA' => 'Por marca',
     ];
 
+    /**
+     * Parámetros de la vista «Alertas» de los televisores (MonitorAlertasService): campo =>
+     * [mínimo, máximo, etiqueta, ayuda]. Los límites en minutos y la tolerancia aceptan 0 = apagado.
+     */
+    public const ALERTAS = [
+        'alertaLimiteEsperaMin' => [0, 10080, 'Límite sin pasar a picking (min)', '0 = no se avisa.'],
+        'alertaLimitePickingMin' => [0, 10080, 'Límite en picking (min)', '0 = no se avisa.'],
+        'alertaLimitePackingMin' => [0, 10080, 'Límite en packing (min)', '0 = no se avisa.'],
+        'alertaTolerancia' => [0, 1000, 'Tolerancia sobre el tiempo esperado (%)', 'Retraso si pasa del tiempo esperado por las unidades del pedido más este %. 0 = no se usa.'],
+        'alertaUmbralAviso' => [1, 1000, 'Rendimiento: amarillo desde (%)', 'Más lento que su propio promedio en este %.'],
+        'alertaUmbralAlerta' => [1, 1000, 'Rendimiento: rojo desde (%)', 'Tiene que ser mayor que el amarillo.'],
+        'alertaVentanaDias' => [1, 365, 'Días de historial para los promedios', 'Entre 1 y 365.'],
+        'alertaMuestraMinima' => [1, 1000, 'Pedidos mínimos de historial', 'Con menos, no se compara a nadie.'],
+        'alertaMuestraMinimaHoy' => [1, 100, 'Pedidos mínimos de hoy', 'Para comparar lo que va del día.'],
+    ];
+
     public const INTERRUPTORES = [
         'MostrarTituloMonitor', 'activarVerOperadorMonitor', 'mostrarObsMonitor', 'mostrarTranMonitor',
         'activarValPicking', 'pickingOrdenLibre', 'mostrarExiRealPick', 'mostrarDepPiking',
@@ -53,15 +69,21 @@ class ConfiguracionController extends Controller
     public function update(Request $request): RedirectResponse
     {
         $cfg = $this->cfg($request);
+        // `sometimes`: una pantalla que no los manda conserva los valores guardados.
+        $alertas = collect(self::ALERTAS)->map(fn ($regla) => ['sometimes', 'required', 'integer', "min:{$regla[0]}", "max:{$regla[1]}"])->all();
+        $alertas['alertaUmbralAlerta'][] = 'gt:alertaUmbralAviso';
         // El campo viaja aunque esté oculto: si nadie pide la clave no se valida, se conserva la guardada.
         $usaClave = $request->boolean('activarValPicking') || $request->boolean('activarValPacking');
 
         $datos = $request->validate([
+            ...$alertas,
             'TamLetraMonitor' => ['required', 'integer', Rule::in(self::TAMANOS_LETRA)],
             'ordenPedSides' => ['required', Rule::in(array_keys(self::ORDENES))],
             'claveValPicking' => $usaClave ? ['required', 'string', 'min:4', 'max:20'] : ['nullable'],
         ], [
             'TamLetraMonitor.*' => 'Elige un tamaño de letra de la lista.',
+            'alertaUmbralAlerta.gt' => 'En las alertas de los televisores, el rojo tiene que empezar en un % mayor que el amarillo.',
+            'alerta*.*' => 'Revisa los números de las alertas de los televisores: cada uno tiene su mínimo y su máximo.',
             'ordenPedSides.*' => 'Elige un orden de productos de la lista.',
             'claveValPicking.required' => 'Escribe la clave de supervisor: la piden Picking o Packing.',
             'claveValPicking.min' => 'La clave de supervisor debe tener al menos 4 caracteres.',

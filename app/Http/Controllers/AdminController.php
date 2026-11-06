@@ -122,8 +122,8 @@ class AdminController extends Controller
             ...self::MENSAJES_CLAVE,
         ]);
 
-        // Guía de carga/descarga quitan Etiquetas del menú: son permisos de chofer, no de encargado.
-        $permisos = array_fill_keys(array_diff(PermisosUsuario::columnas(), ['activarGuiaCarga', 'activarGuiaDescarga']), 1);
+        // Guía de carga/descarga son permisos de chofer y Pantalla de TV es del televisor, no de encargado.
+        $permisos = array_fill_keys(array_diff(PermisosUsuario::columnas(), ['activarGuiaCarga', 'activarGuiaDescarga', 'activarTv']), 1);
         $clave = $this->claveElegida($datos);
         $usuario = new SidesUsers();
         $usuario->forceFill([

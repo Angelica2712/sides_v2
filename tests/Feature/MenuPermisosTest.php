@@ -46,13 +46,17 @@ class MenuPermisosTest extends TestCase
         $this->assertSame(count($agrupados), count(array_unique($agrupados)));
     }
 
-    public function test_usuario_de_guias_de_carga_no_ve_etiquetas(): void
+    public function test_etiquetas_solo_la_ve_el_usuario_con_ese_permiso(): void
     {
-        $this->crearCfg();
-        $usuario = $this->crearUsuario($this->todosLosPermisos());
+        $this->crearCfg([], ['etiquetas']);
+        $sinPermiso = $this->crearUsuario(array_merge($this->todosLosPermisos(), ['activarEtiquetas' => 0]));
 
-        $this->actingAs($usuario)->get('/home')->assertSee('Monitor')->assertDontSee('Etiquetas');
+        $this->actingAs($sinPermiso)->get('/home')->assertSee('Monitor')->assertDontSee('Etiquetas');
         $this->get('/etiquetas')->assertForbidden();
+
+        $conPermiso = $this->crearUsuario(['email' => 'etiquetas@example.com', 'activarEtiquetas' => 1]);
+        $this->actingAs($conPermiso)->get('/home')->assertSee('Etiquetas');
+        $this->get('/etiquetas')->assertOk();
     }
 
     public function test_usuario_solo_picking_ve_solo_picking(): void

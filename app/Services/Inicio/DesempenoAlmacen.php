@@ -26,7 +26,7 @@ class DesempenoAlmacen
 
     public const MAXIMO_SEGUNDOS = 86400;
 
-    private const TRAMOS = [
+    public const TRAMOS = [
         'aceptar' => ['fecrecibido', 'fecpicking'],
         'picking' => ['fecpicking', 'fecpacking'],
         'packing' => ['fecpacking', 'feccompletado'],
@@ -45,6 +45,38 @@ class DesempenoAlmacen
         $desde = Carbon::today()->subDays($dias - 1 + $dias * $atras);
 
         return [$desde, $desde->copy()->addDays($dias)];
+    }
+
+    /** Duración de un tramo en segundos, o null si le falta una fecha o pasa de MAXIMO_SEGUNDOS. */
+    public static function duracion(mixed $inicio, mixed $fin): ?int
+    {
+        $inicio = FechaSeped::valor($inicio);
+        $fin = FechaSeped::valor($fin);
+        if (! $inicio || ! $fin) {
+            return null;
+        }
+        $segundos = $fin->getTimestamp() - $inicio->getTimestamp();
+
+        return $segundos >= 0 && $segundos <= self::MAXIMO_SEGUNDOS ? $segundos : null;
+    }
+
+    /**
+     * Tiempos, desempeño y los mejores operarios de un rango cualquiera (el resumen mensual de
+     * Reportes de operaciones). $hasta es exclusivo.
+     */
+    public function resumen(string $codisb, Carbon $desde, Carbon $hasta, bool $conPacking = true): array
+    {
+        $tiempos = $this->tiempos($codisb, $desde, $hasta);
+        if (! $conPacking) {
+            unset($tiempos['packing']);
+        }
+
+        return [
+            'tiempos' => $tiempos,
+            'desempeno' => $this->desempeno($codisb, $desde, $hasta),
+            'despachadores' => $this->ranking($codisb, 'sides_logpicking', 'fecha_del_picking', $desde, $hasta),
+            'embaladores' => $conPacking ? $this->ranking($codisb, 'sides_logpacking', 'fecha_del_packing', $desde, $hasta) : collect(),
+        ];
     }
 
     public function de(string $codisb, string $periodo, bool $conPacking = true): array

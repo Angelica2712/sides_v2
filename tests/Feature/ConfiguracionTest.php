@@ -22,7 +22,7 @@ class ConfiguracionTest extends TestCase
 
         $this->crearCfg(['activarValPicking' => 1, 'claveValPicking' => 'viejaclave', 'mostrarObsMonitor' => 1], ['batch']);
         $this->crearCfg(['codisb' => 'OTRA', 'nombre' => 'OTRA SUCURSAL'], []);
-        $this->usuario = $this->crearUsuario(['activarConfig' => 1]);
+        $this->usuario = $this->crearUsuario(['activarConfig' => 1, 'activarEtiquetas' => 1]);
     }
 
     private function formulario(array $cambios = []): array

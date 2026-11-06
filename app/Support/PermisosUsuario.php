@@ -15,8 +15,10 @@ class PermisosUsuario
             'activarPicking' => ['Picking', 'Recolecta pedidos, también en Batch Picking.'],
             'activarLiberarAlcabala' => ['Liberar pedidos en espera', 'En Batch Picking, pasa pedidos en espera al picking normal.'],
             'activarPacking' => ['Packing', 'Verifica y embala pedidos.'],
+            'activarEtiquetas' => ['Etiquetas', 'Imprime las etiquetas de los bultos.'],
             'activarAlmacen' => ['Almacén 3D', 'Ve el almacén en 3D y dónde está cada producto, también como mapa en el picking.'],
             'activarUbicaciones' => ['Registrar ubicaciones', 'Registra desde el teléfono dónde está cada producto y numera los pasillos y anaqueles del almacén. Necesita también Almacén 3D.'],
+            'activarTv' => ['Pantalla de TV', 'Para el televisor de la droguería: ve «Picking en vivo» con el Almacén 3D y no puede cambiar nada. Dale solo este permiso. La app de TV se vincula a este usuario en Configuración → Televisores.'],
         ],
         'Pedidos' => [
             'activarPedido' => ['Pedidos', 'Consulta y modifica pedidos.'],
@@ -24,8 +26,8 @@ class PermisosUsuario
             'eliminarPedido' => ['Anular pedidos', 'Anula pedidos desde la consulta de pedidos.'],
         ],
         'Despacho' => [
-            'activarGuiaCarga' => ['Guía de carga', 'Carga pedidos en las guías de despacho. Sin acceso a Etiquetas.'],
-            'activarGuiaDescarga' => ['Guía de descarga', 'Registra la entrega de las guías. Sin acceso a Etiquetas.'],
+            'activarGuiaCarga' => ['Guía de carga', 'Carga pedidos en las guías de despacho.'],
+            'activarGuiaDescarga' => ['Guía de descarga', 'Registra la entrega de las guías.'],
         ],
         'Gestión' => [
             'activarIndicadores' => ['Indicadores del almacén', 'Para el jefe de operaciones o del almacén: ve en el Inicio los tiempos promedio de aceptar, picking y packing, el almacén en vivo y el desempeño de toda la droguería.'],

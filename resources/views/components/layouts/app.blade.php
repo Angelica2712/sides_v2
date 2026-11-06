@@ -54,7 +54,7 @@
             <aside style="width: 17rem"
                    :style="'width: ' + (sidebarCollapsed ? '78px' : '17rem')"
                    :class="{ 'translate-x-0!': sidebarOpen }"
-                   class="fixed lg:sticky inset-y-0 lg:top-0 left-0 z-50 flex flex-col h-screen bg-sidebar border-r border-sidebar-border shadow-lg -translate-x-full lg:translate-x-0 transition-[width,transform] duration-300">
+                   class="print:hidden fixed lg:sticky inset-y-0 lg:top-0 left-0 z-50 flex flex-col h-screen bg-sidebar border-r border-sidebar-border shadow-lg -translate-x-full lg:translate-x-0 transition-[width,transform] duration-300">
 
                 <div class="shrink-0 min-h-20 px-3 py-3 flex flex-col items-center justify-center bg-primary border-b border-primary-dark text-on-primary">
                     <a href="{{ route('home') }}" class="flex flex-col items-center text-center group">
@@ -136,7 +136,7 @@
             </aside>
 
             <div class="flex-1 flex flex-col min-w-0">
-                <header class="sticky top-0 z-30 bg-primary border-b border-primary-dark text-on-primary shadow-md">
+                <header class="print:hidden sticky top-0 z-30 bg-primary border-b border-primary-dark text-on-primary shadow-md">
                     <div class="flex items-center justify-between gap-3 px-4 sm:px-6 min-h-16 py-3">
                         <div class="flex items-center gap-2 min-w-0">
                             <button type="button" @click="sidebarOpen = true" aria-label="Abrir menú"
@@ -187,7 +187,7 @@
                     </div>
                 </header>
 
-                <main class="flex-1 p-4 sm:p-6">
+                <main class="flex-1 p-4 sm:p-6 print:p-0">
                     @if (session('mensaje'))
                         <div role="status" class="mx-auto mb-4 flex max-w-6xl items-start gap-2 rounded-xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 ring-1 ring-emerald-200">
                             <svg class="mt-0.5 size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>

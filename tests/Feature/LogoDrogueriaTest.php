@@ -28,7 +28,7 @@ class LogoDrogueriaTest extends TestCase
         $this->crearCfg(['codisb' => 'SIDES', 'nombre' => 'SIDES'], []);
         $this->crearCfg(['activarImpTicket' => 1]);
         $this->admin = $this->crearUsuario(['name' => 'FULLTECH360', 'email' => 'soporte@example.com', 'codisb' => 'SIDES', 'esAdmin' => 1]);
-        $this->operario = $this->crearUsuario(['email' => 'op@example.com', 'activarMonitor' => 1, 'activarConfig' => 1]);
+        $this->operario = $this->crearUsuario(['email' => 'op@example.com', 'activarMonitor' => 1, 'activarConfig' => 1, 'activarEtiquetas' => 1]);
     }
 
     private function formulario(array $cambios = []): array
